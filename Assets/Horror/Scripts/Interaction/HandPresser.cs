@@ -21,11 +21,15 @@ namespace Horror.Interaction
         {
             var tip = new GameObject("Bout des doigts (bouton)");
             tip.transform.SetParent(transform, false);
-            tip.transform.localPosition = tipOffset;
+            // radius et tipOffset sont en mètres RÉELS : on compense l'échelle de la main visible
+            // (la boule de main est à l'échelle 0,12 : sans ça, le bout des doigts faisait 4 mm
+            // et restait derrière la main, qui s'arrête contre le mur avant d'atteindre le bouton).
+            float scale = Mathf.Max(1e-4f, transform.lossyScale.x);
+            tip.transform.localPosition = tipOffset / scale;
             tip.layer = gameObject.layer;
             SphereCollider col = tip.AddComponent<SphereCollider>();
             col.isTrigger = true;
-            col.radius = radius;
+            col.radius = radius / scale;
             Rigidbody rb = tip.AddComponent<Rigidbody>();   // nécessaire pour que les déclencheurs fonctionnent
             rb.isKinematic = true;
             rb.useGravity = false;

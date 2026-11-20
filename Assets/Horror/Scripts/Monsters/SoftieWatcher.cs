@@ -157,6 +157,9 @@ namespace Horror.Monsters
             foreach (ArmLocomotion p in ArmLocomotion.All)
             {
                 if (p == null || SafeZone.Contains(p.HeadPosition)) continue;
+                // Joueur en plein jumpscare (mains bloquées) : on l'ignore, sinon le Doux repart
+                // vers lui au lieu de rester à sa place dans le rang.
+                if (!p.inputEnabled) continue;
                 float d = Vector3.Distance(p.HeadPosition, head.position);
                 if (d < bestD) { bestD = d; best = p; }
             }
