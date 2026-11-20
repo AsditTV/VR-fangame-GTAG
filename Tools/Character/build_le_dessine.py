@@ -70,7 +70,9 @@ def S(x, y, z):
 X, Y, Z = [1, 0, 0], [0, 1, 0], [0, 0, 1]
 
 # ---------------------------------------------------------------- primitives
-def ellipsoid(rx, ry, rz, color, subdiv=3):
+def ellipsoid(rx, ry, rz, color, subdiv=None):
+    if subdiv is None:  # moins de triangles pour les petites pièces (budget VR)
+        subdiv = 3 if max(rx, ry, rz) > 0.1 else 2
     m = trimesh.creation.icosphere(subdivisions=subdiv, radius=1.0)
     m.apply_transform(S(rx, ry, rz))
     return colored(m, color)
@@ -78,7 +80,8 @@ def ellipsoid(rx, ry, rz, color, subdiv=3):
 
 def capsule_y(length, radius, color):
     """Capsule verticale, de y=0 à y=-length (pend vers le bas depuis son origine)."""
-    m = trimesh.creation.capsule(height=length, radius=radius, count=[14, 10])
+    count = [14, 10] if radius > 0.02 else [8, 5]  # doigts : moins de détails
+    m = trimesh.creation.capsule(height=length, radius=radius, count=count)
     m.apply_transform(R(90, X))        # l'axe de trimesh est Z -> on le met sur Y
     m.apply_transform(T(0, -length / 2, 0))
     return colored(m, color)
@@ -267,10 +270,30 @@ def build():
         add(capsule_y(FORE, 0.038, LILAS), "AvantBras_" + side, elbow)
 
         hand = "Main_" + side
-        node(hand, elbow, T(0, -FORE - 0.03, 0))
-        add(ellipsoid(0.056, 0.066, 0.042, PECHE), "Moufle_" + side, hand)
-        thumb = ellipsoid(0.022, 0.03, 0.02, PECHE, subdiv=2)
-        add(thumb, "Pouce_" + side, hand, T(-0.045 * sx, 0.01, 0.018) @ R(-30 * sx, Z))
+        node(hand, elbow, T(0, -FORE - 0.02, 0))
+        # Paume (la face avant de la main = +Z local du noeud Main)
+        add(ellipsoid(0.048, 0.05, 0.027, PECHE), "Paume_" + side, hand, T(0, -0.045, 0))
+
+        # 3 doigts de dessin animé + 1 pouce, 2 articulations chacun.
+        # Plier un doigt = tourner ses noeuds Doigt_*_1 et Doigt_*_2 autour de leur axe X local
+        # (angle NÉGATIF = vers la paume). Le script HandFingerAnimator fait ça dans Unity.
+        fingers = (("Index", 0.024, 0.034, 0.028),
+                   ("Majeur", 0.0, 0.038, 0.030),
+                   ("Annulaire", -0.024, 0.031, 0.025))
+        for fname, fx, l1, l2 in fingers:
+            j1 = "Doigt_%s_1_%s" % (fname, side)
+            j2 = "Doigt_%s_2_%s" % (fname, side)
+            node(j1, hand, T(fx * sx, -0.086, 0.002))
+            add(capsule_y(l1, 0.0115, PECHE), j1 + "_Mesh", j1)
+            node(j2, j1, T(0, -l1 - 0.004, 0))
+            add(capsule_y(l2, 0.0105, PECHE), j2 + "_Mesh", j2)
+
+        t1 = "Doigt_Pouce_1_" + side
+        t2 = "Doigt_Pouce_2_" + side
+        node(t1, hand, T(0.040 * sx, -0.038, 0.012) @ R(38 * sx, Z) @ R(-18, X))
+        add(capsule_y(0.028, 0.012, PECHE), t1 + "_Mesh", t1)
+        node(t2, t1, T(0, -0.032, 0))
+        add(capsule_y(0.024, 0.011, PECHE), t2 + "_Mesh", t2)
 
     # Pièce rapiécée menthe sur le bras droit, avec ses points
     patch = box(0.07, 0.07, 0.008, MENTHE)
