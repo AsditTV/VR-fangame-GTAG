@@ -1,5 +1,8 @@
+using System;
 using Horror.Locomotion;
 using Horror.Noise;
+using Horror.Player;
+using Horror.World;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Events;
@@ -66,6 +69,15 @@ namespace Horror.Monsters
         public State state = State.Errance;
         [Range(0f, 2f)] public float alert;
 
+        /// <summary>Changement d'état (ancien, nouveau) : la voix et les sons s'y abonnent.</summary>
+        public event Action<State, State> StateChanged;
+        /// <summary>Un bruit vient d'être entendu (le bruit, à quel point : 0..1).</summary>
+        public event Action<NoiseEvent, float> NoiseHeard;
+        /// <summary>Vitesse actuelle (m/s), pour caler les bruits de pas.</summary>
+        public float CurrentSpeed => _currentSpeed;
+        /// <summary>La tête du monstre (utilisée aussi par le jumpscare).</summary>
+        public Transform Head => head;
+
         private NavMeshAgent _agent;
         private Vector3 _target;
         private Vector3 _home;
@@ -93,11 +105,15 @@ namespace Horror.Monsters
 
         private void OnNoise(NoiseEvent e)
         {
+            // La Salle de jeux n'a pas de micro : elle n'entend rien de ce qui s'y passe.
+            if (SafeZone.Contains(e.position)) return;
+
             Vector3 ears = head != null ? head.position : transform.position + Vector3.up * 2f;
             var boosted = e;
             boosted.radius *= hearingMultiplier;
             float heard = NoiseSystem.Audibility(boosted, ears);
             if (heard <= 0f) return;
+            NoiseHeard?.Invoke(e, heard);
 
             _lastNoisePos = e.position;
             _lastNoiseTime = Time.time;
@@ -198,6 +214,7 @@ namespace Horror.Monsters
 
         private void MoveTowards(Vector3 target, float speed)
         {
+            target = SafeZone.KeepOutside(target);   // elle s'arrête au bord de la zone sûre
             _currentSpeed = Mathf.Lerp(_currentSpeed, speed, 1f - Mathf.Exp(-6f * Time.deltaTime));
 
             if (_agent != null && _agent.isOnNavMesh)
@@ -255,13 +272,15 @@ namespace Horror.Monsters
                 return;
             }
             // Pas de points de ronde : un point au hasard autour de la maison
-            Vector2 r = Random.insideUnitCircle * 5f;
+            Vector2 r = UnityEngine.Random.insideUnitCircle * 5f;
             _target = _home + new Vector3(r.x, 0f, r.y);
         }
 
         private void SetState(State next)
         {
+            State previous = state;
             state = next;
+            if (previous != next) StateChanged?.Invoke(previous, next);
             _stateTimer = 0f;
             if (next == State.Errance) NextPatrolPoint();
         }
@@ -275,12 +294,15 @@ namespace Horror.Monsters
 
             foreach (ArmLocomotion player in ArmLocomotion.All)
             {
-                if (player == null) continue;
+                if (player == null || SafeZone.Contains(player.HeadPosition)) continue;
                 if (Vector3.Distance(reach, player.HeadPosition) > catchDistance) continue;
 
                 _catchCooldown = 3f;
                 onCatch.Invoke(player.gameObject);
-                if (respawnCaughtPlayer) player.TeleportTo(player.SpawnPosition);
+                // Jumpscare s'il est installé sur le joueur (il s'occupe du respawn), sinon respawn direct
+                Jumpscare scare = player.GetComponent<Jumpscare>();
+                if (scare != null) scare.Trigger(this);
+                else if (respawnCaughtPlayer) player.TeleportTo(player.SpawnPosition);
                 alert = 0f;
                 SetState(State.Errance);
                 break;

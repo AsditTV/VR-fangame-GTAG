@@ -119,6 +119,7 @@ namespace Horror.EditorTools
 
             BlindMonsterAI ai = root.AddComponent<BlindMonsterAI>();
             ai.head = head;
+            SafeZoneShopBuilder.SetupMonsterVoice(ai);   // murmures, réaction, cri, pas, clés
 
             // Points de ronde aux 4 coins de la pièce de test
             var points = new Transform[4];

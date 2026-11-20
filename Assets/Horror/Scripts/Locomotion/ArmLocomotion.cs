@@ -167,8 +167,11 @@ namespace Horror.Locomotion
         /// <summary>Position de la tête du joueur (là où le monstre doit l'attraper).</summary>
         public Vector3 HeadPosition => head != null ? head.position : transform.position;
 
-        /// <summary>Point de départ du joueur (pour le renvoyer au début quand il se fait attraper).</summary>
-        public Vector3 SpawnPosition => _spawnPosition;
+        /// <summary>Où réapparaître : la zone sûre s'il y en a une, sinon le point de départ.</summary>
+        public Vector3 SpawnPosition => Horror.World.SafeZone.RespawnPosition ?? _spawnPosition;
+
+        /// <summary>Faux pendant un jumpscare : les mains ne déplacent plus le corps.</summary>
+        public bool inputEnabled = true;
 
         private void FixedUpdate()
         {
@@ -210,7 +213,7 @@ namespace Horror.Locomotion
 
             // 3) Filet de sécurité : tombé hors de la map → retour au départ.
             if (_rb.position.y < respawnBelowY)
-                TeleportTo(_spawnPosition);
+                TeleportTo(SpawnPosition);
         }
 
         private void LateUpdate()
@@ -237,6 +240,12 @@ namespace Horror.Locomotion
 
         private void StepHand(Hand hand, ref Vector3 totalMove, ref int touchingCount)
         {
+            if (!inputEnabled)
+            {
+                hand.touching = false;
+                hand.position = PhysicsPosition(hand.controller);
+                return;
+            }
             Vector3 target = ClampToArmLength(PhysicsPosition(hand.controller), PhysicsPosition(head));
 
             if (hand.touching)
