@@ -173,3 +173,28 @@ Les yeux ont été effacés à la gomme, jusqu'à trouer le papier. Au dos :
 - **La bouche qui bouge avec le micro** : c'est la voix d'un enfant prisonnière du dessin.
 - **Le style pastel qui devient glauque** : un hôtel pour enfants joyeux qui s'est transformé en prison silencieuse.
 - **Les Doux qui ne bougent pas quand on les regarde** : c'est leur jeu « 1, 2, 3, soleil ».
+
+---
+
+## Zones (v2) : chacune change la façon de jouer
+
+Règle de design : chaque zone a **sa propre peur** et **son propre monstre rapide**, avec un sens
+différent (ouïe, vue, toucher...). Si tous les monstres marchent pareil, le joueur s'habitue et
+n'a plus peur.
+
+| # | Zone | Ce qui fait peur | Monstre rapide |
+|---|---|---|---|
+| 1 | **Hall de l'hôtel** (départ) | Immense, lustre, poussière. Trop calme. | aucun (zone de départ) |
+| 2 | **Couloirs des chambres** | Couloirs longs, portes à boutons qui se ferment derrière toi. | **Le Veilleur** : ferme les portes, on l'entend compter. |
+| 3 | **Aile école + dortoir aux 23 lits** | Un masque posé sur chaque lit. L'un d'eux manque. | **L'Écoute** (aveugle) : fonce vers chaque bruit. |
+| 4 | **Salle des machines** (chaufferie et pompes de la piscine, au sous-sol) | Le vacarme des machines couvre tes pas... jusqu'à ce qu'elles s'arrêtent toutes d'un coup. Tuyaux, échelles, passerelles : parfait pour grimper aux bras. | **Le Mécanicien** : se déplace DANS les tuyaux, on l'entend cogner. Sort des bouches d'aération. |
+| 5 | **Piscine d'encre** | Bassin noir, plongeoir, gradins. Tomber dedans = noir total. | **Le Maître-Nageur** : attiré par les éclaboussures. |
+| 6 | **Le Standard** (salle d'écoute) | Des centaines de micros et de haut-parleurs reliés à toutes les pièces : c'est comme ça que Céleste entend tout. | Pas de monstre à lui, mais parler dans un micro fait sortir ta voix ailleurs : un **leurre** pour l'Écoute. |
+| 7 | **La Buanderie** | Draps suspendus partout, on ne voit pas à un mètre. | **La Lingère** : une silhouette sous les draps, on la voit seulement quand les draps bougent. |
+| 8 | **Parc fermé** | Carrousel arrêté, stands, haies. | **Les Doux** : bougent seulement quand personne ne les regarde. |
+| 9 | **Plateau télé des Doux** | Décors en carton, caméras, une télé qui passe de vieux épisodes. | **Les Doux** (version géante). |
+| 10 | **L'Envers** (secret, sous la piscine) | Un monde entièrement dessiné au crayon sur papier blanc. Le pastel s'efface, les murs sont des traits. | **Les Ratures** : des gribouillis très rapides qui effacent ce qu'ils touchent. |
+| 11 | **Chambre de Mila** (secret) | Figée en 1977. Le seul endroit vraiment coloré du jeu. | aucun : c'est la récompense. |
+
+Conseil de production : construire d'abord **3 zones complètes** (Hall, École, Salle des
+machines) avec leurs sons, puis ajouter les autres une par une.
