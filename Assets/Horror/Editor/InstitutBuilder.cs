@@ -209,6 +209,7 @@ namespace Horror.EditorTools
         /// </summary>
         private static void SetupSofties(GameObject map, MapData data)
         {
+            if (SetupSoftieModels(map, data)) return;   // nouveaux modèles Blender (Art/Monsters/Doux) si présents
             var heads = new Dictionary<string, List<MeshFilter>>();
             var walkerBody = new List<MeshFilter>();
             var walkerHead = new List<MeshFilter>();
@@ -255,6 +256,148 @@ namespace Horror.EditorTools
                 w.shuffleLoop = Load<AudioClip>(Audio + "World/softie_shuffle.wav");
                 w.settleSound = Load<AudioClip>(Audio + "World/softie_settle.wav");
             }
+        }
+
+        // ------------------------------------------------------------------ Doux : modèles Blender
+
+        private const string DouxFolder = "Assets/Horror/Art/Monsters/Doux/";
+        // Le rang des Doux, dans les coordonnées de la maquette (Tools/Map/build_institut.py, théâtre).
+        private static readonly string[] DouxKinds = { "Lapin", "Ours", "Chat", "Chien", "Lapin", "Ours" };
+        private static readonly string[] DouxFurs = { "rose", "menthe", "lilas", "jaune", "bleu", "peche" };
+        private static readonly string[] DouxColors = { "#E1B3BF", "#B3D6C6", "#C7B6DC", "#E9D7A0", "#B2C5E1", "#EBC1A8" };
+        private static readonly float[] DouxRowX = { 16.8f, 18.6f, 20.4f, 24.1f, 25.9f, 27.7f };
+
+        /// <summary>
+        /// Pose les Doux en modèles séparés (tête sur pivot au cou), teint leur fourrure, et retire les anciens
+        /// Doux de la maquette (têtes cachées, corps du rang découpés des maillages fusionnés : les costumes pendus
+        /// et le Doux assis de la loge restent). Renvoie faux si les modèles ne sont pas dans le projet.
+        /// </summary>
+        private static bool SetupSoftieModels(GameObject map, MapData data)
+        {
+            if (Load<GameObject>(DouxFolder + "Doux_Lapin.glb") == null) return false;
+
+            var root = new GameObject("Les Doux (1, 2, 3, soleil)");
+            Quaternion facing = Quaternion.LookRotation(Dir(Vector3.forward), Vector3.up);   // ils regardent le rideau
+            var spots = new List<Vector3>();
+            for (int k = 0; k < DouxRowX.Length; k++)
+            {
+                Vector3 feet = P(new Vector3(DouxRowX[k], 1.1f, -19f - 0.25f * (k % 2)));
+                float yaw = (k % 2 == 0 ? 6f : -6f) * s_sx * s_sz;
+                GameObject d = PlaceDoux(root.transform, "Doux " + k + " (" + DouxKinds[k] + ")", DouxKinds[k], k, feet, facing * Quaternion.Euler(0f, yaw, 0f));
+                SoftieWatcher w = d.AddComponent<SoftieWatcher>();
+                w.head = FindChild(d.transform, "Tete");
+                spots.Add(feet);
+            }
+
+            Bounds theatre = default;
+            foreach (RoomData r in data.rooms)
+                if (r.zone == "Theatre")
+                {
+                    Vector3 a = P(r.min), b = P(r.max);
+                    theatre = new Bounds((a + b) * 0.5f, new Vector3(Mathf.Abs(b.x - a.x) - 0.6f, 20f, Mathf.Abs(b.z - a.z) - 0.6f));
+                }
+            Vector3 walkerFeet = P(new Vector3(22.25f, 1.1f, -18.4f));     // pile devant la fente du rideau
+            GameObject walker = PlaceDoux(root.transform, "Le Doux qui avance", "Lapin", 0, walkerFeet, facing);
+            SoftieWatcher ww = walker.AddComponent<SoftieWatcher>();
+            ww.head = FindChild(walker.transform, "Tete");
+            ww.canWalk = true;
+            ww.area = theatre;
+            ww.shuffleLoop = Load<AudioClip>(Audio + "World/softie_shuffle.wav");
+            ww.settleSound = Load<AudioClip>(Audio + "World/softie_settle.wav");
+            spots.Add(walkerFeet);
+
+            // les anciens Doux de la maquette
+            foreach (MeshFilter mf in map.GetComponentsInChildren<MeshFilter>(true))
+            {
+                string n = mf.gameObject.name;
+                if (n.Contains("TeteDoux_") || n.Contains("DouxMarcheur_"))
+                {
+                    Renderer r = mf.GetComponent<Renderer>();
+                    if (r != null) r.enabled = false;
+                }
+                else if (n.Contains("Theatre_doux_") || n.Contains("Theatre_tissu_creme"))
+                    CutOutDoux(mf, spots);
+            }
+            return true;
+        }
+
+        private static GameObject PlaceDoux(Transform parent, string name, string kind, int fur, Vector3 feet, Quaternion rot)
+        {
+            var proto = Load<GameObject>(DouxFolder + "Doux_" + kind + ".glb");
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(proto);
+            go.name = name;
+            go.transform.SetParent(parent, false);
+            go.transform.SetPositionAndRotation(feet, rot);
+            go.transform.localScale = Vector3.one * s_w;     // même agrandissement que la maquette
+            foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++)
+                    if (mats[i] != null && mats[i].name.StartsWith("Fourrure")) mats[i] = DouxFur(fur, mats[i]);
+                r.sharedMaterials = mats;
+            }
+            return go;
+        }
+
+        /// <summary>Fourrure teinte (une matière par couleur, enregistrée à côté des autres matières de l'Institut).</summary>
+        private static Material DouxFur(int fur, Material source)
+        {
+            EnsureFolder("Assets/Horror/Art/Materials");
+            string path = "Assets/Horror/Art/Materials/Doux_Fourrure_" + DouxFurs[fur] + ".mat";
+            var mat = Load<Material>(path);
+            if (mat != null) return mat;
+            ColorUtility.TryParseHtmlString(DouxColors[fur], out Color c);
+            mat = new Material(source) { name = "Doux_Fourrure_" + DouxFurs[fur] };
+            if (mat.HasProperty("baseColorFactor")) mat.SetColor("baseColorFactor", c);
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
+            AssetDatabase.CreateAsset(mat, path);
+            return mat;
+        }
+
+        /// <summary>Retire d'un maillage fusionné de la maquette les triangles des anciens Doux du rang
+        /// (colonne autour de chaque emplacement). Le résultat est enregistré en asset et sert aussi de collision.</summary>
+        private static void CutOutDoux(MeshFilter mf, List<Vector3> spots)
+        {
+            Mesh src = mf.sharedMesh;
+            if (src == null) return;
+            float radius = 0.75f * s_w, height = 2.3f * s_w;
+            Vector3[] v = src.vertices;
+            Mesh dst = Object.Instantiate(src);
+            dst.name = src.name + "_sansDoux";
+            bool changed = false;
+            for (int s = 0; s < src.subMeshCount; s++)
+            {
+                int[] tris = src.GetTriangles(s);
+                var keep = new List<int>(tris.Length);
+                for (int i = 0; i < tris.Length; i += 3)
+                {
+                    Vector3 c = mf.transform.TransformPoint((v[tris[i]] + v[tris[i + 1]] + v[tris[i + 2]]) / 3f);
+                    bool inside = false;
+                    foreach (Vector3 f in spots)
+                    {
+                        Vector2 d = new Vector2(c.x - f.x, c.z - f.z);
+                        if (d.magnitude < radius && c.y > f.y - 0.1f && c.y < f.y + height) { inside = true; break; }
+                    }
+                    if (inside) changed = true;
+                    else { keep.Add(tris[i]); keep.Add(tris[i + 1]); keep.Add(tris[i + 2]); }
+                }
+                dst.SetTriangles(keep, s);
+            }
+            if (!changed) { Object.DestroyImmediate(dst); return; }
+            EnsureFolder("Assets/Horror/Art/Map/Genere");
+            string path = "Assets/Horror/Art/Map/Genere/" + dst.name + ".asset";
+            if (Load<Mesh>(path) != null) AssetDatabase.DeleteAsset(path);   // fichier produit par ce menu : on le refait
+            AssetDatabase.CreateAsset(dst, path);
+            mf.sharedMesh = dst;
+            MeshCollider col = mf.GetComponent<MeshCollider>();
+            if (col != null) col.sharedMesh = dst;
+        }
+
+        private static Transform FindChild(Transform root, string name)
+        {
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                if (t.name == name) return t;
+            return null;
         }
 
         /// <summary>Copie des morceaux (sommets en coordonnées monde) sous un pivot placé où on veut ; cache les originaux.</summary>
