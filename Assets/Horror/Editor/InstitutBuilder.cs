@@ -21,7 +21,9 @@ namespace Horror.EditorTools
     ///  - nuit : pas de soleil, brouillard noir, les lumières colorées de la maquette ;
     ///  - ambiances sonores par pièce (sous-sol, dortoir...), Salle de jeux = zone sûre + berceuse ;
     ///  - boutique (5 présentoirs), panneau des pièces, journal des papiers ;
-    ///  - 9 portes du Protocole Verrou avec boutons des deux côtés ;
+    ///  - 14 portes du Protocole Verrou avec boutons des deux côtés ;
+    ///  - salle des machines en boucle, chaises volantes, ventilateur, 22 petites portes qui frappent ;
+    ///  - deux Écoutes : une en haut, une au sous-sol ;
     ///  - les 17 papiers de lore à leur place ;
     ///  - L'Écoute (voix, animation, navigation de pièce en pièce, ouvre les portes) ;
     ///  - le joueur (poupée, mains, glisse, jumpscare, pièces...).
@@ -39,11 +41,13 @@ namespace Horror.EditorTools
         [System.Serializable] private class DoorData { public float x, z, width, bottom, top; public string axis; }
         [System.Serializable] private class RoomData { public string zone, name; public Vector3 min, max, center; }
         [System.Serializable] private class PaperData { public string id; public Vector3 pos, face; public float spin; }
+        [System.Serializable] private class ChildDoorData { public int id; public string name; public Vector3 pos, face; }
         [System.Serializable] private class MapData
         {
             public Vector3 spawn; public float spawnYaw;
             public LightData[] lights; public DoorData[] doors; public RoomData[] rooms;
             public Vector3[] navPoints; public Vector2Int[] navLinks; public PaperData[] papers;
+            public ChildDoorData[] childDoors;
         }
 #pragma warning restore 0649
 
@@ -79,6 +83,7 @@ namespace Horror.EditorTools
             map.isStatic = true;
             DetectAxes(map);
             SetupGeometry(map);
+            SetupMovingProps(map);
             SetupNight(data);
             RoomData playroom = SetupRooms(data);
             CosmeticItem[] items = SafeZoneShopBuilder.EnsureItems();
@@ -88,6 +93,7 @@ namespace Horror.EditorTools
             LoreDocument[] docs = LoreSetupBuilder.LoadDocuments();
             SetupPapers(data, docs);
             SetupThrowables(data);
+            SetupChildDoors(data);
             SetupJournal(playroom, docs);
             WaypointGraph graph = SetupNav(data);
             SetupMonster(data, graph);
@@ -137,8 +143,58 @@ namespace Horror.EditorTools
                 }
                 if (n.StartsWith("Piscine_encre")) continue;   // l'encre ne porte pas : on s'y enfonce (2 m de noir)
                 if (n.Contains("Cosmetique_") || n.Contains("Prix_")) continue;
+                if (n.Contains("ChaiseVolante_") || n.Contains("Pales_Ventilateur")) continue;   // objets animés (SetupMovingProps)
                 MeshCollider col = mf.gameObject.AddComponent<MeshCollider>();
                 col.sharedMesh = mf.sharedMesh;
+            }
+        }
+
+        /// <summary>
+        /// Chaises volantes et pales du ventilateur : dans la maquette, leurs sommets sont en coordonnées
+        /// du monde (pivot à l'origine). On crée une copie avec un pivot au centre de l'objet pour pouvoir
+        /// la faire tourner / tomber, et on cache l'original (le lien avec la maquette est gardé).
+        /// </summary>
+        private static void SetupMovingProps(GameObject map)
+        {
+            var root = new GameObject("Objets animés (chaises, ventilateur)");
+            AudioClip[] clatter = LoadMany(Audio + "World", "chair_clatter_");
+            AudioClip shiver = Load<AudioClip>(Audio + "World/chair_shiver.wav");
+            foreach (MeshFilter mf in map.GetComponentsInChildren<MeshFilter>(true))
+            {
+                string n = mf.gameObject.name;
+                bool chair = n.Contains("ChaiseVolante_");
+                bool fan = n.Contains("Pales_Ventilateur");
+                if (!chair && !fan) continue;
+                Renderer src = mf.GetComponent<Renderer>();
+                if (src == null) continue;
+
+                var pivot = new GameObject(chair ? "Chaise volante" : "Pales du grand ventilateur");
+                pivot.transform.SetParent(root.transform, false);
+                pivot.transform.position = src.bounds.center;
+                var copy = new GameObject("Maillage");
+                copy.transform.SetPositionAndRotation(mf.transform.position, mf.transform.rotation);
+                copy.transform.localScale = mf.transform.lossyScale;
+                copy.transform.SetParent(pivot.transform, true);
+                copy.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+                copy.AddComponent<MeshRenderer>().sharedMaterials = src.sharedMaterials;
+                src.enabled = false;
+
+                if (fan)
+                {
+                    SlowSpinner spin = pivot.AddComponent<SlowSpinner>();
+                    spin.axis = Dir(Vector3.right);   // l'axe du ventilateur est l'axe X de la maquette
+                    continue;
+                }
+                MeshCollider col = copy.AddComponent<MeshCollider>();
+                col.sharedMesh = mf.sharedMesh;
+                col.convex = true;                    // obligatoire pour un objet physique
+                Rigidbody rb = pivot.AddComponent<Rigidbody>();
+                rb.mass = 2f;
+                FloatingProp prop = pivot.AddComponent<FloatingProp>();
+                prop.shiverSound = shiver;
+                Horror.Noise.ImpactNoise noise = pivot.AddComponent<Horror.Noise.ImpactNoise>();
+                noise.hitClips = clatter;
+                noise.maxRadius = 14f;
             }
         }
 
@@ -202,6 +258,12 @@ namespace Horror.EditorTools
                     respawn.transform.SetParent(go.transform, false);
                     respawn.transform.position = P(data.spawn);
                     safe.respawnPoint = respawn.transform;
+                }
+                else if (r.zone == "Ventilateur")
+                {
+                    zone.loop = Load<AudioClip>(Audio + "World/fan_loop.wav");
+                    zone.loopVolume = 0.55f;
+                    zone.oneShots = creaks;
                 }
                 else if (r.min.y < -1f)   // sous-sol
                 {
@@ -453,6 +515,25 @@ namespace Horror.EditorTools
             }
         }
 
+        /// <summary>Petites portes d'enfants : on y frappe parfois de l'autre côté (et ça attire le monstre).</summary>
+        private static void SetupChildDoors(MapData data)
+        {
+            if (data.childDoors == null) return;
+            var root = new GameObject("Portes d'enfants (toc toc)");
+            AudioClip[] knocks = LoadMany(Audio + "World", "knock_");
+            AudioClip[] voices = LoadMany(Audio + "World", "door_voice_");
+            foreach (ChildDoorData d in data.childDoors)
+            {
+                var go = new GameObject("Porte de " + d.name);
+                go.transform.SetParent(root.transform, false);
+                go.transform.position = P(d.pos);
+                ChildDoorKnock knock = go.AddComponent<ChildDoorKnock>();
+                knock.childName = d.name;
+                knock.knocks = knocks;
+                knock.voices = voices;
+            }
+        }
+
         // ------------------------------------------------------------------ monstre et joueur
 
         private static WaypointGraph SetupNav(MapData data)
@@ -468,17 +549,28 @@ namespace Horror.EditorTools
 
         private static void SetupMonster(MapData data, WaypointGraph graph)
         {
-            var patrol = new List<Vector3>();
-            Vector3 start = Vector3.zero;
+            // Deux Écoutes : une en haut (dortoir, couloirs, Standard), une au sous-sol (machines, galerie,
+            // ventilateur, citerne, piscine). Chacune patrouille son étage, mais un bruit les attire partout.
+            var patrolUp = new List<Vector3>();
+            var patrolDown = new List<Vector3>();
+            Vector3 startUp = Vector3.zero, startDown = Vector3.zero;
             foreach (RoomData r in data.rooms)
             {
                 if (r.zone == "SalleDeJeux" || r.zone == "Escalier") continue;
-                patrol.Add(P(r.center));
-                if (r.name == "Ecole" && r.max.z > 20f) start = P(new Vector3(0f, 0f, 27f));   // elle commence au fond du dortoir
+                if (r.min.y < -1f) patrolDown.Add(P(r.center));
+                else patrolUp.Add(P(r.center));
+                if (r.name == "Ecole" && r.max.z > 20f) startUp = P(new Vector3(0f, 0f, 27f));   // au fond du dortoir
+                if (r.zone == "Ventilateur") startDown = P(r.center);                            // devant le grand ventilateur
             }
-            GameObject monster = MonsterTestBuilder.CreateMonster(start, patrol.ToArray());
+            GameObject monster = MonsterTestBuilder.CreateMonster(startUp, patrolUp.ToArray());
             monster.transform.rotation = Quaternion.LookRotation(Dir(Vector3.back));
             monster.AddComponent<MonsterAnimator>();
+            if (patrolDown.Count > 0)
+            {
+                GameObject second = MonsterTestBuilder.CreateMonster(startDown, patrolDown.ToArray());
+                second.name += " (sous-sol)";
+                second.AddComponent<MonsterAnimator>();
+            }
         }
 
         private static void SetupPlayer(MapData data, CosmeticItem[] items)

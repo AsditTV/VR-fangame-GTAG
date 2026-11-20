@@ -286,3 +286,60 @@ def socket_labels():
             d.line([(x + 10, y + 24), (x + cw - 10, y + 24)], fill=(170, 40, 50), width=3)
             d.text((x + cw / 2, y + 38), "DISCONNECTED", fill=(170, 40, 50), font=ImageFont.truetype(FONT_SANS, 11), anchor="mm")
     return img
+
+
+FONT_KID = os.path.join(os.path.dirname(__file__), "..", "Papers", "fonts", "gloria-hallelujah-latin-400-normal.woff")
+
+
+def child_door(name, seed=0, scratched=False):
+    """Petite porte d'enfant peinte à la main : couleur pastel qui bave, prénom au feutre,
+    un dessin (soleil, fleur, maison, étoile...), un trou de serrure. Rien n'est droit.
+    scratched=True : le prénom a été rayé (l'enfant n'est plus là)."""
+    rng = np.random.default_rng(100 + seed)
+    pastels = [(232, 184, 196), (184, 214, 200), (190, 202, 228), (238, 220, 160), (214, 190, 222), (240, 200, 170)]
+    bg = pastels[seed % len(pastels)]
+    w, h = 192, 288
+    arr = np.ones((h, w, 3), np.float32) * (np.array(bg, np.float32) / 255)
+    arr *= 1 + (tx.fractal(h, rng)[:, :w, None] - 0.5) * 0.16   # peinture inégale
+    img = _img(arr)
+    d = HandDraw(img, wobble=1.6)
+    dark = tuple(int(c * 0.55) for c in bg)
+    d.rounded_rectangle([10, 10, w - 11, h - 11], radius=26, outline=dark, width=5)          # cadre peint
+    d.rounded_rectangle([28, 34, w - 29, 132], radius=14, outline=dark, width=3)              # panneau haut
+    d.rounded_rectangle([28, 150, w - 29, h - 34], radius=14, outline=dark, width=3)          # panneau bas
+    font = ImageFont.truetype(FONT_KID, 30 if len(name) < 6 else 24)
+    ink = [(200, 70, 90), (60, 110, 160), (70, 140, 90), (150, 80, 160)][seed % 4]
+    d.text((w / 2 + rng.uniform(-6, 6), 70), name, fill=ink, font=font, anchor="mm")
+    if scratched:
+        for k in range(7):
+            y = 60 + k * 4 + rng.uniform(-2, 2)
+            d.line([(36, y + rng.uniform(-6, 6)), (w - 36, y + rng.uniform(-6, 6))], fill=(40, 34, 40), width=3)
+    cx, cy = w / 2 + rng.uniform(-12, 12), 104
+    kind = -1 if name == "???" else seed % 4
+    if kind == -1:     # gribouillis noir rageur à la place du dessin
+        pts = [(cx + rng.uniform(-22, 22), cy + rng.uniform(-16, 16)) for _ in range(14)]
+        d.line(pts, fill=(30, 24, 30), width=3)
+    col = [(240, 170, 60), (220, 90, 120), (90, 150, 200), (120, 170, 90)][(seed + 1) % 4]
+    if kind == 0:      # soleil
+        d.ellipse([cx - 13, cy - 13, cx + 13, cy + 13], outline=col, width=3)
+        for a in np.linspace(0, math.tau, 9)[:-1]:
+            d.line([(cx + 17 * math.cos(a), cy + 17 * math.sin(a)), (cx + 25 * math.cos(a), cy + 25 * math.sin(a))], fill=col, width=3)
+    elif kind == 1:    # fleur
+        for a in np.linspace(0, math.tau, 6)[:-1]:
+            px, py = cx + 11 * math.cos(a), cy + 11 * math.sin(a)
+            d.ellipse([px - 7, py - 7, px + 7, py + 7], outline=col, width=3)
+        d.line([(cx, cy + 14), (cx + 3, cy + 26)], fill=(90, 140, 80), width=3)
+    elif kind == 2:    # maison
+        d.polygon([(cx - 18, cy + 18), (cx + 18, cy + 18), (cx + 18, cy - 2), (cx, cy - 18), (cx - 18, cy - 2)], outline=col, width=3)
+        d.rectangle([cx - 5, cy + 4, cx + 5, cy + 18], outline=col, width=2)
+    else:              # étoile
+        pts = [(cx + (18 if i % 2 == 0 else 8) * math.cos(a), cy + (18 if i % 2 == 0 else 8) * math.sin(a))
+               for i, a in enumerate(np.linspace(-math.pi / 2, 1.5 * math.pi, 11)[:-1])]
+        d.polygon(pts, outline=col, width=3)
+    # trou de serrure + traces de doigts sales autour de la poignée
+    d.ellipse([w - 52, 168, w - 40, 180], fill=(30, 26, 30))
+    d.polygon([(w - 49, 178), (w - 43, 178), (w - 41, 194), (w - 51, 194)], fill=(30, 26, 30))
+    for k in range(5):
+        x, y = w - 46 + rng.uniform(-22, 18), 186 + rng.uniform(-30, 30)
+        d.ellipse([x - 4, y - 5, x + 4, y + 5], fill=tuple(int(c * 0.82) for c in bg))
+    return img

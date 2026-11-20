@@ -135,3 +135,33 @@ peux pas prévenir les autres. C'est un vrai choix stratégique.
 **Quand le coder :** à l'étape 6 (multijoueur), parce que les salles privées et le micro
 dépendent du réseau (Photon Fusion + Photon Voice). Les réglages locaux (nom, couleur, mode micro)
 seront sauvegardés sur la machine du joueur.
+
+## Mise à jour : sous-sol en boucle, chaises volantes, portes d'enfants
+
+**Salle des machines agrandie (24 × 14 m, 7 m de haut)** : 4 chaudières, le grand moteur
+(volant d'inertie), une passerelle basse et une passerelle haute (échelle, on y grimpe aux bras).
+Elle ne s'arrête plus : elle continue en **boucle** :
+
+```
+Escalier -> SALLE DES MACHINES -> Galerie des portes -> Grand ventilateur
+               ^                                            |
+               |                                            v
+            Piscine <------- Couloir des douches <---- Citerne d'encre
+```
+
+Une boucle change tout pour la poursuite : on peut fuir en rond au lieu de finir dans un cul-de-sac.
+Une **deuxième Écoute** patrouille le sous-sol (la première reste en haut).
+
+- **Galerie des portes** : couloir bas (3,2 m), tuyaux, 11 petites portes (dont une au plafond).
+- **Grand ventilateur** : 6,6 m de diamètre, il tourne lentement (`SlowSpinner`), son souffle en boucle.
+- **Citerne d'encre** : 4 cuves reliées à la piscine, l'une fuit.
+- **Couloir des douches** : les pommeaux coulent noir ; ramène à la piscine.
+
+**Chaises qui volent (10)** : dortoir, hall, couloir, salle du ventilateur. Elles flottent et tournent.
+Si un joueur s'approche à moins de 1,8 m : elles tremblent, puis **tombent** -> bruit -> le monstre
+vient. Elles remontent seules quand plus personne n'est à côté (`FloatingProp`).
+
+**22 petites portes d'enfants** (+ la porte 23 du couloir = les « 23 friends » du dessin) : prénom
+au feutre, dessin, trou de serrure. Certaines sont normales, d'autres en hauteur, de travers,
+à moitié dans le sol, à l'envers, au plafond. Elles ne s'ouvrent pas. Parfois on y **frappe** de
+l'autre côté, et une voix d'enfant chuchote (`ChildDoorKnock`) ; les coups attirent le monstre.

@@ -370,6 +370,62 @@ def keys_unlock():
 
 
 # ---------------------------------------------------------------- tout fabriquer
+def knock(i):
+    """Trois petits coups de poing d'enfant sur une porte en bois, de l'autre côté."""
+    pattern = ((0.0, 1.0), (0.32, 0.85), (0.62, 0.95)) if i == 0 else ((0.0, 0.9), (0.22, 0.7), (0.9, 1.0), (1.05, 0.6))
+    x = np.zeros(int(SR * 1.8))
+    for at, amp in pattern:
+        d = 0.18
+        t = t_axis(d)
+        body = sum(np.sin(2 * np.pi * f * t) * np.exp(-t * k) for f, k in ((110 + 15 * i, 30), (230, 45), (480, 70)))
+        thud = lowpass(noise(d), 1200) * np.exp(-t * 60)
+        hit = (body * 0.8 + thud * 0.6) * amp
+        s0 = int(at * SR)
+        x[s0:s0 + len(hit)] += hit
+    return reverb(lowpass(x, 2500), size=1.4, mix=0.35)
+
+
+def door_voice(text):
+    """Voix d'enfant étouffée derrière une porte (chuchotée, aigüe, sans aigus : le bois filtre)."""
+    v = espeak(text, voice="en-us+whisperf", speed=120, pitch=85)
+    v = lowpass(resample(v, 1.12), 1400)
+    return reverb(v, size=1.2, mix=0.3)
+
+
+def fan_loop():
+    """Grand ventilateur qui tourne lentement : souffle qui revient à chaque pale + grondement (boucle 15 s)."""
+    d = 15
+    t = t_axis(d)
+    blade = 0.5 + 0.5 * np.sin(2 * np.pi * t * (5 / 3.0)) ** 2        # 5 pales, un tour en 3 s
+    air = bandpass(noise(d), 120, 900) * (0.4 + 0.6 * blade)
+    rumble = sum(np.sin(2 * np.pi * f * t) * a for f, a in ((33, 1.0), (66.4, 0.4), (99.2, 0.15)))
+    squeak = bandpass(noise(d), 1800, 2100, order=3) * (np.sin(2 * np.pi * t / 3.0) > 0.97) * 2
+    return loopify(air * 1.2 + rumble * 0.35 + squeak, 1.5)
+
+
+def chair_clatter(i):
+    """Chaise en bois qui tombe : plusieurs chocs secs qui rebondissent."""
+    x = np.zeros(int(SR * 1.2))
+    for k, (at, amp) in enumerate(((0.0, 1.0), (0.13, 0.6), (0.24 + 0.03 * i, 0.45), (0.34, 0.25))):
+        d = 0.12
+        t = t_axis(d)
+        f = 300 + 170 * ((k + i) % 3)
+        hit = (np.sin(2 * np.pi * f * t) * np.exp(-t * 50) + highpass(noise(d), 900) * np.exp(-t * 80) * 0.8) * amp
+        s0 = int(at * SR)
+        x[s0:s0 + len(hit)] += hit
+    return reverb(x, size=1.6, mix=0.3)
+
+
+def chair_shiver():
+    """La chaise tremble en l'air avant de tomber : petit cliquetis de bois qui s'accélère."""
+    d = 0.9
+    t = t_axis(d)
+    rate = 12 + 30 * t / d
+    clicks = (np.sin(2 * np.pi * np.cumsum(rate) / SR) > 0.92).astype(float)
+    x = bandpass(clicks + noise(d) * 0.05, 500, 3000) * np.linspace(0.3, 1, len(t))
+    return reverb(x, size=1.0, mix=0.25)
+
+
 def main():
     lines = ["Shhh...", "I can hear you.", "Where are you, little one?", "Quiet. Quiet.",
              "Back to bed.", "Mila? Is that you?", "Nobody screams here.", "I hear everything."]
@@ -412,6 +468,16 @@ def main():
     save("Doors", "door_slide", door_slide(), 0.75)
     save("Doors", "door_lock", door_lock(), 0.8)
     save("Doors", "keys_unlock", keys_unlock(), 0.8)
+
+    # Galerie des portes, ventilateur, chaises volantes (ajoutés à la fin : les sons existants ne changent pas)
+    for i in range(2):
+        save("World", "knock_%02d" % (i + 1), knock(i), 0.8)
+    for i, line in enumerate(("let me out", "is it you?", "dont open it")):
+        save("World", "door_voice_%02d" % (i + 1), door_voice(line), 0.6)
+    save("World", "fan_loop", fan_loop(), 0.6)
+    for i in range(2):
+        save("World", "chair_clatter_%02d" % (i + 1), chair_clatter(i), 0.85)
+    save("World", "chair_shiver", chair_shiver(), 0.6)
 
     total = sum(len(fs) for _, _, fs in os.walk(OUT))
     print("OK ->", OUT, "|", total, "fichiers")

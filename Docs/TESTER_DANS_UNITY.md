@@ -54,3 +54,12 @@ ambiances par pièce, Salle de jeux (départ, zone sûre, boutique, journal), 9 
 Après le menu 5 ou 8 : la boîte jaune de la Salle de jeux donne 100 crayons, puis affiche
 `NEXT IN hh:mm:ss`. Pour retester : **Horror > Tests > Remettre la boîte de crayons à zéro**.
 Détails, prix et calculs : `Docs/ECONOMIE.md`.
+
+## Sous-sol en boucle, chaises volantes, petites portes (menu 8)
+⚠️ Si la scène `Institut.unity` existe déjà, le menu 8 ne l'écrase pas : supprime-la toi-même
+(ou renomme-la) pour la reconstruire avec la nouvelle maquette.
+1. Descends au sous-sol : salle des machines -> galerie des portes -> ventilateur -> citerne ->
+   douches -> piscine. Tu dois pouvoir faire le tour complet.
+2. Approche-toi d'une chaise qui flotte : elle tremble, tombe (bruit), puis remonte ~10 s après ton départ.
+3. Reste près des petites portes de la galerie : au bout d'un moment, toc toc toc (parfois une voix).
+4. Le ventilateur tourne. Deux Écoutes : une en haut, une au sous-sol.

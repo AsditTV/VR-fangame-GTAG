@@ -158,6 +158,14 @@ class Builder:
             out = trimesh.Trimesh(vertices=out.vertices, faces=out.faces, vertex_normals=fn, process=False)
         self._push(zone, key, out, uv)
 
+    def unique_mesh(self, zone, name, key, mesh):
+        """Objet à part (son propre noeud dans le fichier) : Unity peut le détacher et l'animer
+        (chaises volantes...). Même matière et même projection d'UV que le décor."""
+        texel = self.M[key][1] or 1.0
+        out, uv = tx.box_uv(mesh, texel)
+        out.visual = TextureVisuals(uv=uv, material=self.M[key][0])
+        self.unique.append((zone, name, out))
+
     def box(self, zone, key, x0, x1, y0, y1, z0, z1, rot=None, style="prop"):
         """Boîte arrondie. style="prop" : meuble de travers et bombé ; "arch" : mur/sol presque droit ;
         "sharp" : vraie boîte nette (rare : marches, passerelles métalliques)."""
@@ -504,36 +512,157 @@ def build():
         yy = -0.15 - k * 0.3
         B.box(Z, "metal_gris", -17.3, -14.7, yy, yy + 0.04, zz - 0.25, zz + 0.25, style="sharp")
 
-    # ============================ SALLE DES MACHINES ============================
+    # ============================ SALLE DES MACHINES (grande, en boucle) ============================
+    # Hall des chaudières (haut de 7 m, passerelles) -> galerie des portes -> grand ventilateur
+    # -> citerne d'encre -> couloir des douches -> piscine -> retour au hall. Une boucle : on peut fuir en rond.
     Z = "Machines"
-    B.room(Z, -24, -8, -22, -10, -3, 4, "beton", "beton", openings=[("N", -17.2, -14.8, 3), ("E", -17, -14, 3)])
-    labels.append({"nom": "Salle des machines (sous-sol)", "pos": [-16, 0.5, -16]})
-    for x, z in ((-21, -13.5), (-21, -18.5)):    # chaudières
-        B.cyl(Z, "rouille", [x, -3, z], [x, 0.2, z], 1.2, 20)
-        B.cyl(Z, "rouille", [x, 0.2, z], [x, 0.9, z], 0.25, 10)
-        B.sphere(Z, "lum_orange", (x + 1.18, -1.6, z), 0.07)
-        light((x + 1.5, -1.6, z), "#ff9a50", 0.9, 4)
+    B.room(Z, -32, -8, -24, -10, -3, 7, "beton", "beton",
+           openings=[("N", -17.2, -14.8, 3), ("E", -17, -14, 3), ("S", -26.7, -24.3, 3)],
+           nav_center=(-17, -3, -20), name="Salle des machines")
+    labels.append({"nom": "Salle des machines (sous-sol)", "pos": [-20, 2.5, -17]})
+    for x in (-21, -27.5):                       # quatre chaudières, plus hautes que toi
+        for z in (-13.5, -18.5):
+            B.cyl(Z, "rouille", [x, -3, z], [x, 1.2, z], 1.2, 20)
+            m = trimesh.creation.icosphere(subdivisions=2, radius=1.2)
+            m.apply_scale([1, 0.45, 1])
+            m.apply_translation([x, 1.2, z])
+            B.add_mesh(Z, "rouille", m)          # dôme
+            B.cyl(Z, "rouille", [x, 1.6, z], [x, 4.0, z], 0.25, 10)       # cheminée jusqu'au plafond
+            for yy in (-2.2, -0.6, 0.8):         # cerclages rivetés
+                B.cyl(Z, "metal_gris", [x, yy, z], [x, yy + 0.08, z], 1.24, 20)
+            B.sphere(Z, "lum_orange", (x + 1.18, -1.6, z), 0.07)
+        light((x + 1.6, -1.6, -16), "#ff9a50", 1.0, 5)
     B.boxc(Z, "rouille", (-12, -2.4, -19.5), (2.4, 1.2, 1.6))       # pompe de la piscine
     B.cyl(Z, "rouille", [-12, -1.8, -19.5], [-12, -1.0, -19.5], 0.5, 16)
     B.quad(Z, "Plaque_Pompe", mt.pump_plate(), (-12, -2.3, -18.69), 0.8, 0.5, (0, 0, 1))
-    for k, y in enumerate((-0.4, 0.1, 0.5)):   # tuyaux au plafond, dont ceux d'encre
-        key = "encre" if k == 1 else "rouille"
-        B.cyl(Z, key, [-23.5, y, -11 - k * 0.5], [-8.2, y, -11 - k * 0.5], 0.16 if k == 1 else 0.12, 12)
+    # le grand moteur : un volant d'inertie arrêté net
+    fw = trimesh.creation.torus(major_radius=1.6, minor_radius=0.12, major_sections=32, minor_sections=8)
+    fw.apply_transform(trimesh.transformations.rotation_matrix(math.pi / 2, [0, 1, 0]))
+    fw.apply_translation([-11.5, -0.9, -12.6])
+    B.add_mesh(Z, "metal_gris", fw)
+    for k in range(6):
+        a = k / 6 * math.tau
+        B.cyl(Z, "metal_gris", [-11.5, -0.9, -12.6], [-11.5, -0.9 + 1.55 * math.sin(a), -12.6 + 1.55 * math.cos(a)], 0.06, 6)
+    B.cyl(Z, "rouille", [-12.3, -0.9, -12.6], [-10.7, -0.9, -12.6], 0.25, 12)          # moyeu
+    B.boxc(Z, "rouille", (-9.4, -2.1, -12.6), (2.0, 1.8, 1.4))                          # carter du moteur
+    for k, y in enumerate((-0.4, 0.1, 0.5, 2.6, 3.3)):   # tuyaux au plafond, dont ceux d'encre
+        key = "encre" if k in (1, 3) else "rouille"
+        B.cyl(Z, key, [-31.5, y, -11 - (k % 3) * 0.5], [-8.2, y, -11 - (k % 3) * 0.5], 0.16 if key == "encre" else 0.12, 12)
     B.cyl(Z, "encre", [-12, -1.0, -19.5], [-12, -0.1, -19.5], 0.14, 10)
     B.cyl(Z, "encre", [-12, -0.1, -19.5], [-8.2, -0.1, -16], 0.14, 10)
-    B.box(Z, "metal_gris", -23.8, -9, -1.0, -0.92, -21.8, -20.6)     # passerelle
-    for x in np.arange(-23.5, -9, 1.5):
+    B.box(Z, "metal_gris", -31.8, -9, -1.0, -0.92, -21.8, -20.6, style="sharp")        # passerelle basse
+    for x in np.arange(-31.5, -9, 1.5):
         B.cyl(Z, "metal_gris", [x, -0.92, -20.6], [x, -0.1, -20.6], 0.025, 6)
         B.cyl(Z, "metal_gris", [x, -3, -21.2], [x, -1.0, -21.2], 0.04, 6)
-    B.cyl(Z, "metal_gris", [-23.5, -0.15, -20.6], [-9, -0.15, -20.6], 0.025, 6)
-    for x, z, r in ((-15, -15, 0.9), (-10.5, -13, 0.6), (-18, -20, 0.5)):   # flaques d'encre
+    B.cyl(Z, "metal_gris", [-31.5, -0.15, -20.6], [-9, -0.15, -20.6], 0.025, 6)
+    B.box(Z, "metal_gris", -31.8, -9, 1.5, 1.58, -11.6, -10.2, style="sharp")          # passerelle haute (on y grimpe aux bras)
+    for x in np.arange(-31.5, -9, 1.5):
+        B.cyl(Z, "metal_gris", [x, 1.58, -11.6], [x, 2.4, -11.6], 0.025, 6)
+    B.cyl(Z, "metal_gris", [-31.5, 2.35, -11.6], [-9, 2.35, -11.6], 0.025, 6)
+    for k in range(15):                                                                   # échelle
+        B.cyl(Z, "metal_gris", [-31.75, -2.7 + k * 0.3, -11.3], [-31.75, -2.7 + k * 0.3, -10.5], 0.02, 6)
+    for z in (-11.3, -10.5):
+        B.cyl(Z, "metal_gris", [-31.75, -3, z], [-31.75, 1.6, z], 0.03, 6)
+    for x, z, r in ((-15, -15, 0.9), (-10.5, -16.5, 0.6), (-18, -20, 0.5), (-25, -22.5, 0.8), (-30, -15, 0.5)):   # flaques d'encre
         B.sphere(Z, "encre", (x, -2.995, z), r, scale=(1, 0.01, 0.7))
+    B.sphere(Z, "lum_orange", (-25.5, 0.4, -23.8), 0.1, scale=(1.6, 0.6, 0.6))
+    light((-25.5, 0.2, -23.3), "#ff4a3a", 0.7, 4)          # lampe de secours rouge au-dessus de la galerie
     mark("La pompe n°2", "« Remplissage spécial, 12/11/1985 ». La veille de la Nuit Longue. Les tuyaux noirs partent vers la piscine.",
          (-12, -2.3, -18.7), (-13.5, -1.4, -15.5))
+    mark("Le grand moteur", "Un volant d'inertie de trois mètres, arrêté net. Il y a encore des traces de petites mains sur les rayons.",
+         (-11.5, -0.9, -12.6), (-15.5, 0.2, -15.5))
+
+    # ---- la galerie des portes : un couloir bas, des tuyaux, et des petites portes partout
+    Z = "Galerie"
+    B.room(Z, -27, -24, -40, -24, -3, 3.2, "beton", "beton",
+           openings=[("N", -26.7, -24.3, 3), ("S", -26.7, -24.3, 3)], name="Galerie des portes")
+    labels.append({"nom": "Galerie des portes", "pos": [-25.5, 0.6, -32]})
+    for x, sd in ((-26.75, 1), (-24.25, -1)):
+        B.cyl(Z, "rouille", [x + 0.05 * sd, -0.5, -39.8], [x + 0.05 * sd, -0.5, -24.2], 0.1, 10)
+        B.cyl(Z, "encre", [x + 0.12 * sd, -0.15, -39.8], [x + 0.12 * sd, -0.15, -24.2], 0.08, 10)
+    for z, r in ((-29, 0.4), (-35.5, 0.6)):
+        B.sphere(Z, "encre", (-25.5, -2.995, z), r, scale=(1, 0.01, 1.6))
+    light((-25.5, -0.3, -29), "#9fd8b8", 0.35, 4)
+    light((-25.5, -0.3, -36.5), "#9fd8b8", 0.3, 4)
+
+    # ---- la salle du grand ventilateur
+    Z = "Ventilateur"
+    B.room(Z, -36, -18, -54, -40, -3, 8, "beton", "beton",
+           openings=[("N", -26.7, -24.3, 3), ("E", -49, -46, 3)], name="Salle du grand ventilateur")
+    labels.append({"nom": "Le grand ventilateur", "pos": [-28, 3.5, -47]})
+    fan_c = np.array([-35.55, 1.6, -47.0])
+    ring = trimesh.creation.torus(major_radius=3.3, minor_radius=0.28, major_sections=40, minor_sections=10)
+    ring.apply_transform(trimesh.transformations.rotation_matrix(math.pi / 2, [0, 1, 0]))
+    ring.apply_translation(fan_c)
+    B.add_mesh(Z, "rouille", ring)
+    for k in range(9):                                     # grille devant les pales
+        zz = -47.0 + (k - 4) * 0.72
+        hh = math.sqrt(max(3.3 ** 2 - (zz + 47.0) ** 2, 0.1))
+        B.cyl(Z, "metal_gris", [-35.2, fan_c[1] - hh, zz], [-35.2, fan_c[1] + hh, zz], 0.03, 6)
+    blades = []
+    for k in range(5):                                     # pales (objet à part : Unity les fait tourner)
+        bl = rounded_box([0.08, 2.9, 0.9], 0.04, wonk=0.04, subdiv=1)
+        bl.apply_translation([0, 1.6, 0])
+        bl.apply_transform(trimesh.transformations.rotation_matrix(math.radians(14), [0, 1, 0]))
+        bl.apply_transform(trimesh.transformations.rotation_matrix(k / 5 * math.tau, [1, 0, 0]))
+        blades.append(bl)
+    hub = trimesh.creation.icosphere(subdivisions=2, radius=0.45)
+    hub.apply_scale([0.7, 1, 1])
+    blades.append(hub)
+    fan = trimesh.util.concatenate(blades)
+    fan.apply_translation(fan_c + [0.15, 0, 0])
+    B.unique_mesh(Z, "Pales_Ventilateur", "rouille", fan)
+    light((-35.0, 1.6, -47.0), "#ffb070", 1.3, 10)          # la lumière passe entre les pales
+    light((-21, 4.5, -44), "#8fa0b8", 0.3, 9)
+    for k in range(4):                                     # caisses de crayons empilées, éventrées
+        B.boxc(Z, "jaune_bouee" if k % 2 else "bois_peint_bleu", (-20.0, -2.6 + k * 0.78 if k < 3 else -2.6, -52.6 + (1.0 if k == 3 else 0)),
+               (1.0, 0.75, 0.8), rot=trimesh.transformations.rotation_matrix(math.radians(6 * k - 8), [0, 1, 0]))
+    mark("Le grand ventilateur", "Il tourne tout seul, très lentement. Le souffle fait voler les chaises de la salle de classe.",
+         tuple(fan_c), (-24.5, 1.4, -47.5))
+
+    # ---- la citerne d'encre
+    Z = "Citerne"
+    B.room(Z, -18, -2, -54, -40, -3, 5, "beton", "beton",
+           openings=[("O", -49, -46, 3), ("N", -5.7, -3.3, 3)], nav_center=(-10, -3, -47.2), name="La citerne d'encre")
+    labels.append({"nom": "La citerne d'encre", "pos": [-10, 2.5, -47]})
+    for k, (x, z, r) in enumerate(((-14, -51.6, 1.4), (-8, -52.2, 1.3), (-14, -42.4, 1.2), (-4.2, -51.0, 1.0))):
+        B.cyl(Z, "rouille", [x, -3, z], [x, 1.4, z], r, 22)
+        m = trimesh.creation.icosphere(subdivisions=2, radius=r)
+        m.apply_scale([1, 0.35, 1])
+        m.apply_translation([x, 1.4, z])
+        B.add_mesh(Z, "rouille", m)
+        for yy in (-1.8, 0.2):
+            B.cyl(Z, "metal_gris", [x, yy, z], [x, yy + 0.07, z], r + 0.03, 22)
+        B.cyl(Z, "encre", [x, 1.7, z], [x, 1.7, -40.2], 0.12, 10)            # tuyau d'encre vers la piscine
+        B.cyl(Z, "encre", [x, 1.6, z], [x, 1.9, z], 0.12, 10)
+    B.cyl(Z, "encre", [-12.65, -0.2, -51.3], [-12.6, -2.99, -50.9], 0.05, 8)    # la fuite
+    B.sphere(Z, "encre", (-12.0, -2.995, -50.0), 1.5, scale=(1, 0.01, 0.8))
+    vw = trimesh.creation.torus(major_radius=0.35, minor_radius=0.04, major_sections=20, minor_sections=6)
+    vw.apply_transform(trimesh.transformations.rotation_matrix(math.pi / 2, [0, 0, 1]))
+    vw.apply_translation([-12.4, -1.0, -42.4])
+    B.add_mesh(Z, "laiton", vw)                                                  # vanne
+    light((-11, 0.8, -49.5), "#ffa060", 0.6, 6)
+    mark("La citerne d'encre", "Des cuves pleines d'encre, reliées à la piscine. L'une fuit encore. Quelqu'un a gratté « 23 » sur la vanne.",
+         (-12.0, -1.0, -47.0), (-4.2, 1.2, -42.6))
+
+    # ---- le couloir des douches (retour vers la piscine)
+    Z = "Douches"
+    B.room(Z, -6, -3, -40, -26, -3, 3.2, "carrelage_creme", "carrelage_piscine",
+           openings=[("S", -5.7, -3.3, 3), ("N", -5.7, -3.3, 3)], name="Couloir des douches")
+    labels.append({"nom": "Couloir des douches", "pos": [-4.5, 0.4, -33]})
+    for k, z in enumerate((-29, -32, -35, -38)):
+        x = -5.85 if k % 2 == 0 else -3.15
+        sd = 1 if k % 2 == 0 else -1
+        B.cyl(Z, "metal_gris", [x, -0.6, z], [x + 0.35 * sd, -0.6, z], 0.025, 6)
+        B.cyl(Z, "metal_gris", [x + 0.35 * sd, -0.6, z], [x + 0.35 * sd, -0.75, z], 0.06, 10)   # pommeau
+        B.sphere(Z, "encre", (x + 0.35 * sd, -2.995, z), 0.35, scale=(1, 0.01, 1))         # elles coulent noir
+    B.cyl(Z, "metal_gris", [-4.5, -3.0, -33], [-4.5, -2.99, -33], 0.18, 12)                  # bonde
+    light((-4.5, 0.0, -33), "#cfe8ff", 0.35, 5)
 
     # ============================ PISCINE D'ENCRE ============================
     Z = "Piscine"
-    B.room(Z, -8, 12, -26, -8, -3, 6, "carrelage_creme", None, openings=[("O", -17, -14, 3)], nav_center=(-5.5, -3, -15.5))
+    B.room(Z, -8, 12, -26, -8, -3, 6, "carrelage_creme", None, openings=[("O", -17, -14, 3), ("S", -5.7, -3.3, 3)],
+           nav_center=(-5.5, -3, -15.5))
     labels.append({"nom": "Piscine d'encre (sous-sol)", "pos": [2, 1.5, -17]})
     bx0, bx1, bz0, bz1 = -4, 8, -22, -12
     for (x0, x1, z0, z1) in ((-8, 12, -26, bz0), (-8, 12, bz1, -8), (-8, bx0, bz0, bz1), (bx1, 12, bz0, bz1)):
@@ -642,6 +771,90 @@ def build():
          "Toutes les 7 heures, on appuie sur le bouton rose : +100 crayons gratuits. Au-dessus, un compte à rebours dit quand revenir.",
          (14.4, 0.8, 7.9), (11.6, 1.6, 7.4))
 
+    # ============================ CHAISES QUI VOLENT ============================
+    def kid_chair(seed):
+        """Petite chaise d'école en bois peint, un peu tordue (assise, dossier, 4 pieds)."""
+        parts = [rounded_box([0.38, 0.045, 0.36], 0.02, wonk=0.05, subdiv=1)]
+        back = rounded_box([0.38, 0.26, 0.035], 0.015, wonk=0.06, subdiv=1)
+        back.apply_translation([0, 0.3, -0.17])
+        parts.append(back)
+        for dx in (-0.16, 0.16):
+            parts.append(trimesh.creation.cylinder(radius=0.016, segment=[[dx, 0, -0.165], [dx, 0.2, -0.17]], sections=6))
+            for dz in (-0.15, 0.15):
+                leg = trimesh.creation.cylinder(radius=0.018, segment=[[dx, 0, dz], [dx * 1.08, -0.36, dz * 1.08]], sections=6)
+                parts.append(leg)
+        m = trimesh.util.concatenate(parts)
+        return m
+
+    chairs = (("Ecole", (0.0, 2.2, 18.0), (25, 40, 10)), ("Ecole", (-2.6, 2.9, 22.0), (-160, 15, 30)),
+              ("Ecole", (2.3, 1.6, 25.4), (10, -70, -20)), ("Hall", (-1.6, 3.6, -2.0), (70, 20, 0)),
+              ("Hall", (3.4, 2.3, 3.4), (-20, 120, 35)), ("Couloir", (20.0, 1.7, 0.0), (180, 30, 0)),
+              ("Ventilateur", (-31.0, 2.6, -45.0), (40, 0, 80)), ("Ventilateur", (-29.0, 1.0, -49.4), (-30, 60, 15)),
+              ("Ventilateur", (-27.6, 3.9, -44.2), (120, -20, 40)), ("Ventilateur", (-32.6, 0.4, -50.2), (15, 200, -60)))
+    for k, (zone, pos, (rx, ry, rz)) in enumerate(chairs):
+        m = kid_chair(k)
+        rot = (trimesh.transformations.euler_matrix(math.radians(rx), math.radians(ry), math.radians(rz), "sxyz"))
+        m.apply_transform(rot)
+        m.apply_translation(pos)
+        key = ("bois_peint_rose", "bois_peint_bleu", "peinture_blanche")[k % 3]
+        B.unique_mesh(zone, "ChaiseVolante_%d" % k, key, m)
+    mark("Les chaises qui volent", "Des petites chaises d'école flottent dans le noir. Si tu t'approches trop, elles tombent... et le bruit l'appelle.",
+         (0.0, 2.2, 18.0), (2.5, 1.8, 15.0))
+
+    # ============================ PETITES PORTES D'ENFANTS ============================
+    # 22 petites portes avec un prénom (+ la porte 23 du couloir = les « 23 friends » du dessin).
+    # Certaines sont normales, d'autres incrustées de travers, à moitié avalées par le sol, en hauteur,
+    # à l'envers... ou au plafond. Elles ne s'ouvrent pas. Parfois, on y frappe de l'intérieur.
+    def child_door(zone, k, name, center, normal, spin=0.0, scratched=False, w=0.72, h=1.12):
+        n = np.array(normal, float)
+        up = np.array([0, 1, 0.0]) if abs(n[1]) < 0.9 else np.array([0, 0, -1.0])
+        right = np.cross(up, n)
+        right /= np.linalg.norm(right)
+        up = np.cross(n, right)
+        a = math.radians(spin)
+        right, up = right * math.cos(a) + up * math.sin(a), -right * math.sin(a) + up * math.cos(a)
+        c = np.array(center, float)
+        frame = rounded_box([w + 0.12, h + 0.1, 0.05], 0.025, wonk=0.04, subdiv=1)
+        T = np.eye(4)
+        T[:3, 0], T[:3, 1], T[:3, 2], T[:3, 3] = right, up, n, c + n * 0.025
+        frame.apply_transform(T)
+        B.add_mesh(zone, "bois_sombre", frame)
+        img = mt.child_door(name, k, scratched=scratched).resize((128, 192))
+        B.quad(zone, "PorteEnfant_%d" % k, img, tuple(c + n * 0.052), w, h, tuple(n), spin=spin, rough=0.75)
+        B.sphere(zone, "laiton", tuple(c + n * 0.08 + right * w * 0.32 - up * h * 0.08), 0.035)
+        return {"id": k, "name": name, "pos": [float(v) for v in c + n * 0.06], "face": [float(v) for v in n]}
+
+    kid_doors = []
+    names = ["Theo", "Lucie", "???", "Nour", "Ines", "Malo", "Bastien", "Mila", "Jade", "Sacha", "Lena",
+             "Remi", "Adele", "Yanis", "Rose", "Elsa", "Hugo", "Nina", "Louis", "Maya", "Noe", "Clara"]
+    W2 = WALL
+    spots_doors = [   # zone, centre (sur la face du mur), normale vers la pièce, rotation dans le plan
+        ("Hall", (-2.4, 0.56, 6 - W2), (0, 0, -1), 0),
+        ("Hall", (2.6, 1.9, 6 - W2), (0, 0, -1), -4),                  # en hauteur
+        ("Hall", (-7 + W2, 0.56, -3.5), (1, 0, 0), 180),               # à l'envers
+        ("Ecole", (-5.5, 0.56, 12 + W2), (0, 0, 1), 3),
+        ("Ecole", (-3.4, 0.2, 12 + W2), (0, 0, 1), -8),                # à moitié dans le sol
+        ("Ecole", (4.0, 0.56, 12 + W2), (0, 0, 1), 0),
+        ("Ecole", (6.2, 2.6, 12 + W2), (0, 0, 1), 12),                 # en hauteur, de travers
+        ("Ecole", (5.6, 3.2, 30 - W2), (0, 0, -1), 180),               # à l'envers près du plafond
+    ]
+    gz = [-25.4, -26.9, -28.4, -29.9, -31.4, -32.9, -34.4, -35.9, -37.4, -38.9]
+    for i, z in enumerate(gz):          # galerie : des portes des deux côtés, de plus en plus folles
+        left = i % 2 == 0
+        x = -27 + W2 if left else -24 - W2
+        nrm = (1, 0, 0) if left else (-1, 0, 0)
+        y = (-2.44, -2.0, -2.44, -1.2, -2.85, -2.44, -0.9, -2.44, -2.3, -1.6)[i]
+        spin = (0, 6, -3, 25, 0, 90, -15, 180, 40, -100)[i]
+        spots_doors.append(("Galerie", (x, y, z), nrm, spin))
+    spots_doors.append(("Galerie", (-25.5, 0.2 - 0.02, -33.6), (0, -1, 0), 0))   # au plafond
+    spots_doors.append(("Ventilateur", (-33.0, 2.2, -40 - W2), (0, 0, -1), 8))     # en hauteur dans la salle du ventilateur
+    spots_doors.append(("Ventilateur", (-21.0, -2.44, -40 - W2), (0, 0, -1), 0))
+    spots_doors.append(("Douches", (-6 + W2, -2.44, -36.5), (1, 0, 0), -5))      # entre deux douches
+    for k, (zone, c, nrm, spin) in enumerate(spots_doors):
+        kid_doors.append(child_door(zone, k, names[k], c, nrm, spin, scratched=(names[k] == "Malo")))
+    mark("La galerie des portes", "Un couloir bas plein de petites portes avec des prénoms. Aucune ne s'ouvre. Parfois, quelqu'un frappe de l'autre côté.",
+         (-25.4, -2.0, -31.4), (-25.5, -1.4, -26.0))
+
     # ============================ PAPIERS DE LORE + DESSINS D'ENFANTS ============================
     papers_dir = os.path.join(ROOT, "Assets/Horror/Art/Papers")
     meta = {m["id"]: m for m in json.load(open(os.path.join(papers_dir, "papers.json"), encoding="utf-8"))}
@@ -711,7 +924,7 @@ def build():
     rooms = [{"zone": r["zone"], "nom": r["nom"], "min": r["min"], "max": r["max"], "centre": r["centre"]} for r in B.rooms]
 
     data = {"spawn": [11, 0, 5.2], "spawn_yaw": 1.5708, "lumieres": lights, "zones": labels, "lore": lore, "papiers": papers,
-            "portes": doors, "pieces": rooms, "nav": {"points": nodes, "liens": edges}}
+            "portes": doors, "pieces": rooms, "nav": {"points": nodes, "liens": edges}, "portes_enfants": kid_doors}
     return B.scene(), data
 
 
@@ -726,6 +939,7 @@ def write_unity_json(data):
         "navPoints": [v3(p) for p in data["nav"]["points"]],
         "navLinks": [{"x": a, "y": b} for a, b in data["nav"]["liens"]],
         "papers": [{"id": p["id"], "pos": v3(p["pos"]), "face": v3(p["face"]), "spin": p["spin"]} for p in data["papiers"]],
+        "childDoors": [{"id": d["id"], "name": d["name"], "pos": v3(d["pos"]), "face": v3(d["face"])} for d in data["portes_enfants"]],
     }
     with open(OUT_JSON.replace(".json", "_Unity.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
