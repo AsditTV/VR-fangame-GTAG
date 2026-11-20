@@ -1,9 +1,10 @@
 {
  "spawn": [
+  11,
   0,
-  0,
-  -2
+  5.2
  ],
+ "spawn_yaw": 1.5708,
  "lumieres": [
   {
    "pos": [
@@ -174,6 +175,26 @@
    "color": "#8fe3b0",
    "intensity": 0.5,
    "distance": 3
+  },
+  {
+   "pos": [
+    11.0,
+    2.8,
+    5.5
+   ],
+   "color": "#ffd9b0",
+   "intensity": 2.6,
+   "distance": 9
+  },
+  {
+   "pos": [
+    7.8,
+    1.0,
+    8.0
+   ],
+   "color": "#ffe2b8",
+   "intensity": 0.8,
+   "distance": 3
   }
  ],
  "zones": [
@@ -223,6 +244,14 @@
     2,
     1.5,
     -17
+   ]
+  },
+  {
+   "nom": "Salle de jeux (zone sûre)",
+   "pos": [
+    11,
+    2.6,
+    6.2
    ]
   }
  ],
@@ -435,6 +464,34 @@
     5.0,
     -1.5,
     -19.0
+   ]
+  },
+  {
+   "titre": "La Salle de jeux (zone sûre)",
+   "texte": "La seule pièce sans micro : elle ne t'entend pas ici et n'y entre jamais. On y apparaît, on y revient après s'être fait attraper. La boutique de cosmétiques est contre le mur.",
+   "pos": [
+    11.0,
+    1.0,
+    9.0
+   ],
+   "cam": [
+    10.2,
+    1.9,
+    4.6
+   ]
+  },
+  {
+   "titre": "Le micro débranché",
+   "texte": "Au Standard, l'étiquette « Playroom » est barrée : DISCONNECTED. C'est pour ça que la Salle de jeux est sûre.",
+   "pos": [
+    -19.5,
+    2.3,
+    2.1
+   ],
+   "cam": [
+    -16.5,
+    2.2,
+    3.0
    ]
   }
  ]

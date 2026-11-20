@@ -208,7 +208,7 @@ def side_surface(y, side, out=0.003, center_y=0.47, a=0.19, b=0.25, angle_deg=90
     return T(x + math.sin(ang) * out, y, z + math.cos(ang) * out) @ R(math.degrees(ang), Y)
 
 
-def tag_texture(number="3", name="Théo"):
+def tag_texture(number="3", name="Theo"):
     """Étiquette en carton épinglée sur la poitrine (numéro de l'enfant, cf. lore)."""
     w, h = 256, 176
     img = Image.new("RGBA", (w, h), (236, 228, 210, 255))
@@ -216,7 +216,7 @@ def tag_texture(number="3", name="Théo"):
     d.rectangle([5, 5, w - 6, h - 6], outline=(150, 70, 70, 255), width=5)
     font_big = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 78)
     font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 30)
-    d.text((w / 2, 74), "n°" + number, fill=(60, 45, 55, 255), font=font_big, anchor="mm")
+    d.text((w / 2, 74), "No." + number, fill=(60, 45, 55, 255), font=font_big, anchor="mm")
     d.text((w / 2, 140), name, fill=(110, 80, 90, 255), font=font_small, anchor="mm")
     # carton taché et un coin corné
     rng = np.random.default_rng(5)

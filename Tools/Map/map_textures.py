@@ -184,9 +184,9 @@ def chalkboard():
     for k in range(9):
         y = 22 + k * 32
         x = 20 + rng.uniform(-4, 4)
-        text = "Je ne crierai plus. Je ne crierai plus."
+        text = "I will not scream again. I will not scream again."
         if k >= 7:
-            text = "Je ne crierai plus. Je ne cr"     # l'écriture s'arrête net...
+            text = "I will not scream again. I will not scr"     # l'écriture s'arrête net...
         d.text((x, y), text, fill=(222, 222, 210), font=font)
     d.rectangle([0, 0, w - 1, h - 1], outline=(120, 96, 70), width=12)
     return img
@@ -205,8 +205,8 @@ def sign(lines, bg=(236, 226, 206), fg=(90, 60, 70), w=512, h=192, font_size=44,
 
 def happy_sign_covered():
     """Ancien panneau joyeux de l'hôtel, avec le panneau de l'institut cloué de travers par-dessus."""
-    old = sign(["Ici les enfants rient !"], bg=(250, 214, 220), fg=(200, 110, 140), font_size=40)
-    new = sign(["Ici, on se tait."], bg=(222, 222, 216), fg=(40, 36, 44), w=380, h=120, font_size=40, border=(80, 80, 86))
+    old = sign(["Children laugh here!"], bg=(250, 214, 220), fg=(200, 110, 140), font_size=40)
+    new = sign(["Here, we keep quiet."], bg=(222, 222, 216), fg=(40, 36, 44), w=380, h=120, font_size=40, border=(80, 80, 86))
     new = new.rotate(-6, expand=True, fillcolor=(0, 0, 0))
     mask = new.convert("L").point(lambda v: 255 if v > 8 else 0)
     old.paste(new, (70, 40), mask)
@@ -249,28 +249,28 @@ def growth_chart():
         if k % 2 == 0:
             d.text((34, y - 8), "%d" % (k * 10), fill=(110, 90, 80), font=ImageFont.truetype(FONT_SANS, 12))
     rng = np.random.default_rng(16)
-    names = ["Théo", "Lucie", "Nour", "Inès", "Malo", "Bastien"]
+    names = ["Theo", "Lucie", "Nour", "Ines", "Malo", "Bastien"]
     font = ImageFont.truetype(FONT_OBL, 12)
     for i, n in enumerate(names):
         y = int(h - 20 - rng.uniform(9, 14) * 28)
         d.line([(60, y), (124, y)], fill=(160, 70, 80), width=2)
-        d.text((62, y - 15), n + " 11/85", fill=(160, 70, 80), font=font)
+        d.text((62, y - 15), n + " Nov 85", fill=(160, 70, 80), font=font)
     return img
 
 
 def pump_plate():
-    return sign(["POMPE N°2", "Remplissage spécial", "12/11/1985"], bg=(170, 160, 140), fg=(50, 40, 36),
+    return sign(["PUMP No.2", "Special filling", "Nov 12, 1985"], bg=(170, 160, 140), fg=(50, 40, 36),
                 w=320, h=200, font_size=28, border=(90, 80, 70))
 
 
 def pool_sign():
-    return sign(["INTERDIT DE CRIER", "PRÈS DU BASSIN"], bg=(220, 236, 230), fg=(150, 60, 70), font_size=40)
+    return sign(["NO SCREAMING", "NEAR THE POOL"], bg=(220, 236, 230), fg=(150, 60, 70), font_size=40)
 
 
 def socket_labels():
     """Étiquettes du Standard : un micro par pièce."""
-    rooms = ["Dortoir", "Piscine", "Chambre 3", "Chambre 7", "Réfectoire", "Infirmerie",
-             "Buanderie", "Couloir", "Hall", "Salle de classe", "Chambre 12", "Chambre 23"]
+    rooms = ["Dormitory", "Pool", "Room 3", "Room 7", "Dining Hall", "Infirmary",
+             "Laundry", "Hallway", "Lobby", "Classroom", "Playroom", "Room 23"]
     w, h = 1024, 96
     img = Image.new("RGB", (w, h), (196, 186, 160))
     d = ImageDraw.Draw(img)
@@ -280,4 +280,7 @@ def socket_labels():
         x, y = (i % 6) * cw, (i // 6) * 48
         d.rectangle([x + 4, y + 6, x + cw - 4, y + 42], outline=(90, 80, 60), width=2)
         d.text((x + cw / 2, y + 24), r, fill=(50, 40, 30), font=font, anchor="mm")
+        if r == "Playroom":   # la seule pièce sans micro (la zone sûre)
+            d.line([(x + 10, y + 24), (x + cw - 10, y + 24)], fill=(170, 40, 50), width=3)
+            d.text((x + cw / 2, y + 38), "DISCONNECTED", fill=(170, 40, 50), font=ImageFont.truetype(FONT_SANS, 11), anchor="mm")
     return img

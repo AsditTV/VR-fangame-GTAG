@@ -27,6 +27,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "Character"))
 import map_textures as mt  # noqa: E402
 import textures as tx  # noqa: E402
+import build_cosmetics as cos  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 OUT_GLB = os.path.join(ROOT, "Assets/Horror/Art/Map/Institut_Maquette.glb")
@@ -75,6 +76,7 @@ def make_materials():
     M["tissu_rose"] = (pbr(*mt.fabric_colored("#D9A9B2", seed=11)), 0.4)
     M["tissu_menthe"] = (pbr(*mt.fabric_colored("#A9CDBD", seed=12)), 0.4)
     M["lino_sombre"] = (pbr(*mt.checker("#3E4440", "#56574F", tiles=6, seed=13)), 1.4)
+    M["mur_creme"] = (pbr(*mt.wallpaper("#F1DCCB", "#F7EBDD", "#E6B9A6", seed=5, kind="etoile")), 1.4)
     M["plafond"] = (pbr(color=hexc("#D9D1CC"), rough=1.0), None)
     M["peinture_blanche"] = (pbr(color=hexc("#E9E4DA"), rough=0.6), None)
     M["bois_peint_rose"] = (pbr(color=hexc("#D6A3AE"), rough=0.7), None)
@@ -224,7 +226,7 @@ def build():
     # ============================ HALL (départ) ============================
     Z = "Hall"
     B.room(Z, -7, 7, -6, 6, 0, 7, "mur_lilas", "sol_damier",
-           openings=[("E", -1.2, 1.2, 3), ("N", -1.2, 1.2, 3), ("O", -1.2, 1.2, 3)])
+           openings=[("E", -1.2, 1.2, 3), ("E", 3.2, 4.8, 2.6), ("N", -1.2, 1.2, 3), ("O", -1.2, 1.2, 3)])
     labels.append({"nom": "Hall", "pos": [0, 3.5, 0]})
     # grandes portes d'entrée condamnées (chaîne)
     B.box(Z, "bois_sombre", -1.6, 1.6, 0, 3.6, -5.9, -5.8)
@@ -483,7 +485,52 @@ def build():
     mark("L'échelle dans l'encre", "Au grand bain, une échelle descend dans l'encre... et continue. Vers l'Envers ?",
          (7.6, -3.6, -21.3), (5.0, -1.5, -19.0))
 
-    data = {"spawn": [0, 0, -2], "lumieres": lights, "zones": labels, "lore": lore}
+    # ============================ SALLE DE JEUX (zone sûre + boutique) ============================
+    Z = "SalleDeJeux"
+    B.room(Z, 7, 15, 2.5, 10, 0, 3.4, "mur_creme", "parquet", openings=[("O", 3.2, 4.8, 2.6)])
+    labels.append({"nom": "Salle de jeux (zone sûre)", "pos": [11, 2.6, 6.2]})
+    B.cyl(Z, "tissu_menthe", [11, 0, 5.2], [11, 0.02, 5.2], 2.2, 32)                 # grand tapis rond
+    B.cyl(Z, "tissu_rose", [11, 0.02, 5.2], [11, 0.03, 5.2], 0.8, 24)                # point de réapparition
+    B.quad(Z, "Panneau_Playroom", mt.sign(["PLAYROOM"], bg=(247, 235, 221), fg=(190, 120, 120), font_size=56),
+           (11, 2.7, 2.67), 2.2, 0.8, (0, 0, 1))
+    B.quad(Z, "Panneau_Shop", mt.sign(["SHOP"], bg=(232, 244, 238), fg=(90, 140, 120), font_size=60, w=384),
+           (11, 2.55, 9.83), 1.6, 0.8, (0, 0, -1))
+    B.quad(Z, "Panneau_Pieces", mt.sign(["COINS: 50"], bg=(60, 50, 70), fg=(240, 210, 130), font_size=52, w=448, border=(120, 100, 70)),
+           (14.83, 1.7, 6.0), 1.4, 0.6, (-1, 0, 0))
+    for i, (cid, name, price, slot) in enumerate(cos.CATALOG):   # présentoirs avec les vrais cosmétiques
+        x = 8.6 + i * 1.2
+        B.cyl(Z, "bois_peint_bleu", [x, 0, 9.0], [x, 0.9, 9.0], 0.32, 18)
+        B.cyl(Z, "peinture_blanche", [x, 0.9, 9.0], [x, 0.95, 9.0], 0.36, 18)
+        y_top = 0.95
+        lift = 0.0
+        if slot == "Cou":     # l'écharpe est présentée sur un petit support, comme un cou
+            lift = 0.46
+            B.cyl(Z, "bois_sombre", [x, y_top, 9.0], [x, y_top + lift, 9.0], 0.05, 10)
+        elif slot == "Poitrine":
+            lift = 0.02
+        for k, part in enumerate(cos.BUILDERS[cid]()):
+            part = part.copy()
+            part.apply_scale(2.2)
+            part.apply_translation([x, y_top + lift, 9.0])
+            B.unique.append((Z, "Cosmetique_%s_%d" % (cid, k), part))
+        B.quad(Z, "Prix_%s" % cid, mt.sign([name, "%d coins" % price], bg=(247, 240, 228), fg=(90, 70, 80), font_size=34, w=384),
+               (x, 0.6, 8.66), 0.5, 0.25, (0, 0, -1))
+        B.boxc(Z, "lum_rose", (x, 0.45, 8.67), (0.12, 0.12, 0.04))                  # bouton "acheter"
+    for k, (x, z, c) in enumerate(((8.2, 3.4, "tissu_rose"), (8.6, 3.3, "tissu_menthe"), (8.4, 3.75, "bois_peint_bleu"),
+                                    (13.6, 3.6, "bois_peint_rose"), (13.9, 3.3, "tissu_creme"))):   # cubes de jouets
+        B.boxc(Z, c, (x, 0.15 + (0.3 if k == 2 else 0), z), (0.3, 0.3, 0.3))
+    B.box(Z, "bois_sombre", 7.3, 7.9, 0, 0.6, 7.6, 8.4)                                  # tabouret + boîte à musique
+    B.boxc(Z, "laiton", (7.6, 0.7, 8.0), (0.3, 0.2, 0.2))
+    light((11, 2.8, 5.5), "#ffd9b0", 2.6, 9)          # la seule lumière chaude et franche du jeu
+    light((7.8, 1.0, 8.0), "#ffe2b8", 0.8, 3)
+    mark("La Salle de jeux (zone sûre)",
+         "La seule pièce sans micro : elle ne t'entend pas ici et n'y entre jamais. On y apparaît, on y revient après s'être fait attraper. La boutique de cosmétiques est contre le mur.",
+         (11, 1.0, 9.0), (10.2, 1.9, 4.6))
+    mark("Le micro débranché",
+         "Au Standard, l'étiquette « Playroom » est barrée : DISCONNECTED. C'est pour ça que la Salle de jeux est sûre.",
+         (-19.5, 2.3, 2.1), (-16.5, 2.2, 3.0))
+
+    data = {"spawn": [11, 0, 5.2], "spawn_yaw": 1.5708, "lumieres": lights, "zones": labels, "lore": lore}
     return B.scene(), data
 
 
