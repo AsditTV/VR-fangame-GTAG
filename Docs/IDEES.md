@@ -11,6 +11,7 @@ les 23 enfants. Rien n'est copié (ni nom, ni personnage, ni asset).
 | **Faire la poupée** (cachettes) | Sur un lit du dortoir, tes bruits portent 3x moins loin (`HideZone`) | Elle est aveugle : immobile parmi les poupées, tu es une poupée de plus |
 | **Coupures de courant** | Toutes les 2,5 à 5 min, les lumières grésillent puis s'éteignent 6 à 11 s ; elle entend mieux dans le noir ; le retour du courant fait un « clac » qu'elle entend (`BlackoutDirector`) | Vieux bâtiment, Standard abandonné ; pas de lampe torche |
 | **Traînées d'encre** | Flaques humides le long de sa ronde | Sa robe trempée d'encre goutte : le décor raconte où elle passe |
+| **La Laverie + Le Drap** | Derrière la porte 23 : salle inondée, monstre qui SENT LE SOL ; on traverse par les machines et les fils à linge ; chaque monstre a son territoire (`Territory`) | Odette la lingère ; l'eau dissout l'encre de Céleste ; le lore se lit dans le décor (chemises, machine 23, panneaux) |
 
 ## Prochaines idées (par ordre d'intérêt / effort)
 1. **Le jeu du chat-encre (multijoueur, Photon)** : un joueur attrapé par L'Écoute ne quitte pas la

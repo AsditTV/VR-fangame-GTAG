@@ -97,3 +97,15 @@ Détails, prix et calculs : `Docs/ECONOMIE.md`.
 5. **Modèles** : nouveaux Dessiné (moufles), Écoute (griffes, épingles, vertèbres), Doux, cosmétiques.
 6. **Sans casque** : `Assets/Horror/Scripts/Tests/PlaytestBot.cs` (ajouté au Joueur en Play) bouge
    tête et mains pour tester la logique (ramer, taper, appuyer sur un bouton, regarder).
+
+## La Laverie et Le Drap (nouveau monstre, menu 8)
+Au bout du couloir des chambres, la **porte 23** est maintenant ouverte : passage de service, puis
+la Laverie inondée.
+1. Monte sur le rebord d'entrée, puis traverse par les machines, la table, les tuyaux le long des
+   murs et les fils à linge (on peut s'y suspendre). Ne touche pas l'eau.
+2. Touche le carrelage (main dans l'eau, ou descends) : une bosse glisse sous l'eau vers toi puis
+   Le Drap surgit -> jumpscare -> retour Salle de jeux. Debout sur une machine : il ne sent rien.
+3. Lance une balle au fond de l'eau : il y va. Parle fort : il s'en moque.
+4. Fais un bruit énorme dans la Laverie avec L'Écoute pas loin dans le couloir : elle n'entend rien
+   et ne passe pas la porte 23 (territoire du Drap).
+5. Lis les panneaux, les 23 chemises, la machine n°23.

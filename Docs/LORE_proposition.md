@@ -198,3 +198,27 @@ n'a plus peur.
 
 Conseil de production : construire d'abord **3 zones complètes** (Hall, École, Salle des
 machines) avec leurs sons, puis ajouter les autres une par une.
+
+---
+
+## Ajout : la Laverie et Le Drap (Odette, la lingère)
+
+**Qui.** Odette, la lingère de l'Institut, l'une des 9 employés disparus. Chaque nuit, elle faisait
+bouillir les draps des 23 enfants pour en retirer l'encre du Programme Visage (les masques « bavent »
+sur les oreillers). Sa manie : un sol parfaitement sec. Elle punissait les petites traces de pas
+mouillées sur son carrelage.
+
+**La Nuit Longue.** Quand Céleste a coupé le courant et lancé le Protocole Verrou, Odette a ouvert
+toutes les vannes de la Laverie : l'eau dissout l'encre, Céleste ne pouvait donc pas y entrer. Elle y a
+caché le 23e enfant, dans la machine n°23 (d'où la « porte 23 » au bout du couloir : il n'y avait que
+22 chambres à l'hôtel). Puis elle s'est enroulée dans un drap pour ne plus être vue, et ne l'a plus quitté.
+
+**En jeu.** Le Drap vit sous l'eau savonneuse. Il ne voit rien et n'entend pas les voix : il SENT le
+sol. Une main sur le carrelage, un joueur debout dans l'eau, un objet qui tombe au fond, et il glisse
+jusque-là sous l'eau puis surgit. On traverse par les machines, la table, les tuyaux, les fils à linge.
+On peut y parler (il s'en moque) : c'est l'inverse exact de L'Écoute. Elle n'y entre pas ; il n'en sort pas.
+
+**Ce que la Laverie raconte sans aucun journal.** Le panneau « KEEP MY FLOOR DRY. — Odette » ; l'avertissement
+d'un enfant à l'entrée (« STAY ON THE MACHINES / DON'T TOUCH THE WATER / SHE FEELS IT ») ; 23 petites
+chemises sur un fil, numérotées de 1 à 22, la 23e noire d'encre et sans numéro ; la machine n°23 ouverte,
+pleine d'encre, sous une lampe rouge ; et, au marqueur à linge : « I hid the 23rd one where she never listens. »

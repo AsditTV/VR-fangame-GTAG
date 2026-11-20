@@ -110,6 +110,8 @@ namespace Horror.Monsters
         {
             // La Salle de jeux n'a pas de micro : elle n'entend rien de ce qui s'y passe.
             if (SafeZone.Contains(e.position)) return;
+            // Le territoire d'un autre monstre (la Laverie du Drap) : elle n'y entend rien, elle n'y va pas.
+            if (Territory.IsForeign(e.position, "Ecoute")) return;
 
             Vector3 ears = head != null ? head.position : transform.position + Vector3.up * 2f;
             var boosted = e;
@@ -346,7 +348,7 @@ namespace Horror.Monsters
 
             foreach (ArmLocomotion player in ArmLocomotion.All)
             {
-                if (player == null || SafeZone.Contains(player.HeadPosition)) continue;
+                if (player == null || SafeZone.Contains(player.HeadPosition) || Territory.IsForeign(player.HeadPosition, "Ecoute")) continue;
                 if (Vector3.Distance(reach, player.HeadPosition) > catchDistance) continue;
 
                 _catchCooldown = 3f;

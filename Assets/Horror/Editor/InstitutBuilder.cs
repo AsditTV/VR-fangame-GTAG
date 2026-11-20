@@ -101,6 +101,7 @@ namespace Horror.EditorTools
             SetupChildDoors(data);
             SetupJournal(playroom, docs);
             WaypointGraph graph = SetupNav(data);
+            SetupLaverie(map);
             SetupInkTrails(graph, playroom);
             SetupBlackout();
             SetupMonster(data, graph);
@@ -318,6 +319,234 @@ namespace Horror.EditorTools
                     hz.size = new Vector3(1.84f, 0.9f, 0.84f) * s_w;
                     hz.muffle = 0.35f;
                 }
+        }
+
+        // ------------------------------------------------------------------ la Laverie (derrière la porte 23) et Le Drap
+
+        /// <summary>
+        /// La Laverie, derrière la porte 23 au bout du couloir des chambres (« il n'y avait que 22 chambres »).
+        /// Salle carrelée inondée d'eau savonneuse : le territoire du Drap (Odette, la lingère), qui sent le sol.
+        /// On la traverse par les machines, la table, les tuyaux et les fils à linge. L'Écoute n'y entre pas
+        /// (l'eau dissout l'encre). Coordonnées en unités de la maquette (comme build_institut.py), x WORLD_SCALE.
+        /// </summary>
+        private static void SetupLaverie(GameObject map)
+        {
+            var root = new GameObject("Laverie (porte 23)");
+            Material tile = MakeMat("Laverie_Carrelage", new Color(0.78f, 0.84f, 0.82f));
+            Material wall = MakeMat("Laverie_Mur", new Color(0.62f, 0.70f, 0.70f));
+            Material metal = MakeMat("Laverie_Machine", new Color(0.86f, 0.86f, 0.80f));
+            Material glass = MakeMat("Laverie_Hublot", new Color(0.10f, 0.12f, 0.14f));
+            Material wood = MakeMat("Laverie_Bois", new Color(0.55f, 0.42f, 0.36f));
+            Material pipe = MakeMat("Laverie_Tuyau", new Color(0.50f, 0.58f, 0.55f));
+            Material sheet = MakeMat("Laverie_Drap", new Color(0.88f, 0.90f, 0.93f));
+            Material ink = MakeMat("Encre_Sol", new Color(0.012f, 0.008f, 0.016f));
+            Material water = MakeMat("Laverie_Eau", new Color(0.55f, 0.63f, 0.66f));
+            if (water.HasProperty("_Smoothness")) water.SetFloat("_Smoothness", 0.93f);
+            Color[] pastel = { new Color(0.88f, 0.70f, 0.75f), new Color(0.70f, 0.84f, 0.77f), new Color(0.78f, 0.71f, 0.86f),
+                               new Color(0.91f, 0.84f, 0.63f), new Color(0.70f, 0.77f, 0.88f) };
+
+            GameObject Box(string name, Material m, float x0, float x1, float y0, float y1, float z0, float z1, bool solid = true)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                go.name = name;
+                go.transform.SetParent(root.transform, false);
+                go.transform.position = P(new Vector3((x0 + x1) * 0.5f, (y0 + y1) * 0.5f, (z0 + z1) * 0.5f));
+                go.transform.localScale = new Vector3(Mathf.Abs(x1 - x0), Mathf.Abs(y1 - y0), Mathf.Abs(z1 - z0)) * s_w;
+                go.GetComponent<Renderer>().sharedMaterial = m;
+                if (!solid) Object.DestroyImmediate(go.GetComponent<Collider>());
+                go.isStatic = true;
+                return go;
+            }
+            GameObject Bar(string name, Material m, Vector3 a, Vector3 b, float r, bool solid = true)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                go.name = name;
+                go.transform.SetParent(root.transform, false);
+                Vector3 wa = P(a), wb = P(b);
+                go.transform.position = (wa + wb) * 0.5f;
+                go.transform.up = (wb - wa).normalized;
+                go.transform.localScale = new Vector3(r * 2f * s_w, (wb - wa).magnitude * 0.5f, r * 2f * s_w);
+                go.GetComponent<Renderer>().sharedMaterial = m;
+                if (!solid) Object.DestroyImmediate(go.GetComponent<Collider>());
+                go.isStatic = true;
+                return go;
+            }
+            void Sign(string text, Vector3 pos, Vector3 faceDir, float size, Color c)
+            {
+                GameObject l = SafeZoneShopBuilder.Label(root.transform, text, Vector3.zero, size * 2.2f, c);   // lisible de loin en VR
+                l.transform.position = P(pos);
+                l.transform.rotation = Quaternion.LookRotation(-Flat(Dir(faceDir)));
+            }
+
+            // 1) on ouvre la porte 23 : le bloc noir qui bouchait l'ouverture est découpé (collision comprise)
+            Vector3 c0 = P(new Vector3(30.85f, 0f, -0.55f)), c1 = P(new Vector3(31.25f, 2.2f, 0.55f));
+            Bounds blocker = new Bounds((c0 + c1) * 0.5f, new Vector3(Mathf.Abs(c1.x - c0.x), Mathf.Abs(c1.y - c0.y), Mathf.Abs(c1.z - c0.z)));
+            foreach (MeshFilter mf in map.GetComponentsInChildren<MeshFilter>(true))
+                if (mf.gameObject.name.Contains("noir_cable")) CutOutBox(mf, blocker);
+
+            // 2) le passage de service, avec une marche vers le rebord d'entrée
+            Box("Laverie_Passage_carrelage", tile, 31.0f, 34.3f, -0.1f, 0f, -0.75f, 0.75f);
+            Box("Laverie_Passage_mur_N", wall, 31.0f, 34.3f, 0f, 2.4f, 0.75f, 0.85f);
+            Box("Laverie_Passage_mur_S", wall, 31.0f, 34.3f, 0f, 2.4f, -0.85f, -0.75f);
+            Box("Laverie_Passage_plafond", wall, 31.0f, 34.3f, 2.4f, 2.5f, -0.85f, 0.85f);
+            Box("Laverie_Marche_carrelage", tile, 33.6f, 34.3f, 0f, 0.4f, -0.7f, 0.7f);
+            Sign("23\nLAUNDRY", new Vector3(30.95f, 2.0f, 0f), new Vector3(-1f, 0f, 0f), 0.016f, new Color(0.9f, 0.9f, 0.95f));
+
+            // 3) la salle : sol carrelé (le sol du Drap), murs, plafond, eau savonneuse (sans collision)
+            const float X0 = 34.3f, X1 = 47f, Z0 = -7f, Z1 = 7f, H = 5.5f;
+            Box("Laverie_Sol_carrelage", tile, X0, X1, -0.1f, 0f, Z0, Z1);
+            Box("Laverie_Mur_E", wall, X1, X1 + 0.15f, 0f, H, Z0, Z1);
+            Box("Laverie_Mur_N", wall, X0, X1, 0f, H, Z1, Z1 + 0.15f);
+            Box("Laverie_Mur_S", wall, X0, X1, 0f, H, Z0 - 0.15f, Z0);
+            Box("Laverie_Mur_O_haut", wall, X0 - 0.15f, X0, 2.4f, H, -0.85f, 0.85f);
+            Box("Laverie_Mur_O_n", wall, X0 - 0.15f, X0, 0f, H, 0.85f, Z1);
+            Box("Laverie_Mur_O_s", wall, X0 - 0.15f, X0, 0f, H, Z0, -0.85f);
+            Box("Laverie_Plafond", wall, X0, X1, H, H + 0.15f, Z0, Z1);
+            Box("Laverie_Eau", water, X0, X1, 0f, 0.25f, Z0, Z1, solid: false);
+            Box("Laverie_Rebord_entree_carrelage", tile, X0, X0 + 1.2f, 0f, 0.8f, -1.6f, 1.6f);
+
+            // 4) les machines : deux îlots + une rangée contre chaque grand mur ; quelques sèche-linge empilés
+            int n = 0;
+            for (int row = 0; row < 4; row++)
+            {
+                float z = row == 0 ? -6.45f : row == 1 ? -3.2f : row == 2 ? 3.2f : 6.45f;
+                for (int k = 0; k < 8; k++)
+                {
+                    float x = 36.0f + k * 1.25f + (row % 2) * 0.35f;
+                    if (x > 45.5f) continue;
+                    n++;
+                    Box("Laverie_Machine_" + n + "_metal", metal, x - 0.42f, x + 0.42f, 0f, 0.95f, z - 0.4f, z + 0.4f);
+                    float face = (row < 2) ? 1f : -1f;
+                    Bar("Laverie_Hublot_" + n, glass, new Vector3(x, 0.5f, z + face * 0.39f), new Vector3(x, 0.5f, z + face * 0.43f), 0.24f, solid: false);
+                    if ((k + row) % 3 == 1)
+                        Box("Laverie_SecheLinge_" + n + "_metal", metal, x - 0.4f, x + 0.4f, 0.95f, 1.85f, z - 0.38f, z + 0.38f);
+                }
+            }
+            // la table à plier, au milieu (pieds dans l'eau)
+            Box("Laverie_Table_bois", wood, 37.4f, 43.6f, 0.82f, 0.9f, -0.55f, 0.55f);
+            foreach (float tx in new[] { 37.6f, 40.5f, 43.4f })
+                foreach (float tz in new[] { -0.45f, 0.45f })
+                    Box("Laverie_Pied_metal", pipe, tx - 0.04f, tx + 0.04f, 0f, 0.82f, tz - 0.04f, tz + 0.04f);
+
+            // 5) prises en hauteur : tuyaux le long des murs, fils à linge en travers (on s'y suspend)
+            foreach (float z in new[] { Z0 + 0.25f, Z1 - 0.25f })
+            {
+                Bar("Laverie_Tuyau_bas_metal", pipe, new Vector3(X0 + 0.3f, 2.0f, z), new Vector3(X1 - 0.3f, 2.0f, z), 0.08f);
+                Bar("Laverie_Tuyau_haut_metal", pipe, new Vector3(X0 + 0.3f, 3.3f, z), new Vector3(X1 - 0.3f, 3.3f, z), 0.06f);
+            }
+            int sheetCount = 0;
+            foreach (float x in new[] { 37.2f, 39.4f, 41.6f, 43.8f })
+            {
+                Bar("Laverie_Fil_a_linge", pipe, new Vector3(x, 2.75f, Z0 + 0.2f), new Vector3(x, 2.75f, Z1 - 0.2f), 0.025f);
+                for (float z = Z0 + 1.5f; z < Z1 - 1.5f; z += 2.6f)
+                {
+                    if (++sheetCount % 3 == 0) continue;
+                    Box("Laverie_Drap_pendu", sheet, x - 0.01f, x + 0.01f, 1.55f, 2.72f, z - 0.55f, z + 0.55f, solid: false);   // on passe à travers
+                }
+            }
+
+            // 6) le fond : étagère, rebord, machine 23 ouverte, et les 23 petites chemises sur un fil
+            Box("Laverie_Rebord_fond_carrelage", tile, X1 - 1.4f, X1, 0f, 0.9f, -1.8f, 1.8f);
+            foreach (float y in new[] { 1.7f, 2.5f })
+                Box("Laverie_Etagere_bois", wood, X1 - 0.45f, X1, y, y + 0.06f, -3.2f, 3.2f);
+            Box("Laverie_Machine_23_metal", metal, X1 - 1.25f, X1 - 0.4f, 0.9f, 1.85f, -0.42f, 0.42f);
+            Box("Laverie_Machine_23_encre", ink, X1 - 1.27f, X1 - 1.24f, 1.05f, 1.6f, -0.25f, 0.25f, solid: false);
+            Sign("No.23\nDO NOT OPEN", new Vector3(X1 - 1.3f, 1.75f, 0f), new Vector3(-1f, 0f, 0f), 0.009f, new Color(0.2f, 0.18f, 0.22f));
+            Bar("Laverie_Fil_chemises", pipe, new Vector3(X1 - 0.7f, 3.0f, -6.5f), new Vector3(X1 - 0.7f, 3.0f, 6.5f), 0.02f, solid: false);
+            for (int i = 0; i < 23; i++)
+            {
+                float z = -6.0f + i * (12.0f / 22f);
+                Material m = i == 22 ? ink : MakeMat("Laverie_Chemise_" + (i % pastel.Length), pastel[i % pastel.Length]);
+                Box("Laverie_Chemise_" + (i + 1), m, X1 - 0.72f, X1 - 0.68f, 2.55f, 2.95f, z - 0.17f, z + 0.17f, solid: false);
+                if (i < 22) Sign((i + 1).ToString(), new Vector3(X1 - 0.75f, 2.75f, z), new Vector3(-1f, 0f, 0f), 0.006f, new Color(0.25f, 0.2f, 0.28f));
+            }
+
+            // 7) ce que les murs racontent (en anglais, comme le reste du jeu)
+            Sign("STAFF ONLY.\nKEEP MY FLOOR DRY.\n- Odette", new Vector3(X0 + 0.05f, 3.0f, -2.6f), new Vector3(1f, 0f, 0f), 0.014f, new Color(0.25f, 0.28f, 0.3f));
+            Sign("STAY ON THE MACHINES\nDON'T TOUCH THE WATER\nSHE FEELS IT", new Vector3(X0 + 0.05f, 1.6f, 2.4f), new Vector3(1f, 0f, 0f), 0.011f, new Color(0.95f, 0.95f, 0.9f));
+            Sign("THE OTHER ONE CAN'T COME IN.\nTHE WATER WASHES HER INK OFF.", new Vector3(X1 - 0.05f, 3.8f, 0f), new Vector3(-1f, 0f, 0f), 0.014f, new Color(0.95f, 0.95f, 0.9f));
+            Sign("I hid the 23rd one\nwhere she never listens.", new Vector3(X1 - 0.05f, 1.2f, -2.4f), new Vector3(-1f, 0f, 0f), 0.009f, new Color(0.2f, 0.25f, 0.45f));
+
+            // 8) lumières : néons verdâtres qui grésillent, et une lampe rouge au-dessus de la machine 23
+            foreach (Vector3 lp in new[] { new Vector3(37.5f, 4.6f, 0f), new Vector3(41f, 4.6f, -4f), new Vector3(41f, 4.6f, 4f), new Vector3(44.5f, 4.6f, 0f) })
+            {
+                var lg = new GameObject("Néon de la Laverie");
+                lg.transform.SetParent(root.transform, false);
+                lg.transform.position = P(lp);
+                Light li = lg.AddComponent<Light>();
+                li.type = LightType.Point; li.color = new Color(0.78f, 0.92f, 0.86f); li.intensity = 0.9f; li.range = 6.5f * s_w;
+                lg.AddComponent<LightFlicker>();
+            }
+            var red = new GameObject("Lampe de secours (machine 23)");
+            red.transform.SetParent(root.transform, false);
+            red.transform.position = P(new Vector3(X1 - 1.0f, 2.6f, 0f));
+            Light rl = red.AddComponent<Light>();
+            rl.type = LightType.Point; rl.color = new Color(1f, 0.3f, 0.25f); rl.intensity = 0.7f; rl.range = 3.5f * s_w;
+
+            // 9) l'ambiance sonore : l'eau qui goutte
+            var amb = new GameObject("Clapotis");
+            amb.transform.SetParent(root.transform, false);
+            amb.transform.position = P(new Vector3(40.5f, 0.5f, 0f));
+            AudioSource src = amb.AddComponent<AudioSource>();
+            src.clip = Load<AudioClip>(Audio + "Ambience/drip_02.wav"); src.loop = true; src.spatialBlend = 1f; src.maxDistance = 18f; src.volume = 0.5f; src.playOnAwake = true;
+
+            // 10) territoire du Drap (la salle + le passage) : L'Écoute ignore tout ce qui s'y passe
+            Vector3 ta = P(new Vector3(31.15f, -0.5f, Z0)), tb = P(new Vector3(X1, H, Z1));
+            var terr = new GameObject("Territoire du Drap");
+            terr.transform.SetParent(root.transform, false);
+            terr.transform.position = (ta + tb) * 0.5f;
+            Territory t = terr.AddComponent<Territory>();
+            t.owner = "Drap";
+            t.size = new Vector3(Mathf.Abs(tb.x - ta.x), Mathf.Abs(tb.y - ta.y), Mathf.Abs(tb.z - ta.z));
+
+            // 11) Le Drap
+            var proto = Load<GameObject>("Assets/Horror/Art/Monsters/LeDrap.glb");
+            if (proto != null)
+            {
+                var drap = (GameObject)PrefabUtility.InstantiatePrefab(proto);
+                drap.name = "Le Drap (Odette)";
+                drap.transform.SetParent(root.transform, false);
+                drap.transform.position = P(new Vector3(40.5f, 0f, 0f));
+                drap.transform.localScale = Vector3.one * 1.15f;
+                SheetMonsterAI ai = drap.AddComponent<SheetMonsterAI>();
+                Vector3 za = P(new Vector3(X0 + 0.6f, 0f, Z0 + 0.5f)), zb = P(new Vector3(X1 - 0.6f, 4f, Z1 - 0.5f));
+                ai.zone = new Bounds((za + zb) * 0.5f, new Vector3(Mathf.Abs(zb.x - za.x), 8f, Mathf.Abs(zb.z - za.z)));
+                ai.floorY = P(Vector3.zero).y;
+                ai.face = FindChild(drap.transform, "Tete");
+                ai.sloshLoop = Load<AudioClip>(Audio + "World/drap_eau_loop.wav");
+                ai.riseSound = Load<AudioClip>(Audio + "World/drap_surgit.wav");
+            }
+        }
+
+        /// <summary>Retire d'un maillage de la maquette les triangles dont le centre est dans la boîte (et de sa collision).</summary>
+        private static void CutOutBox(MeshFilter mf, Bounds box)
+        {
+            Mesh src = mf.sharedMesh;
+            if (src == null) return;
+            Vector3[] v = src.vertices;
+            Mesh dst = Object.Instantiate(src);
+            dst.name = src.name + "_porte23";
+            bool changed = false;
+            for (int s = 0; s < src.subMeshCount; s++)
+            {
+                int[] tris = src.GetTriangles(s);
+                var keep = new List<int>(tris.Length);
+                for (int i = 0; i < tris.Length; i += 3)
+                {
+                    Vector3 c = mf.transform.TransformPoint((v[tris[i]] + v[tris[i + 1]] + v[tris[i + 2]]) / 3f);
+                    if (box.Contains(c)) { changed = true; continue; }
+                    keep.Add(tris[i]); keep.Add(tris[i + 1]); keep.Add(tris[i + 2]);
+                }
+                dst.SetTriangles(keep, s);
+            }
+            if (!changed) { Object.DestroyImmediate(dst); return; }
+            EnsureFolder("Assets/Horror/Art/Map/Genere");
+            string path = "Assets/Horror/Art/Map/Genere/" + dst.name + ".asset";
+            if (Load<Mesh>(path) != null) AssetDatabase.DeleteAsset(path);
+            AssetDatabase.CreateAsset(dst, path);
+            mf.sharedMesh = dst;
+            MeshCollider col = mf.GetComponent<MeshCollider>();
+            if (col != null) col.sharedMesh = dst;
         }
 
         // ------------------------------------------------------------------ traces et coupures
