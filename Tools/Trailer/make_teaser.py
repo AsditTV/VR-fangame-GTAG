@@ -154,71 +154,74 @@ def load(rel):
 
 
 def audio():
+    """Bruitages synchronisés sur l'image (cri = flash, grésillements = images déchirées, tac = textes,
+    coupures nettes), et une musique flippante mais TRÈS faible, qui change aux mêmes moments que l'image."""
     L = T_END + 0.5
     tr = []
     mono = lambda: np.zeros(int(C.SR * L))
-    # tension : drone + coeur + souffle
-    d = mono()
-    dr = C.drone(T_CUT)
-    dr *= np.linspace(0.3, 1.0, len(dr))
-    C.place(d, dr, 0.0, 0.5)
-    hb = load("Jumpscare/heartbeat_loop.wav")
-    C.place(d, hb[:int(C.SR * 2.6)] * np.linspace(1, 0.4, int(C.SR * 2.6)), 0.0, 0.7)
-    C.place(d, load("Player/breath_loop.wav")[:int(C.SR * 1.6)], T_A, 0.35)
-    tr.append((d, 0.0))
-    # le cri
-    s = mono()
-    C.place(s, C.boom(2.5, 50), T_SCREAM, 1.0)
-    scream = C.child_scream(1.9)
-    C.place(s, scream, T_SCREAM, 0.9)
-    r = np.random.default_rng(11)
-    t = T_B
-    while t < T_CUT - 0.1:                         # bégaiements du cri dans le glitch
-        g = int(C.SR * r.uniform(0.05, 0.12))
-        st = int(C.SR * r.uniform(0.2, 1.4))
-        grain_ = scream[st:st + g]
-        for k in range(r.integers(1, 4)):
-            C.place(s, grain_ * np.hanning(len(grain_)), t + k * len(grain_) / C.SR, 0.5)
-        t += r.uniform(0.15, 0.4)
-    stc = C.static(T_CUT - T_B)
-    stc *= np.linspace(0.2, 1.0, len(stc))
-    C.place(s, stc, T_B, 0.25)
-    C.place(s, C.riser(T_CUT - T_B - 0.2), T_B + 0.2, 0.5)
-    tr.append((s, 0.0))
-    # murmures du lore (gauche / droite)
-    for k, line in enumerate(LORE):
-        w = C.ms.whisper(line)
-        m = mono()
-        C.place(m, w, T_B + 0.15 + k * 0.52, 0.8)
-        tr.append((m, -0.6 if k % 2 == 0 else 0.6))
-    # la coupure : TOUT s'arrête à T_CUT
-    for sig, _ in tr:
-        sig[int(C.SR * T_CUT):] = 0
-    # le coucou : boîte à musique désaccordée, le masque qui tombe
-    mb = mono()
-    notes = [67, 72, 76, 74, 72, 67, 69, 72, 71, 67, 64, 67]
-    C.place(mb, C.music_box(notes[:8], beat=0.45, detune=0.5, wow=0.004), T_C + 0.2, 0.7)
-    C.place(mb, C.music_box(notes[8:], beat=0.5, slow=1.45, detune=1.6, wow=0.01), T_C + 0.2 + 8 * 0.45, 0.55)
-    C.place(mb, load("Papers/paper_rustle.wav"), T_C + 2.4, 0.8)
-    C.place(mb, C.ms.tap(0, hard=True), T_C + 2.4 + 0.85, 0.9)
-    C.place(mb, load("Ambience/child_giggle_far.wav"), T_C + 3.4, 0.5)
-    mb[int(C.SR * T_CEND):] = 0
-    tr.append((mb, 0.1))
-    # logo
-    lg = mono()
-    C.place(lg, C.boom(3.0, 42), T_CEND, 0.9)
-    C.place(lg, C.ms.whisper("shhh"), T_CEND + 0.1, 0.7)
-    pad = C.drone(T_END - T_D + 0.5) * 0.35
+    MU = C.MUSIC
+    # --- musique (très faible) : drone + verre frotté jusqu'à la coupure, boîte à musique pendant le coucou
+    mu = mono()
+    dr = C.drone(T_CUT - T_A)
+    dr *= np.minimum(1, np.linspace(0, 3, len(dr))) * np.linspace(0.6, 1.0, len(dr))
+    C.place(mu, dr, T_A, MU * 1.3)
+    notes = [67, 72, 76, 74, 72, 67, 69, 72]
+    C.place(mu, C.music_box(notes[:5], beat=0.42, detune=0.4, wow=0.004), T_C + 0.5, MU * 0.9)    # dès que la lampe est allumée
+    C.place(mu, C.music_box([69, 67, 64, 61], beat=0.3, slow=1.5, detune=2.5, wow=0.02), T_C + 2.4, MU * 0.8)  # le masque tombe : elle se dérègle
+    mu[int(C.SR * (T_C + 3.25)):int(C.SR * T_D)] = 0          # le masque touche le sol : la musique s'arrête net
+    pad = C.drone(T_END - T_D + 0.5)
     pad *= np.minimum(1, np.linspace(0, 4, len(pad)))
-    C.place(lg, pad, T_D, 0.6)
-    for k in range(9):                             # crayon qui gratte pendant que le titre se dessine
+    C.place(mu, pad, T_D, MU * 0.8)
+    mu[int(C.SR * T_CUT):int(C.SR * T_C)] = 0                 # coupure : silence total
+    tr.append((mu, 0.0))
+    # --- bruitages
+    fx = mono()
+    hb = load("Jumpscare/heartbeat_loop.wav")
+    C.place(fx, hb[:int(C.SR * (T_SCREAM - 0.2))] * np.linspace(0.2, 0.55, int(C.SR * (T_SCREAM - 0.2))), 0.2, 1.0)
+    C.place(fx, load("Player/breath_loop.wav")[:int(C.SR * 1.5)], T_A + 0.1, 0.22)
+    C.place(fx, C.boom(2.5, 50), T_SCREAM, 1.0)                # cri = flash à l'image
+    scream = C.child_scream(1.9)
+    C.place(fx, scream, T_SCREAM, 0.85)
+    # grésillements image par image (même logique que le glitch du montage)
+    tp = []
+    for f in range(int(T_B * 30), int(T_CUT * 30)):
+        t = f / 30
+        p = 0.25 + 0.75 * ((t - T_B) / (T_CUT - T_B)) ** 1.5
+        tp.append((t, (p if f % 3 else p * 0.4) * 0.35))
+    C.place(fx, C.glitch_audio(tp)[int(C.SR * T_B):], T_B, 1.0)
+    r = np.random.default_rng(11)
+    for f in range(int(T_B * 30), int(T_CUT * 30), 4):        # le cri bégaie sur les images déchirées
+        if r.random() < 0.5:
+            st = int(C.SR * r.uniform(0.2, 1.4))
+            g = scream[st:st + int(C.SR / 15)]
+            C.place(fx, g * np.hanning(len(g)), f / 30, 0.45)
+    for k, line in enumerate(LORE):                           # un « tac » + un murmure pour chaque phrase affichée
+        ts = T_B + 0.25 + k * 0.52
+        C.place(fx, C.tick(), ts, 0.5)
+        tr.append((np.pad(C.ms.whisper(line), (int(C.SR * ts), 0))[:len(fx)] * 0.55, -0.6 if k % 2 == 0 else 0.6))
+    C.place(fx, C.riser(T_CUT - T_B - 0.3), T_B + 0.3, 0.3)
+    fx[int(C.SR * T_CUT):int(C.SR * T_C)] = 0                 # coupure : silence total
+    for i in range(3):                                        # la lampe grésille en s'allumant (calé sur l'image)
+        C.place(fx, C.tick() * 0.6, T_C + i * 0.15, 0.4)
+    C.place(fx, load("Papers/paper_rustle.wav"), T_C + 2.4, 0.55)         # le masque se détache
+    C.place(fx, C.ms.tap(0, hard=True), T_C + 3.25, 0.8)                 # ...et touche le sol
+    C.place(fx, load("Ambience/child_giggle_far.wav"), T_C + 3.5, 0.35)
+    fx[int(C.SR * T_CEND):int(C.SR * T_D)] = 0
+    C.place(fx, C.boom(3.0, 42), T_CEND, 0.9)                 # noir
+    C.place(fx, C.ms.whisper("shhh"), T_CEND + 0.1, 0.5)
+    for k in range(9):                                        # le crayon gratte pendant que le titre se dessine
         g = C.ms.bandpass(C.ms.noise(0.09), 2500, 7000) * np.hanning(int(C.SR * 0.09))
-        C.place(lg, g, T_D + 0.3 + k * 0.09, 0.35)
-    C.place(lg, C.music_box([79], beat=0.5), T_D + 1.4, 0.6)
-    C.place(lg, C.boom(2.5, 60), T_D + 2.2, 0.9)
-    C.place(lg, C.music_box([60, 63, 66], beat=0.02), T_D + 2.2, 0.6)  # accord dissonant
-    C.place(lg, C.ms.whisper("calm faces"), T_D + 2.6, 0.6)
-    tr.append((lg, 0.0))
+        C.place(fx, g, T_D + 0.3 + k * 0.09, 0.25)
+    C.place(fx, C.tick(), T_D + 1.4, 0.3)                     # « Don't make a sound. »
+    C.place(fx, C.boom(2.5, 60), T_D + 2.2, 0.7)              # COMING SOON
+    C.place(fx, C.music_box([60, 63, 66], beat=0.02), T_D + 2.2, 0.25)
+    C.place(fx, C.ms.whisper("calm faces"), T_D + 2.6, 0.4)
+    tr.append((fx, 0.0))
+    for sig, _ in tr:                                         # coupures franches : rien ne déborde (même pas l'écho)
+        for a, b in ((T_CUT, T_C), (T_CEND, T_D)):
+            sig[int(C.SR * a):int(C.SR * b)] = 0
+    for sig, _ in tr[1:-1]:                                   # les murmures s'arrêtent net à la coupure
+        sig[int(C.SR * T_CUT):] = 0
     st = C.mixdown(tr, L)
     fade = np.ones(len(st))
     fade[-int(C.SR * 0.6):] = np.linspace(1, 0, int(C.SR * 0.6))

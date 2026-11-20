@@ -194,6 +194,27 @@ def riser(dur=3.0):
     return x
 
 
+def tick():
+    """Petit « tac » sec, pour marquer une coupe ou l'apparition d'un texte."""
+    t = ms.t_axis(0.12)
+    return (ms.highpass(ms.noise(0.12), 2000) * np.exp(-t * 90) + np.sin(2 * np.pi * 1800 * t) * np.exp(-t * 60) * 0.3)
+
+
+def glitch_audio(times_powers, fps=30):
+    """Grésillements calés image par image sur le glitch : une rafale de bruit par image déchirée."""
+    end = max(t for t, _ in times_powers) + 0.2
+    x = np.zeros(int(SR * end))
+    r = np.random.default_rng(9)
+    n = int(SR / fps)
+    for t, pw in times_powers:
+        if pw <= 0:
+            continue
+        burst = ms.bandpass(r.uniform(-1, 1, n), 800 + 3000 * r.random(), 9000) * pw
+        burst *= (r.random(n) > 0.4)                         # crépitement numérique
+        place(x, burst * np.hanning(n) ** 0.2, t)
+    return x
+
+
 def static(dur):
     return ms.highpass(ms.noise(dur), 1500) * (0.5 + 0.5 * (np.random.default_rng(3).random(int(SR * dur)) > 0.7))
 
@@ -239,8 +260,12 @@ def whisper_line(text, pan):
     return w, pan
 
 
+MUSIC = 0.11   # la musique reste TRÈS faible (environ -19 dB sous les bruitages) : on la sent plus qu'on ne l'entend
+
+
 def mixdown(tracks, length):
-    """tracks : liste de (signal mono, pan -1..1). Renvoie stéréo normalisé."""
+    """tracks : liste de (signal mono, pan -1..1). Renvoie stéréo normalisé sur le bruitage le plus fort
+    (pas d'écrasement : les passages calmes restent calmes, la musique reste au fond)."""
     L = np.zeros(int(SR * length))
     R = np.zeros(int(SR * length))
     for sig, pan in tracks:
@@ -248,8 +273,7 @@ def mixdown(tracks, length):
         L[:n] += sig[:n] * math.sqrt((1 - pan) / 2)
         R[:n] += sig[:n] * math.sqrt((1 + pan) / 2)
     st = np.stack([L, R], 1)
-    st = np.tanh(st / (np.max(np.abs(st)) + 1e-9) * 1.4) * 0.9   # léger écrêtage doux
-    return st
+    return st / (np.max(np.abs(st)) + 1e-9) * 0.89
 
 
 def write_wav(path, st):

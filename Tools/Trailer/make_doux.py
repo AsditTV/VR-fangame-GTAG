@@ -122,52 +122,60 @@ def kid(text):
 
 
 def audio():
+    """Musique TRÈS faible (boîte à musique + drone) qui s'arrête aux mêmes moments que l'image ;
+    bruitages calés sur les coupes (chaque « red light » = un tac, chaque noir = le costume qui avance)."""
     L = T_END + 0.5
     mono = lambda: np.zeros(int(C.SR * L))
+    MU = C.MUSIC
     tr = []
-    # comptine à la boîte à musique, de plus en plus désaccordée ; elle s'arrête avant la fin
-    mb = mono()
-    C.place(mb, C.music_box([76, 74, 72, 74, 76, 76, 76], beat=0.42, detune=0.3, wow=0.004), 0.3, 0.55)
-    C.place(mb, C.music_box([74, 74, 74, 76, 79, 79], beat=0.42, detune=1.2, wow=0.01, slow=1.12), 3.1, 0.5)
-    mb[int(C.SR * 6.9):] = 0
-    tr.append((mb, 0.15))
-    d = mono()
+    mu = mono()
+    C.place(mu, C.music_box([76, 74, 72, 74, 76, 76, 76], beat=0.42, detune=0.3, wow=0.004), PLANS[0][0], MU * 0.9)
+    C.place(mu, C.music_box([74, 74, 74, 76, 79, 79], beat=0.42, detune=1.2, wow=0.01, slow=1.12), PLANS[1][0], MU * 0.8)
+    for t0, t1 in ((2.4, 3.0), (4.6, 5.1)):                   # la musique se coupe pendant les noirs
+        mu[int(C.SR * t0):int(C.SR * t1)] *= 0.15
+    mu[int(C.SR * PLANS[2][1]):] = 0                          # plus de musique quand il passe le rideau
     dr = C.drone(T_LOGO)
-    dr *= np.linspace(0.25, 1.0, len(dr))
-    C.place(d, dr, 0.0, 0.45)
-    hb = load("Jumpscare/heartbeat_loop.wav")
-    C.place(d, hb[:int(C.SR * 3.2)], 5.0, 0.8)
-    C.place(d, load("Player/breath_loop.wav")[:int(C.SR * 1.3)], 6.9, 0.5)
-    d[int(C.SR * 8.0):int(C.SR * 8.2)] = 0
-    tr.append((d, 0.0))
-    v = mono()
-    for t0, text in ((0.6, "red light"), (2.45, "green light"), (3.1, "red light"), (4.65, "green light"), (5.2, "red light")):
-        C.place(v, kid(text), t0, 0.9)
-    g = kid("green")
-    C.place(v, g[:int(C.SR * 0.35)], 6.55, 0.9)                # coupé net
-    tr.append((v, -0.1))
-    sh = mono()
-    shuffle = load("World/softie_shuffle.wav")
-    for t0, t1 in ((2.4, 3.0), (4.6, 5.1), (6.5, 6.9)):          # pendant le noir : le costume avance
-        seg = shuffle[:int(C.SR * (t1 - t0))]
-        C.place(sh, seg * np.hanning(len(seg)) ** 0.3, t0, 1.0)
-    C.place(sh, load("World/softie_settle.wav"), 4.62, 0.6)
-    tr.append((sh, 0.3))
-    j = mono()
-    C.place(j, load("Jumpscare/jumpscare_sting.wav"), 8.2, 1.0)
-    C.place(j, C.child_scream(1.0), 8.25, 0.6)
-    C.place(j, C.static(1.0), 8.2, 0.4)
-    C.place(j, C.boom(3.0, 45), 9.2, 0.9)
-    pad = C.drone(T_END - T_LOGO + 0.5) * 0.35
+    dr *= np.linspace(0.3, 1.0, len(dr))
+    C.place(mu, dr, 0.0, MU * 1.2)
+    mu[int(C.SR * PLANS[3][1]):int(C.SR * T_LOGO)] = 0        # silence juste avant le jumpscare
+    pad = C.drone(T_END - T_LOGO + 0.5)
     pad *= np.minimum(1, np.linspace(0, 4, len(pad)))
-    C.place(j, pad, T_LOGO, 0.6)
+    C.place(mu, pad, T_LOGO, MU * 0.8)
+    tr.append((mu, 0.1))
+    fx = mono()
+    for t0, _, name in PLANS[:4]:                             # chaque image figée arrive avec un « tac »
+        C.place(fx, C.tick(), t0, 0.45)
+    shuffle = load("World/softie_shuffle.wav")
+    for t0, t1 in ((2.4, 3.0), (4.6, 5.1), (6.5, 6.9)):       # pendant le noir : le costume avance
+        seg = shuffle[:int(C.SR * (t1 - t0))]
+        C.place(fx, seg * np.hanning(len(seg)) ** 0.3, t0, 0.7)
+    C.place(fx, load("World/softie_settle.wav"), PLANS[1][0] + 0.05, 0.4)
+    hb = load("Jumpscare/heartbeat_loop.wav")
+    C.place(fx, hb[:int(C.SR * (PLANS[3][1] - PLANS[2][0]))], PLANS[2][0], 0.55)
+    C.place(fx, load("Player/breath_loop.wav")[:int(C.SR * 1.1)], PLANS[3][0], 0.3)
+    fx[int(C.SR * PLANS[3][1]):int(C.SR * PLANS[4][0])] = 0
+    C.place(fx, load("Jumpscare/jumpscare_sting.wav"), PLANS[4][0], 1.0)   # jumpscare pile sur l'image
+    C.place(fx, C.child_scream(1.0), PLANS[4][0] + 0.03, 0.5)
+    tp = [(f / 30, 0.25 + 0.3 * (f / 30 - PLANS[4][0])) for f in range(int(PLANS[4][0] * 30), int(PLANS[4][1] * 30))]
+    C.place(fx, C.glitch_audio(tp)[int(C.SR * PLANS[4][0]):], PLANS[4][0], 1.0)
+    fx[int(C.SR * PLANS[4][1]):int(C.SR * T_LOGO)] = 0
+    C.place(fx, C.boom(3.0, 45), PLANS[4][1], 0.85)
     for k in range(8):
         gr = C.ms.bandpass(C.ms.noise(0.09), 2500, 7000) * np.hanning(int(C.SR * 0.09))
-        C.place(j, gr, T_LOGO + 0.2 + k * 0.09, 0.35)
-    C.place(j, C.boom(2.5, 60), T_LOGO + 2.0, 0.8)
-    C.place(j, C.music_box([60, 63, 66], beat=0.02), T_LOGO + 2.0, 0.6)
-    C.place(j, kid("don't look away"), T_LOGO + 1.2, 0.6)
-    tr.append((j, 0.0))
+        C.place(fx, gr, T_LOGO + 0.2 + k * 0.09, 0.25)
+    C.place(fx, C.boom(2.5, 60), T_LOGO + 2.0, 0.6)
+    C.place(fx, C.music_box([60, 63, 66], beat=0.02), T_LOGO + 2.0, 0.25)
+    tr.append((fx, 0.3))
+    v = mono()
+    for t0, text in ((0.6, "red light"), (2.45, "green light"), (3.1, "red light"), (4.65, "green light"), (5.2, "red light")):
+        C.place(v, kid(text), t0, 0.6)
+    g = kid("green")
+    C.place(v, g[:int(C.SR * 0.35)], 6.55, 0.6)               # coupé net
+    C.place(v, kid("don't look away"), T_LOGO + 1.2, 0.45)
+    tr.append((v, -0.1))
+    for sig, _ in tr:                                         # silence franc juste avant le jumpscare et avant le logo
+        for a, b in ((PLANS[3][1], PLANS[4][0]), (PLANS[4][1] + 0.05, PLANS[4][1] + 0.05)):
+            sig[int(C.SR * a):int(C.SR * b)] = 0
     st = C.mixdown(tr, L)
     fade = np.ones(len(st))
     fade[-int(C.SR * 0.6):] = np.linspace(1, 0, int(C.SR * 0.6))
