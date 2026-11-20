@@ -49,3 +49,8 @@ ambiances par pièce, Salle de jeux (départ, zone sûre, boutique, journal), 9 
 | Le monstre traverse les murs | Il se déplace de point en point : vérifie la console, et envoie une capture de la vue Scène |
 | Glisser donne mal au cœur | Décoche `LeanSlide` sur l'objet "Joueur" |
 | Trop facile / trop dur | Sur L'Écoute : `hearingMultiplier` (ouïe), `chaseSpeed` (vitesse) |
+
+## Boîte de crayons (100 toutes les 7 h) et bonus du lore
+Après le menu 5 ou 8 : la boîte jaune de la Salle de jeux donne 100 crayons, puis affiche
+`NEXT IN hh:mm:ss`. Pour retester : **Horror > Tests > Remettre la boîte de crayons à zéro**.
+Détails, prix et calculs : `Docs/ECONOMIE.md`.

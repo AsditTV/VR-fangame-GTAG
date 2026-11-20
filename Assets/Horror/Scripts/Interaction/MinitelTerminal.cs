@@ -112,7 +112,7 @@ namespace Horror.Interaction
         {
             if (screen == null) return;
             var sb = new System.Text.StringBuilder();
-            sb.Append("MARIVAUX TELEMATIQUE\n--------------------\n");
+            sb.Append("MARIVAUX TELEMATIQUE\n").Append(GameNames.Game).Append("\n--------------------\n");
             switch (_page)
             {
                 case Page.Menu:

@@ -590,7 +590,7 @@ def build():
            (11, 2.7, 2.67), 2.2, 0.8, (0, 0, 1))
     B.quad(Z, "Panneau_Shop", mt.sign(["SHOP"], bg=(232, 244, 238), fg=(90, 140, 120), font_size=60, w=384),
            (11, 2.55, 9.83), 1.6, 0.8, (0, 0, -1))
-    B.quad(Z, "Panneau_Pieces", mt.sign(["COINS: 50"], bg=(60, 50, 70), fg=(240, 210, 130), font_size=52, w=448, border=(120, 100, 70)),
+    B.quad(Z, "Panneau_Pieces", mt.sign(["CRAYONS: 100"], bg=(60, 50, 70), fg=(240, 210, 130), font_size=52, w=448, border=(120, 100, 70)),
            (14.83, 1.7, 6.0), 1.4, 0.6, (-1, 0, 0))
     for i, (cid, name, price, slot) in enumerate(cos.CATALOG):   # présentoirs avec les vrais cosmétiques
         x = 8.6 + i * 1.2
@@ -608,12 +608,26 @@ def build():
             part.apply_scale(2.2)
             part.apply_translation([x, y_top + lift, 9.0])
             B.unique.append((Z, "Cosmetique_%s_%d" % (cid, k), part))
-        B.quad(Z, "Prix_%s" % cid, mt.sign([name, "%d coins" % price], bg=(247, 240, 228), fg=(90, 70, 80), font_size=34, w=384),
+        B.quad(Z, "Prix_%s" % cid, mt.sign([name, "%d crayons" % price], bg=(247, 240, 228), fg=(90, 70, 80), font_size=34, w=384),
                (x, 0.6, 8.66), 0.5, 0.25, (0, 0, -1))
         B.boxc(Z, "lum_rose", (x, 0.45, 8.67), (0.12, 0.12, 0.04))                  # bouton "acheter"
     for k, (x, z, c) in enumerate(((8.2, 3.4, "tissu_rose"), (8.6, 3.3, "tissu_menthe"), (8.4, 3.75, "bois_peint_bleu"),
                                     (13.6, 3.6, "bois_peint_rose"), (13.9, 3.3, "tissu_creme"))):   # cubes de jouets
         B.boxc(Z, c, (x, 0.15 + (0.3 if k == 2 else 0), z), (0.3, 0.3, 0.3))
+    # Boîte de crayons géante (récompense : 100 crayons toutes les 7 h), contre le mur est
+    B.boxc(Z, "jaune_bouee", (14.45, 0.4, 7.9), (0.7, 0.8, 1.0),
+           rot=trimesh.transformations.rotation_matrix(math.radians(4), [0, 1, 0]))       # carton un peu de travers
+    B.boxc(Z, "bois_peint_rose", (14.1, 0.7, 7.9), (0.04, 0.1, 0.9))                 # bande rose sur la face
+    for k, (dz, h, tilt, c) in enumerate(((-0.36, 0.42, -9, "lum_rose"), (-0.18, 0.55, 4, "tissu_menthe"),
+                                          (0.0, 0.36, -3, "bois_peint_bleu"), (0.17, 0.6, 7, "jaune_bouee"),
+                                          (0.34, 0.47, -6, "bois_peint_rose"))):          # crayons qui dépassent
+        z = 7.9 + dz
+        top = (14.45 + 0.02 * k, 0.8 + h, z + tilt * 0.004)
+        B.cyl(Z, c, [14.45, 0.7, z], list(top), 0.055, 7)                               # 7 pans : crayon de cire
+        B.cyl(Z, c, list(top), [top[0], top[1] + 0.09, top[2]], 0.02, 7)                 # pointe usée
+    B.quad(Z, "Panneau_Crayons", mt.sign(["FREE CRAYONS", "+100 / 7H"], bg=(250, 238, 200), fg=(150, 100, 60), font_size=36, w=384),
+           (14.08, 0.42, 7.9), 0.6, 0.3, (-1, 0, 0))
+    B.boxc(Z, "lum_rose", (14.08, 0.15, 7.9), (0.04, 0.12, 0.12))                    # bouton "récolter"
     B.box(Z, "bois_sombre", 7.3, 7.9, 0, 0.6, 7.6, 8.4)                                  # tabouret + boîte à musique
     B.boxc(Z, "laiton", (7.6, 0.7, 8.0), (0.3, 0.2, 0.2))
     light((11, 2.8, 5.5), "#ffd9b0", 2.6, 9)          # la seule lumière chaude et franche du jeu
@@ -624,6 +638,9 @@ def build():
     mark("Le micro débranché",
          "Au Standard, l'étiquette « Playroom » est barrée : DISCONNECTED. C'est pour ça que la Salle de jeux est sûre.",
          (-19.5, 2.3, 2.1), (-16.5, 2.2, 3.0))
+    mark("La boîte de crayons",
+         "Toutes les 7 heures, on appuie sur le bouton rose : +100 crayons gratuits. Au-dessus, un compte à rebours dit quand revenir.",
+         (14.4, 0.8, 7.9), (11.6, 1.6, 7.4))
 
     # ============================ PAPIERS DE LORE + DESSINS D'ENFANTS ============================
     papers_dir = os.path.join(ROOT, "Assets/Horror/Art/Papers")

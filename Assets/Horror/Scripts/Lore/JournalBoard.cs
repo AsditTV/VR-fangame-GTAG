@@ -19,9 +19,32 @@ namespace Horror.Lore
         private TextMesh _text;
 
         private void Awake() => _text = GetComponent<TextMesh>();
-        private void OnEnable() { LoreJournal.Discovered += OnFound; Refresh(); }
-        private void OnDisable() => LoreJournal.Discovered -= OnFound;
-        private void OnFound(LoreDocument _) => Refresh();
+        private void OnEnable()
+        {
+            LoreJournal.Discovered += OnFound;
+            LoreJournal.MilestoneReached += OnMilestone;
+            LoreJournal.CheckMilestones(documents);   // rattrape un palier atteint lors d'une ancienne partie
+            Refresh();
+        }
+
+        private void OnDisable()
+        {
+            LoreJournal.Discovered -= OnFound;
+            LoreJournal.MilestoneReached -= OnMilestone;
+        }
+        private string _banner = "";
+
+        private void OnFound(LoreDocument _)
+        {
+            LoreJournal.CheckMilestones(documents);
+            Refresh();
+        }
+
+        private void OnMilestone(string label, int bonus)
+        {
+            _banner = label + "  +" + GameNames.Amount(bonus) + "\n";
+            Refresh();
+        }
 
         private void Refresh()
         {
@@ -43,7 +66,7 @@ namespace Horror.Lore
             }
             string header = "PAPERS FOUND " + found + " / " + total;
             if (secrets > 0) header += "   SECRETS " + secrets;
-            _text.text = header + "\n\n" + sb;
+            _text.text = _banner + header + "\n\n" + sb;
         }
     }
 }

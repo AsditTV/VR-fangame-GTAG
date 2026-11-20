@@ -108,7 +108,7 @@ namespace Horror.EditorTools
                     doc.title = p.title;
                     doc.order = p.order;
                     doc.isSecret = p.secret;
-                    doc.coinReward = p.secret ? 60 : 25;
+                    doc.coinReward = p.secret ? 150 : 25;   // voir Docs/ECONOMIE.md
                     doc.front = AssetDatabase.LoadAssetAtPath<Texture2D>(PapersFolder + p.id + ".jpg");
                     if (p.back) doc.back = AssetDatabase.LoadAssetAtPath<Texture2D>(PapersFolder + p.id + "_back.jpg");
                     float ratio = p.size != null && p.size.Length == 2 ? p.size[1] / (float)p.size[0] : 1.414f;

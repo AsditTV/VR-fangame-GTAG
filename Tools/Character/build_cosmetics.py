@@ -24,11 +24,11 @@ OUT = os.path.join(ROOT, "Assets/Horror/Art/Cosmetics")
 
 # id, nom anglais, prix, emplacement (pour le menu Unity et la maquette)
 CATALOG = [
-    ("paper_crown", "Paper Crown", 150, "Tete"),
-    ("party_hat", "Party Hat", 100, "Tete"),
-    ("ribbon_bow", "Ribbon Bow", 80, "Tete"),
-    ("yarn_scarf", "Yarn Scarf", 120, "Cou"),
-    ("moon_badge", "Moon Badge", 60, "Poitrine"),
+    ("paper_crown", "Paper Crown", 5000, "Tete"),   # objet de prestige (voir Docs/ECONOMIE.md)
+    ("party_hat", "Party Hat", 1000, "Tete"),
+    ("ribbon_bow", "Ribbon Bow", 600, "Tete"),
+    ("yarn_scarf", "Yarn Scarf", 1500, "Cou"),
+    ("moon_badge", "Moon Badge", 300, "Poitrine"),
 ]
 
 

@@ -31,12 +31,21 @@ namespace Horror.EditorTools
         // id, nom (anglais), prix, emplacement
         private static readonly (string id, string name, int price, CosmeticSlot slot)[] Catalog =
         {
-            ("paper_crown", "Paper Crown", 150, CosmeticSlot.Tete),
-            ("party_hat", "Party Hat", 100, CosmeticSlot.Tete),
-            ("ribbon_bow", "Ribbon Bow", 80, CosmeticSlot.Tete),
-            ("yarn_scarf", "Yarn Scarf", 120, CosmeticSlot.Cou),
-            ("moon_badge", "Moon Badge", 60, CosmeticSlot.Poitrine),
+            // Prix : voir Docs/ECONOMIE.md (la couronne est l'objet de prestige)
+            ("paper_crown", "Paper Crown", 5000, CosmeticSlot.Tete),
+            ("party_hat", "Party Hat", 1000, CosmeticSlot.Tete),
+            ("ribbon_bow", "Ribbon Bow", 600, CosmeticSlot.Tete),
+            ("yarn_scarf", "Yarn Scarf", 1500, CosmeticSlot.Cou),
+            ("moon_badge", "Moon Badge", 300, CosmeticSlot.Poitrine),
         };
+
+        [MenuItem("Horror/Tests/Remettre la boîte de crayons à zéro (récolte dispo)")]
+        private static void ResetCrayonBox()
+        {
+            PlayerPrefs.DeleteKey("horror.reward.last");
+            PlayerPrefs.Save();
+            Debug.Log("[Horror] Boîte de crayons : la récolte est de nouveau disponible.");
+        }
 
         [MenuItem("Horror/5 - Ajouter la Salle de jeux (zone sûre + boutique + sons)")]
         public static void Build()
@@ -96,7 +105,7 @@ namespace Horror.EditorTools
             Label(root.transform, "PLAYROOM\nsafe zone", new Vector3(0f, 2.6f, -1.95f), 0.06f, new Color(0.95f, 0.9f, 0.82f));
             Label(root.transform, "no microphone in this room", new Vector3(0f, 2.15f, -1.95f), 0.03f, new Color(0.75f, 0.7f, 0.8f));
 
-            GameObject coins = Label(root.transform, "COINS: 50", new Vector3(3.6f, 1.6f, -1.95f), 0.05f, new Color(0.95f, 0.85f, 0.5f));
+            GameObject coins = Label(root.transform, GameNames.Currency + ": 100", new Vector3(3.6f, 1.6f, -1.95f), 0.05f, new Color(0.95f, 0.85f, 0.5f));
             coins.AddComponent<CoinDisplay>();
 
             // Présentoirs de la boutique le long du mur
@@ -117,7 +126,7 @@ namespace Horror.EditorTools
                 anchor.transform.localPosition = new Vector3(0f, 0.85f, 0f);
                 anchor.transform.localScale = Vector3.one * 2f;   // aperçu agrandi pour bien le voir
 
-                GameObject label = Label(stand.transform, items[i].displayName.ToUpper() + "\n" + items[i].price + " coins",
+                GameObject label = Label(stand.transform, items[i].displayName.ToUpper() + "\n" + GameNames.Amount(items[i].price),
                                          new Vector3(0f, 1.45f, 0f), 0.025f, new Color(0.95f, 0.92f, 0.86f));
 
                 GameObject btn = Primitive(PrimitiveType.Cube, stand.transform, "Bouton (appuyer)", new Vector3(0f, 0.62f, 0.3f),
@@ -133,6 +142,56 @@ namespace Horror.EditorTools
                 shop.buySound = coin;
                 shop.deniedSound = denied;
             }
+
+            // Boîte de crayons (100 crayons toutes les 7 h) contre le mur droit, face au centre
+            GameObject box = BuildCrayonBox(root.transform, true);
+            box.transform.localPosition = new Vector3(4.1f, 0f, 0.4f);
+            box.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
+        }
+
+        /// <summary>
+        /// Station "FREE CRAYONS" : bouton + panneau avec compte à rebours (CrayonBoxReward).
+        /// Repère local : le joueur se tient du côté +Z. withVisual = false quand le visuel est déjà
+        /// dans la maquette (Institut) : seuls le bouton (invisible) et le texte sont créés.
+        /// </summary>
+        internal static GameObject BuildCrayonBox(Transform parent, bool withVisual)
+        {
+            var root = new GameObject("Boîte de crayons (100 toutes les 7 h)");
+            root.transform.SetParent(parent, false);
+
+            if (withVisual)
+            {
+                // Carton jaune un peu de travers + crayons de couleur qui dépassent (pas de cube parfait)
+                GameObject carton = Primitive(PrimitiveType.Cube, root.transform, "Carton", new Vector3(0f, 0.4f, 0f),
+                                              new Vector3(0.9f, 0.8f, 0.6f), new Color(0.91f, 0.81f, 0.42f));
+                carton.transform.localRotation = Quaternion.Euler(0f, 4f, 1.5f);
+                Color[] cols = { new Color(0.95f, 0.72f, 0.78f), new Color(0.62f, 0.8f, 0.72f), new Color(0.6f, 0.72f, 0.88f),
+                                 new Color(0.95f, 0.85f, 0.5f), new Color(0.85f, 0.62f, 0.72f) };
+                for (int k = 0; k < cols.Length; k++)
+                {
+                    float h = 0.35f + 0.06f * ((k * 7) % 4);
+                    GameObject c = Primitive(PrimitiveType.Cylinder, root.transform, "Crayon " + (k + 1),
+                                             new Vector3(-0.34f + k * 0.17f, 0.8f + h * 0.5f, -0.05f),
+                                             new Vector3(0.1f, h * 0.5f, 0.1f), cols[k]);
+                    c.transform.localRotation = Quaternion.Euler(0f, 0f, (k % 2 == 0 ? -1f : 1f) * (3f + k * 1.5f));
+                    Object.DestroyImmediate(c.GetComponent<Collider>());
+                }
+            }
+
+            GameObject btn = Primitive(PrimitiveType.Cube, root.transform, "Bouton récolter", new Vector3(0f, 0.15f, 0.33f),
+                                       new Vector3(0.14f, 0.14f, 0.06f), new Color(0.95f, 0.6f, 0.7f));
+            if (!withVisual) btn.GetComponent<Renderer>().enabled = false;   // le bouton visible est dans la maquette
+            PressButton press = btn.AddComponent<PressButton>();
+            press.clickSound = Load<AudioClip>(Audio + "UI/button_click.wav");
+
+            GameObject label = Label(root.transform, "FREE " + GameNames.Currency, new Vector3(0f, 1.75f, 0.1f), 0.02f,
+                                     new Color(0.98f, 0.9f, 0.62f));
+            CrayonBoxReward reward = root.AddComponent<CrayonBoxReward>();
+            reward.button = press;
+            reward.label = label.GetComponent<TextMesh>();
+            reward.claimSound = Load<AudioClip>(Audio + "UI/coin.wav");
+            reward.deniedSound = Load<AudioClip>(Audio + "UI/denied.wav");
+            return root;
         }
 
         // ------------------------------------------------------------------ joueur

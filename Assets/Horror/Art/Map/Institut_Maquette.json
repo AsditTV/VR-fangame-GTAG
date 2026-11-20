@@ -495,6 +495,20 @@
    ]
   },
   {
+   "titre": "La boîte de crayons",
+   "texte": "Toutes les 7 heures, on appuie sur le bouton rose : +100 crayons gratuits. Au-dessus, un compte à rebours dit quand revenir.",
+   "pos": [
+    14.4,
+    0.8,
+    7.9
+   ],
+   "cam": [
+    11.6,
+    1.6,
+    7.4
+   ]
+  },
+  {
    "titre": "Les dessins aux murs",
    "texte": "Des dessins d'enfants punaisés au dortoir : « the lady who listens », « my 23 friends » (un visage n'a pas de bouche), « dont go in the pool »...",
    "pos": [

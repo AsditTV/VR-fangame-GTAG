@@ -24,7 +24,7 @@ namespace Horror.Cosmetics
 
         private static HashSet<string> s_owned;
 
-        public static int Coins => PlayerPrefs.GetInt(CoinsKey, 50); // 50 pièces offertes au départ
+        public static int Coins => PlayerPrefs.GetInt(CoinsKey, 100); // 100 crayons offerts au départ
 
         public static void AddCoins(int amount)
         {

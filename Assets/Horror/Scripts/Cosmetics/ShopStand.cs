@@ -65,7 +65,7 @@ namespace Horror.Cosmetics
             {
                 bool ok = PlayerWallet.TryBuy(item);
                 Play(ok ? buySound : deniedSound);
-                if (!ok) Flash("NOT ENOUGH COINS");
+                if (!ok) Flash("NOT ENOUGH " + GameNames.Currency);
                 return;
             }
             PlayerWallet.ToggleEquip(item);
@@ -90,7 +90,7 @@ namespace Horror.Cosmetics
             if (Time.time < _flashUntil) label.text = name + "\n" + _flashText;
             else if (PlayerWallet.IsEquipped(item)) label.text = name + "\nWEARING - press to remove";
             else if (PlayerWallet.Owns(item)) label.text = name + "\nOWNED - press to wear";
-            else label.text = name + "\n" + item.price + " coins";
+            else label.text = name + "\n" + GameNames.Amount(item.price);
         }
 
         private void Play(AudioClip clip)

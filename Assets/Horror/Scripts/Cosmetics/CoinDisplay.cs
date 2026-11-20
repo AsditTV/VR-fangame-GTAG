@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Horror.Cosmetics
 {
-    /// <summary>Affiche les pièces du joueur sur un panneau (texte en anglais) : "COINS: 120".</summary>
+    /// <summary>Affiche la monnaie du joueur sur un panneau (texte en anglais) : "CRAYONS: 120".</summary>
     [RequireComponent(typeof(TextMesh))]
     public class CoinDisplay : MonoBehaviour
     {
@@ -11,6 +11,6 @@ namespace Horror.Cosmetics
         private void Awake() => _text = GetComponent<TextMesh>();
         private void OnEnable() { PlayerWallet.Changed += Refresh; Refresh(); }
         private void OnDisable() => PlayerWallet.Changed -= Refresh;
-        private void Refresh() => _text.text = "COINS: " + PlayerWallet.Coins;
+        private void Refresh() => _text.text = GameNames.Currency + ": " + PlayerWallet.Coins;
     }
 }

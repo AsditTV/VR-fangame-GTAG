@@ -238,7 +238,7 @@ namespace Horror.EditorTools
                 stand.transform.SetParent(root.transform, false);
                 stand.transform.position = pedestal;
 
-                GameObject label = SafeZoneShopBuilder.Label(stand.transform, items[i].displayName.ToUpper() + "\n" + items[i].price + " coins",
+                GameObject label = SafeZoneShopBuilder.Label(stand.transform, items[i].displayName.ToUpper() + "\n" + GameNames.Amount(items[i].price),
                                                              Vector3.zero, 0.02f, new Color(0.95f, 0.92f, 0.86f));
                 label.transform.position = pedestal + Vector3.up * 1.55f;
                 label.transform.rotation = Quaternion.LookRotation(-inward);   // lisible depuis la pièce
@@ -263,10 +263,19 @@ namespace Horror.EditorTools
 
             // Compteur de pièces (mur est de la maquette)
             Vector3 coinsPos = P(new Vector3(14.8f, 1.7f, 6.0f));
-            GameObject coins = SafeZoneShopBuilder.Label(root.transform, "COINS: 50", Vector3.zero, 0.04f, new Color(0.95f, 0.85f, 0.5f));
+            GameObject coins = SafeZoneShopBuilder.Label(root.transform, GameNames.Currency + ": 100", Vector3.zero, 0.04f, new Color(0.95f, 0.85f, 0.5f));
             coins.transform.position = coinsPos;
             coins.transform.rotation = Quaternion.LookRotation(-Flat(roomCenter - coinsPos));
             coins.AddComponent<CoinDisplay>();
+
+            // Boîte de crayons de la maquette (mur est) : bouton invisible + compte à rebours au-dessus
+            GameObject box = SafeZoneShopBuilder.BuildCrayonBox(root.transform, false);
+            Vector3 boxPos = P(new Vector3(14.45f, 0f, 7.9f));
+            Vector3 boxIn = Flat(roomCenter - boxPos);
+            box.transform.position = boxPos;
+            box.transform.rotation = Quaternion.LookRotation(boxIn);   // +Z local = vers la pièce
+            Transform boxBtn = box.transform.Find("Bouton récolter");
+            if (boxBtn != null) boxBtn.position = P(new Vector3(14.08f, 0.15f, 7.9f)) + boxIn * 0.03f;
         }
 
         /// <summary>Le Minitel de l'accueil (maquette : écran vert sur le comptoir du hall).</summary>
