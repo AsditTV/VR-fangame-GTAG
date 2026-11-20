@@ -111,7 +111,7 @@ namespace Horror.EditorTools
 
         // ------------------------------------------------------------------ joueur
 
-        private static void BuildPlayer(Vector3 position)
+        internal static GameObject BuildPlayer(Vector3 position)
         {
             GameObject player = new GameObject("Joueur");
             player.transform.position = position;
@@ -152,6 +152,7 @@ namespace Horror.EditorTools
             player.AddComponent<LeanSlide>();   // pencher la tête / le corps = glisser au sol
 
             Selection.activeGameObject = player;
+            return player;
         }
 
         private static Transform Controller(GameObject player, string name, XRNode node, Vector3 defaultPosition)

@@ -84,6 +84,14 @@ namespace Horror.EditorTools
             Debug.Log("[Horror] " + docs.Length + " papiers posés. Grip pour attraper, approche le papier de ton visage pour le lire.");
         }
 
+        /// <summary>Lit papers.json et renvoie les LoreDocument (créés si besoin). Null si les images manquent.</summary>
+        internal static LoreDocument[] LoadDocuments()
+        {
+            string json = PapersFolder + "papers.json";
+            if (!File.Exists(json)) return null;
+            return EnsureDocuments(JsonUtility.FromJson<PaperList>("{\"items\":" + File.ReadAllText(json) + "}").items);
+        }
+
         private static LoreDocument[] EnsureDocuments(PaperInfo[] infos)
         {
             if (!AssetDatabase.IsValidFolder(DocsFolder)) AssetDatabase.CreateFolder("Assets/Horror", "Lore");
@@ -198,7 +206,7 @@ namespace Horror.EditorTools
             }
         }
 
-        private static void SetupHands(ArmLocomotion player)
+        internal static void SetupHands(ArmLocomotion player)
         {
             AddGrabber(player.leftHandVisual, XRNode.LeftHand);
             AddGrabber(player.rightHandVisual, XRNode.RightHand);

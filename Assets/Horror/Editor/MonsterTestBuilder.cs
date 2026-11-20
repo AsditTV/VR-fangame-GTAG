@@ -68,7 +68,7 @@ namespace Horror.EditorTools
 
         // ------------------------------------------------------------------ joueur
 
-        private static void SetupPlayerNoise(ArmLocomotion player)
+        internal static void SetupPlayerNoise(ArmLocomotion player)
         {
             if (player.GetComponent<FootstepNoise>() == null)
                 Undo.AddComponent<FootstepNoise>(player.gameObject);
@@ -93,7 +93,7 @@ namespace Horror.EditorTools
 
         // ------------------------------------------------------------------ monstre
 
-        private static GameObject CreateMonster(Vector3 position)
+        internal static GameObject CreateMonster(Vector3 position, Vector3[] patrol = null)
         {
             var root = new GameObject("L'Écoute (test)");
             Undo.RegisterCreatedObjectUndo(root, "L'Écoute");
@@ -122,8 +122,8 @@ namespace Horror.EditorTools
             SafeZoneShopBuilder.SetupMonsterVoice(ai);   // murmures, réaction, cri, pas, clés
 
             // Points de ronde aux 4 coins de la pièce de test
-            var points = new Transform[4];
-            Vector3[] corners = { new Vector3(4.5f, 0, 4.5f), new Vector3(-4.5f, 0, 4.5f), new Vector3(-4.5f, 0, -4.5f), new Vector3(4.5f, 0, -4.5f) };
+            Vector3[] corners = patrol ?? new[] { new Vector3(4.5f, 0, 4.5f), new Vector3(-4.5f, 0, 4.5f), new Vector3(-4.5f, 0, -4.5f), new Vector3(4.5f, 0, -4.5f) };
+            var points = new Transform[corners.Length];
             var pointsRoot = new GameObject("Points de ronde (L'Écoute)");
             Undo.RegisterCreatedObjectUndo(pointsRoot, "Points de ronde");
             for (int i = 0; i < corners.Length; i++)

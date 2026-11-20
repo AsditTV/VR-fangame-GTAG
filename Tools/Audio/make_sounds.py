@@ -339,6 +339,36 @@ def found_chime():
     return reverb(x, size=2.0, mix=0.4)[:len(x)]
 
 
+# ---------------------------------------------------------------- portes
+def door_slide():
+    """Panneau qui coulisse : roulement grave + grincement métallique qui monte et descend."""
+    d = 2.2
+    t = t_axis(d)
+    roll = lowpass(noise(d), 180) * 3 * (0.6 + 0.4 * np.sin(2 * np.pi * 7 * t) ** 2)
+    f = 900 + 500 * np.sin(np.pi * t / d) + 60 * np.sin(2 * np.pi * 3 * t)
+    phase = 2 * np.pi * np.cumsum(f) / SR
+    squeak = np.sin(phase) * (np.abs(np.sin(2 * np.pi * 1.3 * t)) ** 6) * 0.35
+    env_ = np.minimum(1, t / 0.15) * np.minimum(1, (d - t) / 0.3)
+    return reverb((roll + squeak) * env_, size=1.4, mix=0.3)
+
+
+def door_lock():
+    """Fin de course : choc sourd + "clac" de pêne."""
+    t = t_axis(0.6)
+    thud = np.sin(2 * np.pi * (70 + 40 * np.exp(-t * 30)) * t) * np.exp(-t * 18)
+    clack = highpass(noise(0.6), 1500) * np.exp(-((t - 0.08) ** 2) / 0.00005) * 0.8
+    return reverb(thud + clack, size=1.2, mix=0.3)
+
+
+def keys_unlock():
+    """Trousseau qui tinte, puis une clé qui tourne dans la serrure."""
+    x = keys_loop()[:int(SR * 0.9)] * np.linspace(1, 0.3, int(SR * 0.9))
+    t = t_axis(0.5)
+    turn = bandpass(noise(0.5), 800, 3000) * np.exp(-((t - 0.25) ** 2) / 0.002) * 0.6
+    click = highpass(noise(0.5), 2000) * np.exp(-((t - 0.38) ** 2) / 0.00003) * 0.9
+    return reverb(np.concatenate([x, turn + click]), size=1.0, mix=0.25)
+
+
 # ---------------------------------------------------------------- tout fabriquer
 def main():
     lines = ["Shhh...", "I can hear you.", "Where are you, little one?", "Quiet. Quiet.",
@@ -377,6 +407,11 @@ def main():
     save("Papers", "paper_pickup", paper_rustle(0.45, 9), 0.7)
     save("Papers", "paper_rustle", paper_rustle(0.9, 16), 0.6)
     save("Papers", "paper_found", found_chime(), 0.55)
+
+    # Portes du Protocole Verrou (ajoutées à la fin pour ne pas changer les sons existants)
+    save("Doors", "door_slide", door_slide(), 0.75)
+    save("Doors", "door_lock", door_lock(), 0.8)
+    save("Doors", "keys_unlock", keys_unlock(), 0.8)
 
     total = sum(len(fs) for _, _, fs in os.walk(OUT))
     print("OK ->", OUT, "|", total, "fichiers")

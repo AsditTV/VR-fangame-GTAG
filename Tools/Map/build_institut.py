@@ -137,6 +137,8 @@ class Builder:
         self.M = materials
         self.parts = {}       # (zone, matière) -> [verts, faces, normals, uvs]
         self.unique = []      # maillages avec leur propre texture (panneaux, portrait...)
+        self.rooms = []       # pièces (pour les ambiances sonores et la navigation dans Unity)
+        self.doors = {}       # ouvertures entre pièces (pour les portes du Protocole Verrou)
 
     def _push(self, zone, key, mesh, uv):
         p = self.parts.setdefault((zone, key), [[], [], [], [], 0])
@@ -214,10 +216,27 @@ class Builder:
         self.unique.append((zone, name, m))
 
     # -------------------------------------------------------- pièces
-    def room(self, zone, x0, x1, z0, z1, y0, height, wall, floor, openings=(), ceiling=True):
+    def room(self, zone, x0, x1, z0, z1, y0, height, wall, floor, openings=(), ceiling=True, nav_center=None, name=None):
         """Pièce : sol, plafond (noeud Plafonds), 4 murs avec ouvertures.
-        openings : (côté 'N','S','E','O', début, fin, hauteur) ; N = z1, S = z0, E = x1, O = x0."""
+        openings : (côté 'N','S','E','O', début, fin, hauteur) ; N = z1, S = z0, E = x1, O = x0.
+        nav_center : point de passage de la pièce pour le monstre (par défaut le centre au sol)."""
         y1 = y0 + height
+        room_id = len(self.rooms)
+        center = nav_center if nav_center is not None else ((x0 + x1) / 2, y0, (z0 + z1) / 2)
+        self.rooms.append({"zone": zone, "nom": name or zone, "min": [x0, y0, z0], "max": [x1, y1, z1],
+                           "centre": [float(c) for c in center], "portes": []})
+        for (side, a, b, h) in openings:
+            if side in "NS":
+                pos, axis = ((a + b) / 2, (z1 if side == "N" else z0)), "z"
+            else:
+                pos, axis = ((x1 if side == "E" else x0), (a + b) / 2), "x"
+            key = (round(pos[0], 1), round(pos[1], 1))
+            d = self.doors.setdefault(key, {"x": float(pos[0]), "z": float(pos[1]), "axe": axis, "largeur": float(b - a),
+                                            "bas": float(y0), "haut": float(y0 + h), "pieces": []})
+            d["bas"] = max(d["bas"], float(y0))          # entre deux étages : la porte est au niveau le plus haut
+            d["haut"] = min(d["haut"], float(y0 + h))
+            d["pieces"].append(room_id)
+            self.rooms[room_id]["portes"].append(key)
         if floor:
             self.box(zone, floor, x0, x1, y0 - 0.1, y0, z0, z1, style="arch")
         if ceiling:
@@ -475,7 +494,7 @@ def build():
 
     # ============================ ESCALIER VERS LE SOUS-SOL ============================
     Z = "Escalier"
-    B.room(Z, -17.5, -14.5, -10, -5, -3, 6.2, "beton", None, openings=[("N", -17.2, -14.8, 5.6), ("S", -17.2, -14.8, 3)],
+    B.room(Z, -17.5, -14.5, -10, -5, -3, 6.2, "beton", None, openings=[("N", -17.2, -14.8, 5.6), ("S", -17.2, -14.8, 3)], nav_center=(-16, -1.5, -7.5),
            ceiling=False)
     ang = math.atan2(3, 5)
     rot = trimesh.transformations.rotation_matrix(-ang, [1, 0, 0])
@@ -514,7 +533,7 @@ def build():
 
     # ============================ PISCINE D'ENCRE ============================
     Z = "Piscine"
-    B.room(Z, -8, 12, -26, -8, -3, 6, "carrelage_creme", None, openings=[("O", -17, -14, 3)])
+    B.room(Z, -8, 12, -26, -8, -3, 6, "carrelage_creme", None, openings=[("O", -17, -14, 3)], nav_center=(-5.5, -3, -15.5))
     labels.append({"nom": "Piscine d'encre (sous-sol)", "pos": [2, 1.5, -17]})
     bx0, bx1, bz0, bz1 = -4, 8, -22, -12
     for (x0, x1, z0, z1) in ((-8, 12, -26, bz0), (-8, 12, bz1, -8), (-8, bx0, bz0, bz1), (bx1, 12, bz0, bz1)):
@@ -638,7 +657,8 @@ def build():
         h = w * img.height / img.width
         B.quad(zone, "Papier_" + pid, img, pos, w, h, facing, spin=spin, rough=0.95)
         papers.append({"id": pid, "titre": m["title"], "secret": m["secret"], "verso": bool(m.get("back")),
-                       "pos": list(map(float, pos)), "cam": list(map(float, cam))})
+                       "pos": list(map(float, pos)), "cam": list(map(float, cam)),
+                       "face": list(map(float, facing)), "spin": float(spin)})
     drawings_dir = os.path.join(ROOT, "Assets/Horror/Art/Drawings")
     for name, pos, facing, spin in (("drawing_lady", (-7.83, 1.55, 17.6), (1, 0, 0), 3),
                                     ("drawing_friends", (-7.83, 1.45, 22.4), (1, 0, 0), -4),
@@ -651,8 +671,47 @@ def build():
     mark("Les dessins aux murs", "Des dessins d'enfants punaisés au dortoir : « the lady who listens », « my 23 friends » (un visage n'a pas de bouche), « dont go in the pool »...",
          (-7.8, 1.5, 20), (-4.5, 1.8, 20))
 
-    data = {"spawn": [11, 0, 5.2], "spawn_yaw": 1.5708, "lumieres": lights, "zones": labels, "lore": lore, "papiers": papers}
+    # Portes du Protocole Verrou : seulement les ouvertures entre deux pièces (pas la porte 23, qui donne sur le noir)
+    door_keys = [k for k, d in B.doors.items() if len(set(d["pieces"])) >= 2]
+    doors = []
+    for k in door_keys:
+        d = dict(B.doors[k])
+        d["pieces"] = sorted(set(d["pieces"]))
+        doors.append(d)
+    # Réseau de passage du monstre : un point par pièce + un point par porte, reliés
+    nodes, edges = [], []
+    for r in B.rooms:
+        nodes.append(r["centre"])
+    door_index = {}
+    for k in door_keys:
+        d = B.doors[k]
+        door_index[k] = len(nodes)
+        nodes.append([d["x"], d["bas"], d["z"]])
+    for i, r in enumerate(B.rooms):
+        for k in r["portes"]:
+            if k in door_index:
+                edges.append([i, door_index[k]])
+    rooms = [{"zone": r["zone"], "nom": r["nom"], "min": r["min"], "max": r["max"], "centre": r["centre"]} for r in B.rooms]
+
+    data = {"spawn": [11, 0, 5.2], "spawn_yaw": 1.5708, "lumieres": lights, "zones": labels, "lore": lore, "papiers": papers,
+            "portes": doors, "pieces": rooms, "nav": {"points": nodes, "liens": edges}}
     return B.scene(), data
+
+
+def write_unity_json(data):
+    """Même contenu, au format que JsonUtility (Unity) sait lire : des objets {x,y,z} au lieu de listes."""
+    v3 = lambda p: {"x": p[0], "y": p[1], "z": p[2]}
+    out = {
+        "spawn": v3(data["spawn"]), "spawnYaw": math.degrees(data["spawn_yaw"]),
+        "lights": [{"pos": v3(l["pos"]), "color": l["color"], "intensity": l["intensity"], "distance": l["distance"]} for l in data["lumieres"]],
+        "doors": [{"x": d["x"], "z": d["z"], "axis": d["axe"], "width": d["largeur"], "bottom": d["bas"], "top": d["haut"]} for d in data["portes"]],
+        "rooms": [{"zone": r["zone"], "name": r["nom"], "min": v3(r["min"]), "max": v3(r["max"]), "center": v3(r["centre"])} for r in data["pieces"]],
+        "navPoints": [v3(p) for p in data["nav"]["points"]],
+        "navLinks": [{"x": a, "y": b} for a, b in data["nav"]["liens"]],
+        "papers": [{"id": p["id"], "pos": v3(p["pos"]), "face": v3(p["face"]), "spin": p["spin"]} for p in data["papiers"]],
+    }
+    with open(OUT_JSON.replace(".json", "_Unity.json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
 
 
 def _flat(rgb):
@@ -666,6 +725,7 @@ if __name__ == "__main__":
     tx.dedupe_glb(OUT_GLB)
     with open(OUT_JSON, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=1)
+    write_unity_json(data)
     tris = sum(len(g.faces) for g in scene.geometry.values())
     print("OK ->", OUT_GLB, "| triangles :", tris, "| taille :", os.path.getsize(OUT_GLB) // 1024, "Ko",
           "| lumières :", len(data["lumieres"]), "| repères :", len(data["lore"]))

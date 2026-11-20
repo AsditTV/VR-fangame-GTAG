@@ -231,8 +231,11 @@ namespace Horror.Monsters
                 return;
             }
 
-            // Sans NavMesh : tout droit, en glissant le long des murs
-            Vector3 to = target - transform.position;
+            // Sans NavMesh : de point de passage en point de passage (WaypointGraph) s'il y en a un,
+            // sinon tout droit, en glissant le long des murs.
+            OpenDoorsOnTheWay();
+            Vector3 goal = WaypointGraph.Instance != null ? NextWaypoint(target) : target;
+            Vector3 to = goal - transform.position;
             to.y = 0f;
             if (to.sqrMagnitude < 0.01f || _currentSpeed < 0.01f) return;
             Vector3 dir = to.normalized;
@@ -248,6 +251,52 @@ namespace Horror.Monsters
             }
             transform.position += dir * step;
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir, Vector3.up), 1f - Mathf.Exp(-8f * Time.deltaTime));
+            SnapToGround();
+        }
+
+        // ------------------------------------------------------------------ navigation sans NavMesh
+
+        private System.Collections.Generic.List<Vector3> _path;
+        private int _pathIndex;
+        private Vector3 _pathTarget;
+        private float _repathAt;
+
+        /// <summary>Le prochain point à atteindre sur le chemin vers "target" (recalculé si la cible bouge).</summary>
+        private Vector3 NextWaypoint(Vector3 target)
+        {
+            if (_path == null || (target - _pathTarget).sqrMagnitude > 1f || Time.time > _repathAt)
+            {
+                _path = WaypointGraph.Instance.Path(transform.position, target);
+                _pathIndex = 0;
+                _pathTarget = target;
+                _repathAt = Time.time + 1.5f;
+            }
+            while (_pathIndex < _path.Count - 1 && Arrived(_path[_pathIndex], 0.7f)) _pathIndex++;
+            return _path[_pathIndex];
+        }
+
+        /// <summary>Elle a toutes les clés : elle ouvre les portes du Protocole Verrou en passant.</summary>
+        private void OpenDoorsOnTheWay()
+        {
+            foreach (LockDoor door in LockDoor.All)
+            {
+                if (door == null || door.IsOpen) continue;
+                Vector3 d = door.transform.position - transform.position;
+                d.y = 0f;
+                if (d.magnitude < 1.8f && Mathf.Abs(door.transform.position.y - transform.position.y) < 2f) door.OpenByMonster();
+            }
+        }
+
+        /// <summary>Suit le sol (escaliers, rampes) : sans NavMesh, personne ne le fait à sa place.</summary>
+        private void SnapToGround()
+        {
+            if (Physics.Raycast(transform.position + Vector3.up * 1.2f, Vector3.down, out RaycastHit ground, 3f,
+                                NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore))
+            {
+                Vector3 p = transform.position;
+                p.y = Mathf.Lerp(p.y, ground.point.y, 1f - Mathf.Exp(-15f * Time.deltaTime));
+                transform.position = p;
+            }
         }
 
         private bool Arrived(Vector3 point, float tolerance)

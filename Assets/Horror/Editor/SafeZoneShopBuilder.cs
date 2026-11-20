@@ -137,7 +137,7 @@ namespace Horror.EditorTools
 
         // ------------------------------------------------------------------ joueur
 
-        private static void SetupPlayer(ArmLocomotion player, CosmeticItem[] items)
+        internal static void SetupPlayer(ArmLocomotion player, CosmeticItem[] items)
         {
             GameObject go = player.gameObject;
             Transform head = player.head != null ? player.head : player.transform;
@@ -201,7 +201,7 @@ namespace Horror.EditorTools
 
         // ------------------------------------------------------------------ cosmétiques (fichiers)
 
-        private static CosmeticItem[] EnsureItems()
+        internal static CosmeticItem[] EnsureItems()
         {
             if (!AssetDatabase.IsValidFolder(ItemsFolder))
                 AssetDatabase.CreateFolder("Assets/Horror", "Cosmetics");
@@ -229,7 +229,7 @@ namespace Horror.EditorTools
 
         // ------------------------------------------------------------------ utilitaires
 
-        private static GameObject Label(Transform parent, string text, Vector3 localPos, float charSize, Color color)
+        internal static GameObject Label(Transform parent, string text, Vector3 localPos, float charSize, Color color)
         {
             var go = new GameObject("Texte : " + text.Split('\n')[0]);
             go.transform.SetParent(parent, false);
