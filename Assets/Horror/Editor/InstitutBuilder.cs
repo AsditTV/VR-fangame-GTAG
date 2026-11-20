@@ -543,11 +543,23 @@ namespace Horror.EditorTools
             AudioClip coin = Load<AudioClip>(Audio + "UI/coin.wav");
             AudioClip denied = Load<AudioClip>(Audio + "UI/denied.wav");
             Vector3 roomCenter = P(playroom.center);
+            // Ordre des présentoirs dans la maquette (Tools/Character/build_cosmetics.py, CATALOG) : chaque objet
+            // va sur SON présentoir (avant, l'ordre de la liste ne correspondait pas : on achetait autre chose
+            // que l'objet exposé).
+            string[] maquetteOrder = { "paper_crown", "party_hat", "ribbon_bow", "yarn_scarf", "moon_badge" };
+            foreach (MeshFilter mf in map.GetComponentsInChildren<MeshFilter>(true))   // anciennes copies figées
+                if (mf.gameObject.name.Contains("Cosmetique_"))
+                {
+                    Renderer r = mf.GetComponent<Renderer>();
+                    if (r != null) r.enabled = false;
+                }
 
             for (int i = 0; i < items.Length; i++)
             {
-                // Mêmes emplacements que les présentoirs de la maquette
-                Vector3 pedestal = P(new Vector3(10.6f + i * 1.6f, 0f, 11.0f));
+                int spot = System.Array.IndexOf(maquetteOrder, items[i].id);
+                if (spot < 0) spot = i;
+                float x = 10.6f + spot * 1.6f;
+                Vector3 pedestal = P(new Vector3(x, 0f, 11.0f));
                 Vector3 inward = Flat(roomCenter - pedestal);
                 var stand = new GameObject("Présentoir " + items[i].displayName);
                 stand.transform.SetParent(root.transform, false);
@@ -561,7 +573,7 @@ namespace Horror.EditorTools
                 var btn = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 btn.name = "Bouton acheter (invisible, le visuel est dans la maquette)";
                 btn.transform.SetParent(stand.transform, false);
-                btn.transform.position = P(new Vector3(10.6f + i * 1.6f, 0.45f, 10.67f));
+                btn.transform.position = P(new Vector3(x, 0.45f, 10.67f));
                 btn.transform.rotation = Quaternion.LookRotation(inward);
                 btn.transform.localScale = new Vector3(0.16f, 0.16f, 0.08f) * s_w;
                 btn.GetComponent<Renderer>().enabled = false;
@@ -572,6 +584,13 @@ namespace Horror.EditorTools
                 shop.item = items[i];
                 shop.label = label.GetComponent<TextMesh>();
                 shop.button = press;
+                // le vrai modèle, posé sur le présentoir (même taille que l'ancienne copie : x2,2), qui tourne
+                float lift = items[i].slot == CosmeticSlot.Cou ? 0.46f : items[i].slot == CosmeticSlot.Poitrine ? 0.02f : 0f;
+                var anchor = new GameObject("Aperçu " + items[i].id);
+                anchor.transform.SetParent(stand.transform, false);
+                anchor.transform.position = P(new Vector3(x, 0.95f + lift, 11.0f));
+                anchor.transform.localScale = Vector3.one * (2.2f * s_w / Mathf.Max(0.01f, items[i].scale));
+                shop.previewAnchor = anchor.transform;
                 shop.buySound = coin;
                 shop.deniedSound = denied;
             }
