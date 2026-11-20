@@ -10,7 +10,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "Character"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "Papers"))
 import textures as tx  # noqa: E402
+from make_papers import HandDraw  # noqa: E402  (crayon tremblant : rien de parfaitement rond ou carré)
 
 S = 256
 FONT_SERIF = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
@@ -36,7 +38,7 @@ def wallpaper(c1, c2, motif, seed=1, stripes=6, kind="lune"):
     band = (np.floor(x / S * stripes * 2) % 2)[..., None]
     col = _rgb(c1) * (1 - band) + _rgb(c2) * band
     img = _img(col)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     mc = tuple(int(v * 255) for v in _rgb(motif))
     step = S // stripes
     for i in range(stripes):
@@ -144,7 +146,7 @@ def portrait_scratched():
     """Grand portrait de Céleste : peinture pastel, yeux grattés au couteau."""
     w, h = 320, 420
     img = Image.new("RGB", (w, h), (120, 96, 84))
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     d.rectangle([14, 14, w - 15, h - 15], fill=(196, 186, 205))           # fond lilas
     d.ellipse([90, 70, 230, 250], fill=(232, 214, 200))                    # visage
     d.ellipse([70, 40, 250, 140], fill=(92, 78, 98))                       # cheveux / chignon
@@ -165,7 +167,7 @@ def portrait_scratched():
     d.rectangle([6, 6, w - 7, h - 7], outline=(176, 150, 98), width=10)   # cadre doré
     plate = Image.new("RGB", (w, h))
     img = img.filter(ImageFilter.GaussianBlur(0.6))
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     d.rectangle([110, h - 42, 210, h - 22], fill=(176, 150, 98))
     d.text((160, h - 32), "C. Marivaux", fill=(60, 45, 30), font=ImageFont.truetype(FONT_SERIF, 13), anchor="mm")
     return img
@@ -179,7 +181,7 @@ def chalkboard():
     smudge = np.asarray(Image.fromarray((rng.random((8, 20)) * 255).astype(np.uint8)).resize((w, h), Image.BICUBIC)).astype(np.float32)
     arr += (smudge[..., None] - 128) * 0.08
     img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     font = ImageFont.truetype(FONT_OBL, 26)
     for k in range(9):
         y = 22 + k * 32
@@ -194,7 +196,7 @@ def chalkboard():
 
 def sign(lines, bg=(236, 226, 206), fg=(90, 60, 70), w=512, h=192, font_size=44, border=(150, 110, 90)):
     img = Image.new("RGB", (w, h), bg)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     d.rectangle([6, 6, w - 7, h - 7], outline=border, width=8)
     font = ImageFont.truetype(FONT_SERIF, font_size)
     n = len(lines)
@@ -210,7 +212,7 @@ def happy_sign_covered():
     new = new.rotate(-6, expand=True, fillcolor=(0, 0, 0))
     mask = new.convert("L").point(lambda v: 255 if v > 8 else 0)
     old.paste(new, (70, 40), mask)
-    d = ImageDraw.Draw(old)
+    d = HandDraw(old)
     for x, y in ((100, 62), (420, 92), (95, 150), (410, 172)):
         d.ellipse([x - 5, y - 5, x + 5, y + 5], fill=(120, 120, 126))  # clous
     return old
@@ -221,7 +223,7 @@ def number_atlas(numbers, chalk=False, cols=4):
     rows = math.ceil(len(numbers) / cols)
     cw, ch = 128, 128
     img = Image.new("RGBA", (cw * cols, ch * rows), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     rng = np.random.default_rng(15)
     for i, n in enumerate(numbers):
         cx, cy = (i % cols) * cw, (i // cols) * ch
@@ -242,7 +244,7 @@ def growth_chart():
     """Toise : les tailles des enfants, toutes arrêtées en novembre 1985."""
     w, h = 128, 512
     img = Image.new("RGB", (w, h), (236, 228, 208))
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     for k in range(0, 18):
         y = h - 20 - k * 28
         d.line([(0, y), (30 if k % 2 == 0 else 18, y)], fill=(110, 90, 80), width=2)
@@ -273,7 +275,7 @@ def socket_labels():
              "Laundry", "Hallway", "Lobby", "Classroom", "Playroom", "Room 23"]
     w, h = 1024, 96
     img = Image.new("RGB", (w, h), (196, 186, 160))
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     font = ImageFont.truetype(FONT_SANS, 15)
     cw = w / 6
     for i, r in enumerate(rooms):

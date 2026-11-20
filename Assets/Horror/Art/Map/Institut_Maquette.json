@@ -493,6 +493,294 @@
     2.2,
     3.0
    ]
+  },
+  {
+   "titre": "Les dessins aux murs",
+   "texte": "Des dessins d'enfants punaisés au dortoir : « the lady who listens », « my 23 friends » (un visage n'a pas de bouche), « dont go in the pool »...",
+   "pos": [
+    -7.8,
+    1.5,
+    20.0
+   ],
+   "cam": [
+    -4.5,
+    1.8,
+    20.0
+   ]
+  }
+ ],
+ "papiers": [
+  {
+   "id": "p01_brochure",
+   "titre": "Brochure, 1974",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    -5.3,
+    1.172,
+    3.0
+   ],
+   "cam": [
+    -4.2,
+    2.3,
+    1.9
+   ]
+  },
+  {
+   "id": "p02_news1977",
+   "titre": "Newspaper, August 16, 1977",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    2.45,
+    0.462,
+    -0.5
+   ],
+   "cam": [
+    1.5,
+    1.7,
+    -1.6
+   ]
+  },
+  {
+   "id": "p03_rules",
+   "titre": "Rules of the Marivaux Institute, 1978",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    -1.33,
+    1.6,
+    9.0
+   ],
+   "cam": [
+    0.6,
+    1.7,
+    9.0
+   ]
+  },
+  {
+   "id": "p04_theo",
+   "titre": "Theo's note",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    -2.5,
+    0.78,
+    26.85
+   ],
+   "cam": [
+    -2.2,
+    1.9,
+    25.4
+   ]
+  },
+  {
+   "id": "p05_ines",
+   "titre": "Letter never sent",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    5.0,
+    0.012,
+    19.3
+   ],
+   "cam": [
+    3.5,
+    1.6,
+    18.2
+   ]
+  },
+  {
+   "id": "p06_entertainer",
+   "titre": "Note in a dressing room",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    17.0,
+    0.02,
+    -0.25
+   ],
+   "cam": [
+    15.6,
+    1.7,
+    0.6
+   ]
+  },
+  {
+   "id": "p07_lifeguard",
+   "titre": "Lifeguard's notebook",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    -3.0,
+    -1.235,
+    -8.6
+   ],
+   "cam": [
+    -2.0,
+    0.2,
+    -10.6
+   ]
+  },
+  {
+   "id": "p08_diary_a",
+   "titre": "Céleste's diary, page A",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    -18.25,
+    0.81,
+    -0.35
+   ],
+   "cam": [
+    -16.9,
+    1.9,
+    -1.2
+   ]
+  },
+  {
+   "id": "p09_diary_b",
+   "titre": "Céleste's diary, page B",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    -17.95,
+    0.81,
+    0.25
+   ],
+   "cam": [
+    -16.9,
+    1.9,
+    1.3
+   ]
+  },
+  {
+   "id": "p10_inspection",
+   "titre": "Inspection report, October 1985",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    -14.0,
+    0.012,
+    3.5
+   ],
+   "cam": [
+    -13.2,
+    1.5,
+    2.2
+   ]
+  },
+  {
+   "id": "p11_watchman",
+   "titre": "Night watchman's logbook",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    29.4,
+    0.02,
+    0.55
+   ],
+   "cam": [
+    27.6,
+    1.6,
+    -0.4
+   ]
+  },
+  {
+   "id": "p12_news1985",
+   "titre": "Newspaper, November 20, 1985",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    0.9,
+    0.012,
+    -5.2
+   ],
+   "cam": [
+    0.4,
+    1.7,
+    -3.0
+   ]
+  },
+  {
+   "id": "p13_pencil",
+   "titre": "Pencil note",
+   "secret": false,
+   "verso": false,
+   "pos": [
+    -23.2,
+    -2.99,
+    -21.4
+   ],
+   "cam": [
+    -21.6,
+    -1.5,
+    -19.8
+   ]
+  },
+  {
+   "id": "s1_mila",
+   "titre": "Mila's last drawing",
+   "secret": true,
+   "verso": false,
+   "pos": [
+    9.0,
+    -2.99,
+    -21.7
+   ],
+   "cam": [
+    9.6,
+    -1.6,
+    -19.6
+   ]
+  },
+  {
+   "id": "s2_cassette",
+   "titre": "Note in the music box",
+   "secret": true,
+   "verso": false,
+   "pos": [
+    7.6,
+    0.805,
+    8.0
+   ],
+   "cam": [
+    8.6,
+    1.7,
+    7.0
+   ]
+  },
+  {
+   "id": "s3_payroll",
+   "titre": "Staff payroll, 1985",
+   "secret": true,
+   "verso": false,
+   "pos": [
+    -18.05,
+    0.012,
+    -0.1
+   ],
+   "cam": [
+    -16.8,
+    1.2,
+    -0.9
+   ]
+  },
+  {
+   "id": "s4_portrait",
+   "titre": "The 24th face",
+   "secret": true,
+   "verso": true,
+   "pos": [
+    30.78,
+    0.02,
+    0.05
+   ],
+   "cam": [
+    29.4,
+    1.5,
+    0.6
+   ]
   }
  ]
 }

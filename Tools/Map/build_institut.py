@@ -78,6 +78,7 @@ def make_materials():
     M["lino_sombre"] = (pbr(*mt.checker("#3E4440", "#56574F", tiles=6, seed=13)), 1.4)
     M["mur_creme"] = (pbr(*mt.wallpaper("#F1DCCB", "#F7EBDD", "#E6B9A6", seed=5, kind="etoile")), 1.4)
     M["plafond"] = (pbr(color=hexc("#D9D1CC"), rough=1.0), None)
+    M["bois_moulure"] = (pbr(*mt.wood("#B9A6A0", seed=21, planks=2)), 1.2)
     M["peinture_blanche"] = (pbr(color=hexc("#E9E4DA"), rough=0.6), None)
     M["bois_peint_rose"] = (pbr(color=hexc("#D6A3AE"), rough=0.7), None)
     M["bois_peint_bleu"] = (pbr(color=hexc("#9FB3CF"), rough=0.7), None)
@@ -95,6 +96,39 @@ def make_materials():
     M["lum_chaud"] = (pbr(color=hexc("#F7E3B5"), emissive=(1.0, 0.85, 0.55)), None)
     M["ecran_minitel"] = (pbr(color=hexc("#1D3B2E"), emissive=(0.25, 0.75, 0.45), rough=0.2), None)
     return M
+
+
+# ---------------------------------------------------------------- formes "faites main"
+_wrng = np.random.default_rng(77)
+
+
+def rounded_box(extents, radius, wonk=0.0, subdiv=2):
+    """Boîte aux arêtes arrondies, un peu de travers (style meuble de dessin animé) au lieu d'un cube parfait.
+    wonk = déformation relative (0.03 = le dessus est 3 % plus large ou décalé)."""
+    ex = np.array(extents, float)
+    half = ex / 2
+    r = float(min(radius, half.min() * 0.95))
+    m = trimesh.creation.box(extents=ex)
+    for _ in range(subdiv):
+        m = m.subdivide()
+    v = m.vertices.copy()
+    inner = np.maximum(half - r, 1e-5)
+    q = np.clip(v, -inner, inner)
+    d = v - q
+    n = np.linalg.norm(d, axis=1, keepdims=True)
+    v = q + np.where(n > 1e-9, d / np.maximum(n, 1e-9) * r, d)
+    if wonk > 0:
+        t = (v[:, 1] / max(half[1], 1e-5) + 1) / 2              # 0 en bas, 1 en haut
+        top_scale = 1 + _wrng.uniform(-wonk, wonk * 1.5)
+        shear = _wrng.uniform(-wonk, wonk, 2) * ex[1]
+        v[:, 0] *= 1 + (top_scale - 1) * t
+        v[:, 2] *= 1 + (top_scale - 1) * t
+        v[:, 0] += shear[0] * t
+        v[:, 2] += shear[1] * t
+        bulge = _wrng.uniform(0, wonk * 0.6)                   # flancs légèrement bombés
+        side = np.sin(np.pi * t)[:, None]
+        v[:, [0, 2]] += v[:, [0, 2]] / np.maximum(half[[0, 2]], 1e-5) * bulge * min(half[0], half[2]) * side
+    return trimesh.Trimesh(vertices=v, faces=m.faces, process=True)
 
 
 # ---------------------------------------------------------------- constructeur
@@ -122,17 +156,29 @@ class Builder:
             out = trimesh.Trimesh(vertices=out.vertices, faces=out.faces, vertex_normals=fn, process=False)
         self._push(zone, key, out, uv)
 
-    def box(self, zone, key, x0, x1, y0, y1, z0, z1, rot=None):
-        m = trimesh.creation.box(extents=[x1 - x0, y1 - y0, z1 - z0])
+    def box(self, zone, key, x0, x1, y0, y1, z0, z1, rot=None, style="prop"):
+        """Boîte arrondie. style="prop" : meuble de travers et bombé ; "arch" : mur/sol presque droit ;
+        "sharp" : vraie boîte nette (rare : marches, passerelles métalliques)."""
+        ext = [x1 - x0, y1 - y0, z1 - z0]
+        if style == "sharp":
+            m = trimesh.creation.box(extents=ext)
+            flat = True
+        elif style == "arch":
+            m = rounded_box(ext, radius=0.03, wonk=0.006, subdiv=1)
+            flat = False
+        else:
+            m = rounded_box(ext, radius=min(0.06, 0.3 * min(ext)), wonk=0.035, subdiv=2)
+            m.apply_transform(trimesh.transformations.rotation_matrix(math.radians(_wrng.uniform(-2.5, 2.5)), [0, 1, 0]))
+            flat = False
         if rot is not None:
             m.apply_transform(rot)
         m.apply_translation([(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2])
-        self.add_mesh(zone, key, m, flat=True)
+        self.add_mesh(zone, key, m, flat=flat)
 
-    def boxc(self, zone, key, center, size, rot=None):
+    def boxc(self, zone, key, center, size, rot=None, style="prop"):
         cx, cy, cz = center
         sx, sy, sz = size
-        self.box(zone, key, cx - sx / 2, cx + sx / 2, cy - sy / 2, cy + sy / 2, cz - sz / 2, cz + sz / 2, rot)
+        self.box(zone, key, cx - sx / 2, cx + sx / 2, cy - sy / 2, cy + sy / 2, cz - sz / 2, cz + sz / 2, rot, style)
 
     def cyl(self, zone, key, p0, p1, r, sections=14):
         m = trimesh.creation.cylinder(radius=r, segment=[p0, p1], sections=sections)
@@ -144,14 +190,18 @@ class Builder:
         m.apply_translation(c)
         self.add_mesh(zone, key, m)
 
-    def quad(self, zone, name, image, center, w, h, facing, alpha=None, rough=0.8, uv=(0, 0, 1, 1), emissive=None):
-        """Panneau plat texturé (portrait, tableau, panneau...). facing = direction vers laquelle il regarde."""
+    def quad(self, zone, name, image, center, w, h, facing, alpha=None, rough=0.8, uv=(0, 0, 1, 1), emissive=None, spin=0.0):
+        """Panneau plat texturé (portrait, tableau, panneau...). facing = direction vers laquelle il regarde.
+        spin = rotation dans son plan (degrés), pour poser un papier de travers."""
         f = np.array(facing, float)
         f /= np.linalg.norm(f)
         up = np.array([0, 1, 0.0]) if abs(f[1]) < 0.9 else np.array([0, 0, -1.0])
         right = np.cross(up, f)
         right /= np.linalg.norm(right)
         up = np.cross(f, right)
+        if spin:
+            a = math.radians(spin)
+            right, up = right * math.cos(a) + up * math.sin(a), -right * math.sin(a) + up * math.cos(a)
         c = np.array(center, float)
         v = np.array([c - right * w / 2 - up * h / 2, c + right * w / 2 - up * h / 2,
                       c + right * w / 2 + up * h / 2, c - right * w / 2 + up * h / 2])
@@ -169,9 +219,9 @@ class Builder:
         openings : (côté 'N','S','E','O', début, fin, hauteur) ; N = z1, S = z0, E = x1, O = x0."""
         y1 = y0 + height
         if floor:
-            self.box(zone, floor, x0, x1, y0 - 0.1, y0, z0, z1)
+            self.box(zone, floor, x0, x1, y0 - 0.1, y0, z0, z1, style="arch")
         if ceiling:
-            self.box("Plafonds", "plafond", x0, x1, y1, y1 + 0.1, z0, z1)
+            self.box("Plafonds", "plafond", x0, x1, y1, y1 + 0.1, z0, z1, style="arch")
         for side in "NSEO":
             ops = sorted([(a, b, h) for (s, a, b, h) in openings if s == side])
             if side in "NS":
@@ -181,18 +231,38 @@ class Builder:
                 lo, hi = z0, z1
                 xx = (x1 - WALL, x1) if side == "E" else (x0, x0 + WALL)
             cursor = lo
+            thick = zz if side in "NS" else xx
             for a, b, h in ops + [(hi, hi, 0)]:
                 if a > cursor:
-                    self._wall_seg(zone, wall, side, cursor, a, y0, y1, zz if side in "NS" else xx)
-                if h > 0 and b > a:   # linteau au-dessus de l'ouverture
-                    self._wall_seg(zone, wall, side, a, b, y0 + h, y1, zz if side in "NS" else xx)
+                    self._wall_seg(zone, wall, side, cursor, a, y0, y1, thick)
+                    if floor:   # plinthe en bois le long du mur
+                        self._trim(zone, side, cursor + 0.02, a - 0.02, y0, y0 + 0.13, thick, 0.035)
+                if h > 0 and b > a:   # linteau au-dessus de l'ouverture + encadrement de porte
+                    self._wall_seg(zone, wall, side, a, b, y0 + h, y1, thick)
+                    self._trim(zone, side, a - 0.09, a + 0.01, y0, y0 + h + 0.08, thick, 0.05)
+                    self._trim(zone, side, b - 0.01, b + 0.09, y0, y0 + h + 0.08, thick, 0.05)
+                    self._trim(zone, side, a - 0.09, b + 0.09, y0 + h - 0.01, y0 + h + 0.1, thick, 0.05)
                 cursor = max(cursor, b)
 
     def _wall_seg(self, zone, key, side, a, b, y0, y1, thick):
         if side in "NS":
-            self.box(zone, key, a, b, y0, y1, thick[0], thick[1])
+            self.box(zone, key, a, b, y0, y1, thick[0], thick[1], style="arch")
         else:
-            self.box(zone, key, thick[0], thick[1], y0, y1, a, b)
+            self.box(zone, key, thick[0], thick[1], y0, y1, a, b, style="arch")
+
+    def _trim(self, zone, side, a, b, y0, y1, thick, depth):
+        """Moulure (plinthe, chambranle) collée sur la face intérieure du mur."""
+        if b - a < 0.05:
+            return
+        key = "bois_moulure"
+        if side == "N":
+            self.box(zone, key, a, b, y0, y1, thick[0] - depth, thick[0], style="arch")
+        elif side == "S":
+            self.box(zone, key, a, b, y0, y1, thick[1], thick[1] + depth, style="arch")
+        elif side == "E":
+            self.box(zone, key, thick[0] - depth, thick[0], y0, y1, a, b, style="arch")
+        else:
+            self.box(zone, key, thick[1], thick[1] + depth, y0, y1, a, b, style="arch")
 
     # -------------------------------------------------------- export
     def scene(self):
@@ -202,8 +272,14 @@ class Builder:
         for z in zones:
             sc.graph.update(frame_from="Institut", frame_to=z, matrix=np.eye(4))
         for (zone, key), (V, F, N, U, _) in self.parts.items():
-            m = trimesh.Trimesh(vertices=np.vstack(V), faces=np.vstack(F), vertex_normals=np.vstack(N), process=False)
-            m.visual = TextureVisuals(uv=np.vstack(U), material=self.M[key][0])
+            V, F, N, U = np.vstack(V), np.vstack(F), np.vstack(N), np.vstack(U)
+            # Fusion exacte des sommets identiques (position + normale + UV) : même rendu, fichier bien plus léger
+            k = np.round(np.hstack([V * 1e4, N * 1e3, U * 1e4])).astype(np.int64)
+            _, first, inverse = np.unique(k, axis=0, return_index=True, return_inverse=True)
+            inverse = inverse.reshape(-1)
+            V, N, U, F = V[first], N[first], U[first], inverse[F]
+            m = trimesh.Trimesh(vertices=V, faces=F, vertex_normals=N, process=False)
+            m.visual = TextureVisuals(uv=U, material=self.M[key][0])
             name = "%s_%s" % (zone, key)
             sc.add_geometry(m, node_name=name, geom_name=name, parent_node_name=zone)
         for zone, name, m in self.unique:
@@ -403,11 +479,11 @@ def build():
            ceiling=False)
     ang = math.atan2(3, 5)
     rot = trimesh.transformations.rotation_matrix(-ang, [1, 0, 0])
-    B.boxc(Z, "beton", (-16, -1.55, -7.5), (2.7, 0.2, math.hypot(3, 5)), rot=rot)
+    B.boxc(Z, "beton", (-16, -1.55, -7.5), (2.7, 0.2, math.hypot(3, 5)), rot=rot, style="arch")
     for k in range(10):    # marches visibles
         zz = -5.25 - k * 0.5
         yy = -0.15 - k * 0.3
-        B.box(Z, "metal_gris", -17.3, -14.7, yy, yy + 0.04, zz - 0.25, zz + 0.25)
+        B.box(Z, "metal_gris", -17.3, -14.7, yy, yy + 0.04, zz - 0.25, zz + 0.25, style="sharp")
 
     # ============================ SALLE DES MACHINES ============================
     Z = "Machines"
@@ -530,7 +606,52 @@ def build():
          "Au Standard, l'étiquette « Playroom » est barrée : DISCONNECTED. C'est pour ça que la Salle de jeux est sûre.",
          (-19.5, 2.3, 2.1), (-16.5, 2.2, 3.0))
 
-    data = {"spawn": [11, 0, 5.2], "spawn_yaw": 1.5708, "lumieres": lights, "zones": labels, "lore": lore}
+    # ============================ PAPIERS DE LORE + DESSINS D'ENFANTS ============================
+    papers_dir = os.path.join(ROOT, "Assets/Horror/Art/Papers")
+    meta = {m["id"]: m for m in json.load(open(os.path.join(papers_dir, "papers.json"), encoding="utf-8"))}
+    # id : (zone, position, à plat ou au mur (direction), rotation dans le plan, caméra pour le regarder)
+    spots = {
+        "p01_brochure":   ("Hall", (-5.3, 1.172, 3.0), (0, 1, 0), 15, (-4.2, 2.3, 1.9)),
+        "p02_news1977":   ("Hall", (2.45, 0.462, -0.5), (0, 1, 0), -20, (1.5, 1.7, -1.6)),
+        "p03_rules":      ("Ecole", (-1.33, 1.6, 9.0), (1, 0, 0), 2, (0.6, 1.7, 9.0)),
+        "p04_theo":       ("Ecole", (-2.5, 0.78, 26.85), (0, 1, 0), 8, (-2.2, 1.9, 25.4)),
+        "p05_ines":       ("Ecole", (5.0, 0.012, 19.3), (0, 1, 0), 40, (3.5, 1.6, 18.2)),
+        "p06_entertainer": ("Couloir", (17.0, 0.02, -0.25), (0, 1, 0), -30, (15.6, 1.7, 0.6)),
+        "p07_lifeguard":  ("Piscine", (-3.0, -1.235, -8.6), (0, 1, 0), 12, (-2.0, 0.2, -10.6)),
+        "p08_diary_a":    ("Standard", (-18.25, 0.81, -0.35), (0, 1, 0), -10, (-16.9, 1.9, -1.2)),
+        "p09_diary_b":    ("Standard", (-17.95, 0.81, 0.25), (0, 1, 0), 22, (-16.9, 1.9, 1.3)),
+        "p10_inspection": ("Standard", (-14.0, 0.012, 3.5), (0, 1, 0), 35, (-13.2, 1.5, 2.2)),
+        "p11_watchman":   ("Couloir", (29.4, 0.02, 0.55), (0, 1, 0), -15, (27.6, 1.6, -0.4)),
+        "p12_news1985":   ("Hall", (0.9, 0.012, -5.2), (0, 1, 0), 25, (0.4, 1.7, -3.0)),
+        "p13_pencil":     ("Machines", (-23.2, -2.99, -21.4), (0, 1, 0), 5, (-21.6, -1.5, -19.8)),
+        "s1_mila":        ("Piscine", (9.0, -2.99, -21.7), (0, 1, 0), -25, (9.6, -1.6, -19.6)),
+        "s2_cassette":    ("SalleDeJeux", (7.6, 0.805, 8.0), (0, 1, 0), 30, (8.6, 1.7, 7.0)),
+        "s3_payroll":     ("Standard", (-18.05, 0.012, -0.1), (0, 1, 0), 60, (-16.8, 1.2, -0.9)),
+        "s4_portrait":    ("Couloir", (30.78, 0.02, 0.05), (0, 1, 0), 90, (29.4, 1.5, 0.6)),
+    }
+    papers = []
+    for pid, (zone, pos, facing, spin, cam) in spots.items():
+        m = meta[pid]
+        img = Image.open(os.path.join(papers_dir, pid + ".jpg")).convert("RGB")
+        img = img.resize((224, int(224 * img.height / img.width)))          # léger : on lit le papier en grand dans le lecteur
+        w = 0.17
+        h = w * img.height / img.width
+        B.quad(zone, "Papier_" + pid, img, pos, w, h, facing, spin=spin, rough=0.95)
+        papers.append({"id": pid, "titre": m["title"], "secret": m["secret"], "verso": bool(m.get("back")),
+                       "pos": list(map(float, pos)), "cam": list(map(float, cam))})
+    drawings_dir = os.path.join(ROOT, "Assets/Horror/Art/Drawings")
+    for name, pos, facing, spin in (("drawing_lady", (-7.83, 1.55, 17.6), (1, 0, 0), 3),
+                                    ("drawing_friends", (-7.83, 1.45, 22.4), (1, 0, 0), -4),
+                                    ("drawing_pool", (7.83, 1.5, 18.8), (-1, 0, 0), 5),
+                                    ("drawing_family", (7.83, 1.6, 23.6), (-1, 0, 0), -3)):
+        img = Image.open(os.path.join(drawings_dir, name + ".png")).convert("RGB")
+        img = img.resize((256, int(256 * img.height / img.width)))
+        w = 0.62 if img.width > img.height else 0.46
+        B.quad("Ecole", "Dessin_" + name, img, pos, w, w * img.height / img.width, facing, spin=spin)
+    mark("Les dessins aux murs", "Des dessins d'enfants punaisés au dortoir : « the lady who listens », « my 23 friends » (un visage n'a pas de bouche), « dont go in the pool »...",
+         (-7.8, 1.5, 20), (-4.5, 1.8, 20))
+
+    data = {"spawn": [11, 0, 5.2], "spawn_yaw": 1.5708, "lumieres": lights, "zones": labels, "lore": lore, "papiers": papers}
     return B.scene(), data
 
 
