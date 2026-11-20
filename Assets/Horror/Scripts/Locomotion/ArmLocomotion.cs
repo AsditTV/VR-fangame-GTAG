@@ -85,6 +85,9 @@ namespace Horror.Locomotion
         /// </summary>
         public event Action<Vector3, float, bool> HandImpact;
 
+        /// <summary>Pareil, avec la surface touchée (pour les bruits de pas selon le sol : bois, carrelage...).</summary>
+        public event Action<Vector3, float, bool, Collider> HandImpactOn;
+
         /// <summary>Tous les joueurs présents (les monstres s'en servent pour savoir qui ils touchent).</summary>
         public static readonly List<ArmLocomotion> All = new List<ArmLocomotion>();
 
@@ -106,6 +109,7 @@ namespace Horror.Locomotion
             public Vector3 position;      // position "virtuelle" de la main (en monde)
             public bool touching;
             public Vector3 surfaceNormal;
+            public Collider surface;
             public float lastHapticTime = -1f;
         }
 
@@ -133,6 +137,7 @@ namespace Horror.Locomotion
             _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic; // pas de traversée de mur à grande vitesse
 
             _body.direction = 1; // capsule verticale (axe Y)
+            RefreshOwnColliders();
             _velocityHistory = new Vector3[Mathf.Max(2, velocityHistorySize)];
             _spawnPosition = transform.position;
         }
@@ -273,12 +278,11 @@ namespace Horror.Locomotion
             Vector3 path = target - from;
             float distance = path.magnitude;
 
-            if (distance > 0.0001f &&
-                Physics.SphereCast(from, handRadius, path / distance, out RaycastHit hit, distance,
-                                   climbableLayers, QueryTriggerInteraction.Ignore))
+            if (distance > 0.0001f && CastHand(from, path / distance, distance, out RaycastHit hit))
             {
                 hand.position = from + path / distance * hit.distance;
                 hand.surfaceNormal = hit.normal;
+                hand.surface = hit.collider;
                 hand.touching = true;
 
                 totalMove += hand.position - target;
@@ -306,6 +310,41 @@ namespace Horror.Locomotion
             }
 
             HandImpact?.Invoke(hand.position, impactSpeed, hand.isLeft);
+            HandImpactOn?.Invoke(hand.position, impactSpeed, hand.isLeft, hand.surface);
+        }
+
+        // ------------------------------------------------------------------ mains : quoi toucher
+
+        private readonly RaycastHit[] _hits = new RaycastHit[16];
+        private readonly HashSet<Collider> _own = new HashSet<Collider>();
+
+        /// <summary>
+        /// À rappeler si on ajoute des colliders au joueur (ex. PlayerBodyShell) : les mains ne doivent
+        /// jamais s'accrocher à son PROPRE corps, mais elles peuvent grimper sur celui des autres joueurs.
+        /// </summary>
+        public void RefreshOwnColliders()
+        {
+            _own.Clear();
+            foreach (Collider c in GetComponentsInChildren<Collider>(true)) _own.Add(c);
+        }
+
+        /// <summary>
+        /// Comme Physics.SphereCast, mais en ignorant ses propres colliders. Comme SphereCast, on ignore
+        /// aussi ce qui touche déjà la sphère au départ (sinon une main qui vient de se décoller se recolle).
+        /// </summary>
+        private bool CastHand(Vector3 from, Vector3 dir, float distance, out RaycastHit best)
+        {
+            best = default;
+            int n = Physics.SphereCastNonAlloc(from, handRadius, dir, _hits, distance, climbableLayers, QueryTriggerInteraction.Ignore);
+            float bestDist = float.MaxValue;
+            for (int i = 0; i < n; i++)
+            {
+                RaycastHit h = _hits[i];
+                if (h.collider == null || _own.Contains(h.collider)) continue;
+                if (h.distance <= 0f && h.point == Vector3.zero) continue;   // déjà en contact au départ
+                if (h.distance < bestDist) { bestDist = h.distance; best = h; }
+            }
+            return bestDist < float.MaxValue;
         }
 
         private Vector3 ClampToArmLength(Vector3 controllerPosition, Vector3 headPosition)

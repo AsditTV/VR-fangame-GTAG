@@ -165,3 +165,25 @@ vient. Elles remontent seules quand plus personne n'est à côté (`FloatingProp
 au feutre, dessin, trou de serrure. Certaines sont normales, d'autres en hauteur, de travers,
 à moitié dans le sol, à l'envers, au plafond. Elles ne s'ouvrent pas. Parfois on y **frappe** de
 l'autre côté, et une voix d'enfant chuchote (`ChildDoorKnock`) ; les coups attirent le monstre.
+
+## Mise à jour : théâtre des Doux, refuges en hauteur, corrections
+
+**Corrections** : la chaise du Standard flottait (pas de pieds) et les portes du couloir étaient
+enfoncées dans le mur. Corrigé (pieds, portes qui dépassent de 6 cm avec chambranle). Les chaises
+volantes ne restent que dans la salle du ventilateur, où le souffle les explique ; ailleurs, une chaise
+qui flotte ressemble à un bug.
+
+**Le théâtre des Doux** (couloir des chambres -> foyer -> salle) :
+- salle de 18 × 21 m, 9 m de haut, 6 rangées de fauteuils, masques en papier oubliés sur 3 sièges ;
+- **rideau entrouvert** : derrière, 6 Doux en rang face au rideau (lapin, ours, chat, chien...), et
+  un 7e pile devant la fente. Leurs têtes se tournent quand on ne regarde pas ; celui du milieu
+  **avance** quand personne ne le regarde (« 1, 2, 3, soleil », papier 6). S'il te touche : jumpscare ;
+- au-dessus : la **marionnette géante de la Dame qui écoute** (sans yeux, bras trop longs) ;
+- toile de fond peinte « RED LIGHT... GREEN LIGHT » ;
+- **la loge** : un Doux sans tête assis devant le miroir (« DON'T LOOK AWAY »), sa tête sur la
+  coiffeuse, et le **papier 6** (déplacé ici depuis le couloir) ; portant de costumes vides.
+
+**Refuges en hauteur** (elle ne grimpe pas, et ne t'attrape pas au-dessus de ~2,6 m) :
+balcon du théâtre (3,4 m) + corniches + loges, passerelles du cintre (6,8 m), mezzanine du hall (4 m),
+armoires du dortoir (2,7 m), plongeoir de la piscine, passerelle haute des machines.
+Elle vient en dessous, écoute, puis abandonne si tu ne fais plus de bruit.

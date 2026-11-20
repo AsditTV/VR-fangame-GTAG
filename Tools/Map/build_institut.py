@@ -38,8 +38,22 @@ WALL = 0.15   # épaisseur d'un mur (chaque pièce a ses propres murs, côté in
 
 
 # ---------------------------------------------------------------- matières
+def _jpeg(img, quality=86):
+    """Texture opaque -> JPEG (fichier 3 à 5 fois plus léger que PNG ; Unity et three.js le lisent)."""
+    import io
+    if img is None or not hasattr(img, "mode") or img.mode not in ("RGB", "L"):
+        return img
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, format="JPEG", quality=quality)
+    buf.seek(0)
+    return Image.open(buf)
+
+
 def pbr(albedo=None, normal=None, color=(1.0, 1.0, 1.0, 1.0), rough=0.9, metal=0.0, emissive=None,
         alpha=None, double=False):
+    if not alpha:
+        albedo = _jpeg(albedo)
+    normal = _jpeg(normal, 92)
     # floats obligatoires : trimesh lit des entiers comme des valeurs 0-255 (1 -> presque noir)
     kw = dict(baseColorFactor=[float(c) for c in color], roughnessFactor=rough, metallicFactor=metal, doubleSided=double)
     if albedo is not None:
@@ -77,6 +91,14 @@ def make_materials():
     M["tissu_menthe"] = (pbr(*mt.fabric_colored("#A9CDBD", seed=12)), 0.4)
     M["lino_sombre"] = (pbr(*mt.checker("#3E4440", "#56574F", tiles=6, seed=13)), 1.4)
     M["mur_creme"] = (pbr(*mt.wallpaper("#F1DCCB", "#F7EBDD", "#E6B9A6", seed=5, kind="etoile")), 1.4)
+    M["mur_prune"] = (pbr(*mt.wallpaper("#7E5E6E", "#8C6B7B", "#A98495", seed=6, kind="lune")), 1.6)
+    fab_alb, fab_nrm = mt.fabric_colored("#FFFFFF", seed=30, threads=12)    # tissu neutre partagé (fichier léger)
+    M["velours"] = (pbr(fab_alb, fab_nrm, color=hexc("#A8707E")), 0.35)
+    M["rideau"] = (pbr(fab_alb, fab_nrm, color=hexc("#9E5866"), double=True), 0.6)
+    M["planches"] = (pbr(*mt.wood("#7A5E52", seed=22, planks=8)), 1.6)
+    for name, col, sd in (("doux_rose", "#E1B3BF", 40), ("doux_menthe", "#B3D6C6", 41), ("doux_lilas", "#C7B6DC", 42),
+                          ("doux_jaune", "#E9D7A0", 43), ("doux_bleu", "#B2C5E1", 44), ("doux_peche", "#EBC1A8", 45)):
+        M[name] = (pbr(fab_alb, fab_nrm, color=hexc(col), rough=1.0), 0.3)   # fausse fourrure délavée
     M["plafond"] = (pbr(color=hexc("#D9D1CC"), rough=1.0), None)
     M["bois_moulure"] = (pbr(*mt.wood("#B9A6A0", seed=21, planks=2)), 1.2)
     M["peinture_blanche"] = (pbr(color=hexc("#E9E4DA"), rough=0.6), None)
@@ -163,8 +185,13 @@ class Builder:
         (chaises volantes...). Même matière et même projection d'UV que le décor."""
         texel = self.M[key][1] or 1.0
         out, uv = tx.box_uv(mesh, texel)
-        out.visual = TextureVisuals(uv=uv, material=self.M[key][0])
-        self.unique.append((zone, name, out))
+        V, N, F = out.vertices, out.vertex_normals, out.faces
+        k = np.round(np.hstack([V * 1e4, N * 1e3, uv * 1e4])).astype(np.int64)
+        _, first, inverse = np.unique(k, axis=0, return_index=True, return_inverse=True)
+        inverse = inverse.reshape(-1)
+        m = trimesh.Trimesh(vertices=V[first], faces=inverse[F], vertex_normals=N[first], process=False)
+        m.visual = TextureVisuals(uv=uv[first], material=self.M[key][0])
+        self.unique.append((zone, name, m))
 
     def box(self, zone, key, x0, x1, y0, y1, z0, z1, rot=None, style="prop"):
         """Boîte arrondie. style="prop" : meuble de travers et bombé ; "arch" : mur/sol presque droit ;
@@ -381,7 +408,7 @@ def build():
     # ============================ COULOIR DES CHAMBRES ============================
     Z = "Couloir"
     B.room(Z, 7, 31, -1.5, 1.5, 0, 3.2, "mur_menthe", "parquet",
-           openings=[("O", -1.2, 1.2, 3), ("E", -0.5, 0.5, 2.2)])
+           openings=[("O", -1.2, 1.2, 3), ("E", -0.5, 0.5, 2.2), ("S", 21.45, 23.05, 2.6)])
     labels.append({"nom": "Couloir des chambres", "pos": [19, 2.5, 0]})
     B.box(Z, "moquette_rose", 7.2, 30.8, 0, 0.015, -0.7, 0.7)
     numbers = list(range(1, 13))
@@ -390,16 +417,20 @@ def build():
     for i, n in enumerate(numbers):
         side = 1 if i % 2 == 0 else -1
         x = 9.5 + (i // 2) * 3.6
-        zw = 1.5 * side - 0.16 * side
+        wall_face = (1.5 - WALL) * side                     # face intérieure du mur
+        zw = wall_face - 0.06 * side                        # la porte dépasse de 6 cm (avant : enfoncée dans le mur)
         B.box(Z, "bois_peint_rose" if i % 3 else "bois_peint_bleu", x - 0.5, x + 0.5, 0, 2.2,
-              min(zw, zw + 0.06 * side), max(zw, zw + 0.06 * side))
+              min(zw, wall_face), max(zw, wall_face))
+        for a0, a1, y0, y1 in ((x - 0.6, x - 0.5, 0, 2.3), (x + 0.5, x + 0.6, 0, 2.3), (x - 0.6, x + 0.6, 2.2, 2.3)):
+            B.box(Z, "bois_moulure", a0, a1, y0, y1, min(wall_face, wall_face - 0.08 * side), max(wall_face, wall_face - 0.08 * side),
+                  style="arch")                             # chambranle
         B.sphere(Z, "laiton", (x + 0.35, 1.05, zw - 0.05 * side), 0.04)
         cu, cv = (i % cols) / cols, (i // cols) / rows
         B.quad(Z, "Plaque_%d" % n, plates, (x, 1.85, zw - 0.02 * side), 0.32, 0.32, (0, 0, -side), alpha="MASK",
                uv=(cu, cv, cu + 1 / cols, cv + 1 / rows))
         # panneau à boutons du Protocole Verrou
-        B.boxc(Z, "metal_gris", (x + 0.8, 1.3, zw - 0.03 * side), (0.16, 0.24, 0.04))
-        B.sphere(Z, "lum_rose", (x + 0.8, 1.33, zw - 0.06 * side), 0.03)
+        B.boxc(Z, "metal_gris", (x + 0.8, 1.3, wall_face - 0.02 * side), (0.16, 0.24, 0.04))     # collé au mur
+        B.sphere(Z, "lum_rose", (x + 0.8, 1.33, wall_face - 0.05 * side), 0.03)
         # numéro à la craie au sol, de plus en plus tremblé
         B.quad(Z, "Craie_%d" % n, chalk, (x, 0.02, 0.85 * side), 0.45, 0.45, (0, 1, 0), alpha="BLEND",
                uv=(cu, cv, cu + 1 / ccols, cv + 1 / crows))
@@ -485,6 +516,9 @@ def build():
             B.cyl(Z, "bois_sombre", [-18 + dx, 0, dz], [-18 + dx, 0.75, dz], 0.03, 6)
     B.box(Z, "tissu_rose", -17.2, -16.7, 0.45, 0.52, -0.25, 0.25)                             # chaise
     B.box(Z, "tissu_rose", -16.75, -16.68, 0.5, 1.1, -0.25, 0.25)
+    for cx in (-17.15, -16.72):                                                                  # ses pieds (elle flottait !)
+        for cz in (-0.21, 0.21):
+            B.cyl(Z, "bois_sombre", [cx, 0, cz], [cx, 0.46, cz], 0.022, 6)
     m = trimesh.creation.torus(major_radius=0.1, minor_radius=0.012, major_sections=16, minor_sections=5)
     m.apply_transform(trimesh.transformations.rotation_matrix(math.pi / 2, [0, 0, 1]))
     m.apply_translation([-16.95, 0.62, 0])
@@ -771,6 +805,323 @@ def build():
          "Toutes les 7 heures, on appuie sur le bouton rose : +100 crayons gratuits. Au-dessus, un compte à rebours dit quand revenir.",
          (14.4, 0.8, 7.9), (11.6, 1.6, 7.4))
 
+    # ============================ THÉÂTRE DES DOUX ============================
+    # Le théâtre du parc. Derrière le rideau entrouvert, les Doux (les animateurs coincés dans leurs
+    # costumes, papier 6) attendent en rang, face au rideau. Ils ne bougent que quand on ne les regarde pas.
+    # On peut se réfugier EN HAUTEUR : balcon, corniches, loges, passerelles du cintre (elle ne grimpe pas).
+    def ell(rx, ry, rz, c, sd, lump=0.07, sub=2):
+        m = trimesh.creation.icosphere(subdivisions=sub, radius=1.0)
+        m.apply_scale([rx, ry, rz])
+        tx.lumpy(m, min(rx, ry, rz) * lump, freq=7, seed=sd)
+        m.apply_translation(c)
+        return m
+
+    def limb(p0, p1, r):
+        parts = [trimesh.creation.cylinder(radius=r, segment=[p0, p1], sections=8)]
+        for p in (p0, p1):
+            sp = trimesh.creation.icosphere(subdivisions=1, radius=r)
+            sp.apply_translation(p)
+            parts.append(sp)
+        return trimesh.util.concatenate(parts)
+
+    def softie(kind, fur, sd, sitting=False):
+        """Un Doux : costume de mascotte pastel, grosse tête, yeux-boutons, sourire cousu.
+        Repère local : pieds en (0,0,0), regarde vers +Z. Renvoie (corps, tête) : {matière: [maillages]}."""
+        body, head = {}, {}
+        put = lambda d, k, m: d.setdefault(k, []).append(m)
+        if sitting:      # assis sur un tabouret (assise à 0,45 m), jambes en avant, bras ballants
+            for sx in (1, -1):
+                put(body, fur, limb([0.14 * sx, 0.47, 0.0], [0.16 * sx, 0.47, 0.42], 0.12))
+                put(body, fur, limb([0.16 * sx, 0.47, 0.42], [0.17 * sx, 0.1, 0.5], 0.11))
+                put(body, fur, ell(0.12, 0.08, 0.17, (0.17 * sx, 0.07, 0.56), sd + 1))
+                put(body, fur, limb([0.34 * sx, 1.0, -0.02], [0.42 * sx, 0.42, 0.02], 0.09))
+                put(body, fur, ell(0.11, 0.11, 0.11, (0.42 * sx, 0.36, 0.03), sd + 2))
+            put(body, fur, ell(0.34, 0.4, 0.28, (0, 0.8, -0.04), sd))
+            put(body, "tissu_creme", ell(0.22, 0.26, 0.08, (0, 0.74, 0.19), sd + 3))
+            neck_y = 1.18
+        else:
+            for sx in (1, -1):
+                put(body, fur, limb([0.14 * sx, 0.14, 0], [0.15 * sx, 0.58, 0], 0.12))
+                put(body, fur, ell(0.12, 0.08, 0.17, (0.15 * sx, 0.07, 0.05), sd + 1, sub=1))
+                put(body, fur, limb([0.33 * sx, 1.22, 0], [0.4 * sx, 0.74, 0.08], 0.09))
+                put(body, fur, ell(0.11, 0.11, 0.11, (0.41 * sx, 0.68, 0.09), sd + 2, sub=1))
+            put(body, fur, ell(0.34, 0.42, 0.28, (0, 0.98, 0), sd))
+            put(body, "tissu_creme", ell(0.22, 0.28, 0.08, (0, 0.92, 0.22), sd + 3))
+            neck_y = 1.36
+        put(body, fur, trimesh.creation.cylinder(radius=0.16, segment=[[0, neck_y, 0], [0, neck_y + 0.1, 0]], sections=14))
+        hy = neck_y + 0.34
+        put(head, fur, ell(0.33, 0.3, 0.31, (0, hy, 0), sd + 4, lump=0.05))
+        put(head, "tissu_creme", ell(0.16, 0.11, 0.08, (0, hy - 0.1, 0.27), sd + 5))
+        for sx, dy in ((1, 0.06), (-1, -0.01)):            # yeux-boutons : celui de gauche pend un peu
+            b = trimesh.creation.cylinder(radius=0.055, height=0.025, sections=14)
+            b.apply_translation([0.12 * sx, hy + dy, 0.29 if sx > 0 else 0.3])
+            put(head, "noir_cable", b)
+        nose = trimesh.creation.icosphere(subdivisions=1, radius=0.035)
+        nose.apply_translation([0, hy - 0.06, 0.345])
+        put(head, "noir_cable", nose)
+        pts = [(x, hy - 0.16 + 0.05 * (x / 0.13) ** 2, 0.3 - 0.25 * x * x) for x in np.linspace(-0.13, 0.13, 7)]
+        for i in range(len(pts) - 1):                      # sourire cousu (trop grand)
+            put(head, "noir_cable", trimesh.creation.cylinder(radius=0.006, segment=[pts[i], pts[i + 1]], sections=5))
+        for x, y, z in pts[1:-1]:
+            put(head, "noir_cable", trimesh.creation.cylinder(radius=0.006, segment=[[x, y - 0.025, z], [x, y + 0.025, z]], sections=5))
+        for sx in (1, -1):
+            if kind == "lapin":
+                e = ell(0.07, 0.24, 0.04, (0, 0, 0), sd + 6 + sx)
+                e.apply_transform(trimesh.transformations.rotation_matrix(math.radians(12 * sx if sx > 0 else -38), [0, 0, 1]))
+                e.apply_translation([0.12 * sx, hy + 0.42, -0.02])
+            elif kind == "ours":
+                e = ell(0.1, 0.1, 0.05, (0.24 * sx, hy + 0.25, 0), sd + 6 + sx)
+            elif kind == "chien":
+                e = ell(0.07, 0.19, 0.04, (0, 0, 0), sd + 6 + sx)
+                e.apply_transform(trimesh.transformations.rotation_matrix(math.radians(-20 * sx), [0, 0, 1]))
+                e.apply_translation([0.33 * sx, hy - 0.02, 0])
+            else:            # chat
+                e = trimesh.creation.cone(radius=0.1, height=0.2, sections=10)
+                e.apply_transform(trimesh.transformations.rotation_matrix(-math.pi / 2, [1, 0, 0]))
+                e.apply_translation([0.18 * sx, hy + 0.2, 0])
+            put(head, fur, e)
+        return body, head
+
+    def place(parts, T):
+        out = {}
+        for k, ms in parts.items():
+            m = trimesh.util.concatenate([x.copy() for x in ms])
+            m.apply_transform(T)
+            out[k] = m
+        return out
+
+    def rot_y(deg):
+        return trimesh.transformations.rotation_matrix(math.radians(deg), [0, 1, 0])
+
+    def tr(x, y, z):
+        return trimesh.transformations.translation_matrix([x, y, z])
+
+    # ---- foyer
+    Z = "Foyer"
+    B.room(Z, 19.5, 25, -6, -1.5, 0, 3.2, "mur_prune", "moquette_rose",
+           openings=[("N", 21.45, 23.05, 2.6), ("S", 21.45, 23.05, 2.6)], name="Foyer du théâtre")
+    labels.append({"nom": "Foyer du théâtre", "pos": [22.25, 2.6, -3.8]})
+    B.box(Z, "bois_peint_rose", 23.7, 24.85, 0, 1.1, -5.7, -4.1)                       # guichet
+    B.box(Z, "bois_sombre", 23.6, 24.85, 1.1, 1.16, -5.8, -4.0)
+    B.quad(Z, "Affiche_Doux", mt.softies_poster(), (19.5 + WALL + 0.01, 1.55, -3.6), 0.8, 1.12, (1, 0, 0))
+    B.quad(Z, "Affiche_Doux_2", mt.softies_poster(), (19.5 + WALL + 0.01, 1.5, -5.1), 0.6, 0.84, (1, 0, 0), spin=7)
+    for x in (21.0, 23.5):                                                            # poteaux à cordon
+        B.cyl(Z, "laiton", [x, 0, -4.6], [x, 0.95, -4.6], 0.03, 8)
+        B.sphere(Z, "laiton", (x, 0.98, -4.6), 0.05)
+    B.cyl(Z, "velours", [21.0, 0.85, -4.6], [22.25, 0.65, -4.6], 0.025, 6)
+    light((22.25, 2.5, -3.8), "#e8c890", 0.45, 4)
+
+    # ---- la salle
+    Z = "Theatre"
+    B.room(Z, 13, 31, -27, -6, 0, 9, "mur_prune", "parquet", openings=[("N", 21.45, 23.05, 2.6)],
+           nav_center=(22.25, 0, -12.0), name="Le théâtre")
+    labels.append({"nom": "Le théâtre des Doux", "pos": [22, 5, -14]})
+    for zr in (-7.5, -8.8, -10.1, -11.4, -12.7, -14.0):                              # 6 rangées de fauteuils
+        for x0, x1 in ((14.8, 21.0), (23.5, 30.3)):
+            cush = rounded_box([x1 - x0, 0.12, 0.48], 0.04, wonk=0.01, subdiv=1)
+            cush.apply_translation([(x0 + x1) / 2, 0.42, zr])
+            B.add_mesh(Z, "velours", cush)
+            n = int(round((x1 - x0) / 0.567))
+            for k in range(n):
+                x = x0 + (k + 0.5) * (x1 - x0) / n
+                back = rounded_box([0.5, 0.55, 0.08], 0.035, wonk=0.03, subdiv=1)
+                back.apply_transform(trimesh.transformations.rotation_matrix(math.radians(-8), [1, 0, 0]))
+                back.apply_translation([x, 0.75, zr + 0.24])
+                B.add_mesh(Z, "velours", back)
+            for x in (x0 - 0.04, x1 + 0.04):
+                B.box(Z, "bois_sombre", x - 0.04, x + 0.04, 0, 0.62, zr - 0.25, zr + 0.25, style="arch")
+    for k, (x, zr) in enumerate(((16.0, -10.1), (25.7, -8.8), (19.4, -12.7))):       # des masques en papier oubliés sur les sièges
+        B.quad(Z, "Masque_Siege_%d" % k, faces[k % 4], (x, 0.62, zr + 0.21), 0.42, 0.31, (0, 0, -1), alpha="MASK")
+    # balcon (REFUGE) au-dessus de l'entrée, colonnes, et une pile de caisses pour y grimper
+    B.box(Z, "planches", 13.15, 30.85, 3.4, 3.6, -10.9, -6.15, style="arch")
+    for x in np.arange(13.4, 30.7, 0.55):
+        B.cyl(Z, "bois_moulure", [x, 3.6, -10.85], [x, 4.45, -10.85], 0.03, 6)
+    B.box(Z, "bois_moulure", 13.15, 30.85, 4.45, 4.55, -10.95, -10.75, style="arch")
+    B.box(Z, "velours", 13.15, 30.85, 3.25, 3.42, -10.95, -10.85, style="arch")
+    for x in (15.0, 19.0, 25.5, 29.5):
+        B.cyl(Z, "bois_moulure", [x, 0, -10.75], [x, 3.4, -10.75], 0.17, 14)
+    B.boxc(Z, "bois_peint_bleu", (14.1, 0.5, -11.9), (0.95, 1.0, 0.9))
+    B.boxc(Z, "jaune_bouee", (14.0, 1.5, -11.8), (0.85, 1.0, 0.85),
+           rot=trimesh.transformations.rotation_matrix(math.radians(9), [0, 1, 0]))
+    # corniches le long des murs (du balcon aux loges) + loges (REFUGES)
+    for x0, x1 in ((13.15, 13.6), (30.4, 30.85)):
+        B.box(Z, "bois_moulure", x0, x1, 3.42, 3.6, -12.6, -10.9, style="arch")
+    for x0, x1, xr in ((13.15, 14.7, 14.68), (29.3, 30.85, 29.32)):
+        B.box(Z, "planches", x0, x1, 3.4, 3.6, -15.6, -12.6, style="arch")
+        for z in np.arange(-15.45, -12.6, 0.5):
+            B.cyl(Z, "bois_moulure", [xr, 3.6, z], [xr, 4.35, z], 0.03, 6)
+        B.box(Z, "bois_moulure", xr - 0.06, xr + 0.06, 4.35, 4.45, -15.6, -12.6, style="arch")
+        for z in (-15.55, -12.65):                      # tentures des loges
+            B.box(Z, "rideau", xr - 0.1, xr + 0.1, 3.6, 6.2, z - 0.12, z + 0.12)
+    # scène, marches, cadre de scène
+    B.box(Z, "planches", 13.15, 30.85, 0, 1.1, -26.85, -16.0, style="arch")
+    for k in range(3):
+        B.box(Z, "planches", 21.5, 23.0, k * 0.367, (k + 1) * 0.367, -15.0 - k * 0.33, -16.0, style="arch")
+    for x0, x1 in ((13.15, 15.5), (28.5, 30.85)):
+        B.box(Z, "mur_prune", x0, x1, 0, 9, -16.0, -15.7, style="arch")
+        B.box(Z, "bois_moulure", x1 - 0.2 if x0 < 20 else x0, x1 if x0 < 20 else x0 + 0.2, 0, 6.6, -15.75, -15.6, style="arch")
+    B.box(Z, "mur_prune", 15.5, 28.5, 6.5, 9, -16.0, -15.7, style="arch")
+    B.box(Z, "bois_moulure", 15.3, 28.7, 6.45, 6.65, -15.75, -15.6, style="arch")
+    # rideau entrouvert (plis), et son lambrequin
+    def curtain(x0, x1, sd):
+        nx, ny = 48, 14
+        xs = np.linspace(x0, x1, nx)
+        ys = np.linspace(1.1, 6.5, ny)
+        V, F = [], []
+        rr = np.random.default_rng(sd)
+        ph = rr.uniform(0, 6)
+        for j, y in enumerate(ys):
+            for i, x in enumerate(xs):
+                gather = 1.0 + 0.6 * (1 - (y - 1.1) / 5.4)          # plis plus profonds en bas
+                V.append([x, y, -16.28 + 0.1 * gather * math.sin((x - x0) / 0.32 * math.pi + ph)])
+        for j in range(ny - 1):
+            for i in range(nx - 1):
+                a, b2, c, d = j * nx + i, j * nx + i + 1, (j + 1) * nx + i + 1, (j + 1) * nx + i
+                F += [[a, b2, c], [a, c, d]]
+        return trimesh.Trimesh(vertices=V, faces=F, process=False)
+    B.add_mesh(Z, "rideau", curtain(15.5, 21.65, 1))
+    B.add_mesh(Z, "rideau", curtain(22.85, 28.5, 2))
+    for k in range(13):                                    # lambrequin festonné
+        x = 15.5 + k * 1.0
+        m = ell(0.55, 0.28, 0.08, (x + 0.5, 6.35, -16.2), 70 + k, lump=0.02, sub=1)
+        B.add_mesh(Z, "rideau", m)
+    for k in range(9):                                     # rampe de scène (petites lumières)
+        B.sphere(Z, "lum_orange", (16.5 + k * 1.45, 1.13, -16.15), 0.05, scale=(1.4, 0.6, 1))
+    light((22.25, 1.4, -15.2), "#ffb36b", 0.5, 4)
+    B.quad(Z, "Sortie", mt.sign(["EXIT"], bg=(30, 70, 50), fg=(160, 240, 190), w=256, h=96, font_size=44, border=(40, 90, 60)),
+           (22.25, 2.95, -6.17), 0.6, 0.22, (0, 0, -1), emissive=(0.3, 0.8, 0.5))
+    light((22.25, 2.8, -6.6), "#8fe3b0", 0.35, 3)
+    # derrière le rideau : les Doux, en rang, face au rideau
+    kinds = ["lapin", "ours", "chat", "chien", "lapin", "ours"]
+    furs = ["doux_rose", "doux_menthe", "doux_lilas", "doux_jaune", "doux_bleu", "doux_peche"]
+    row = (16.8, 18.6, 20.4, 24.1, 25.9, 27.7)
+    softie_spots = []
+    for k, x in enumerate(row):
+        body, head = softie(kinds[k], furs[k], 300 + 10 * k)
+        T = tr(x, 1.1, -19.0 - 0.25 * (k % 2)) @ rot_y((-1) ** k * 6)
+        for key, m in place(body, T).items():
+            B.add_mesh(Z, key, m)
+        for key, m in place(head, T).items():
+            B.unique_mesh(Z, "TeteDoux_%d_%s" % (k, key), key, m)
+        softie_spots.append([x, 1.1, -19.0])
+    body, head = softie("lapin", "doux_rose", 377)        # celui qui marche : pile devant la fente du rideau
+    T = tr(22.25, 1.1, -18.4)
+    for key, m in place(body, T).items():
+        B.unique_mesh(Z, "DouxMarcheur_corps_%s" % key, key, m)
+    for key, m in place(head, T).items():
+        B.unique_mesh(Z, "DouxMarcheur_tete_%s" % key, key, m)
+    light((22.25, 6.3, -17.6), "#cfd8ff", 1.5, 9)          # une seule poursuite froide sur le rang
+    B.quad(Z, "Toile_De_Fond", mt.stage_backdrop(), (22.0, 3.8, -24.0), 12.0, 5.25, (0, 0, 1))
+    B.box(Z, "bois_sombre", 15.9, 28.1, 6.42, 6.52, -24.08, -23.96, style="arch")         # perche de la toile
+    # la marionnette géante de « la Dame qui écoute », pendue au cintre
+    px, pz = 22.25, -21.0
+    pup = []
+    pup.append(("bois_sombre", rounded_box([0.42, 0.95, 0.16], 0.05, wonk=0.05, subdiv=1), (px, 4.55, pz)))   # buste
+    pup.append(("bois_sombre", rounded_box([0.34, 0.3, 0.14], 0.04, wonk=0.05, subdiv=1), (px, 3.85, pz)))   # bassin
+    hd = ell(0.17, 0.27, 0.15, (0, 0, 0), 501, lump=0.04)
+    pup.append(("peinture_blanche", hd, (px, 5.38, pz)))
+    for sx in (1, -1):                                    # yeux effacés : deux traînées sombres
+        e = ell(0.045, 0.02, 0.01, (0, 0, 0), 510 + sx, lump=0.0, sub=1)
+        pup.append(("noir_cable", e, (px + 0.065 * sx, 5.43, pz + 0.145)))
+    for j, (p0, p1, r) in enumerate((([0.22, 4.95, 0], [0.42, 4.25, 0.05], 0.05), ([0.42, 4.25, 0.05], [0.5, 3.45, 0.12], 0.045),
+                                     ([0.5, 3.45, 0.12], [0.52, 2.75, 0.1], 0.04),                   # bras trop longs
+                                     ([0.11, 3.7, 0], [0.13, 2.95, 0.04], 0.055), ([0.13, 2.95, 0.04], [0.14, 2.2, -0.02], 0.05))):
+        for sx in (1, -1):
+            a0 = np.array([px + p0[0] * sx, p0[1], pz + p0[2]])
+            a1 = np.array([px + p1[0] * sx, p1[1], pz + p1[2]])
+            pup.append(("bois_sombre", limb(a0.tolist(), a1.tolist(), r), (0, 0, 0)))
+    for key, m, off in pup:
+        m = m.copy()
+        m.apply_translation(off)
+        B.add_mesh(Z, key, m)
+    B.box(Z, "bois_sombre", px - 0.7, px + 0.7, 6.55, 6.65, pz - 0.05, pz + 0.05, style="arch")     # croix de manipulation
+    B.box(Z, "bois_sombre", px - 0.05, px + 0.05, 6.55, 6.65, pz - 0.6, pz + 0.6, style="arch")
+    for a0, a1 in (((px, 6.55, pz), (px, 5.62, pz)), ((px - 0.65, 6.55, pz), (px - 0.52, 2.75, pz + 0.1)),
+                   ((px + 0.65, 6.55, pz), (px + 0.52, 2.75, pz + 0.1)), ((px, 6.55, pz - 0.55), (px - 0.14, 2.2, pz - 0.02)),
+                   ((px, 6.55, pz + 0.55), (px + 0.14, 2.2, pz - 0.02))):
+        B.cyl(Z, "noir_cable", list(a0), list(a1), 0.006, 4)
+    # cintre : passerelles en hauteur (REFUGE), échelle, cordages
+    for zc in (-17.6, -22.2):
+        B.box(Z, "metal_gris", 13.15, 30.85, 6.8, 6.86, zc - 0.35, zc + 0.35, style="sharp")
+        for x in np.arange(13.4, 30.8, 0.9):
+            for sz in (-0.35, 0.35):
+                B.cyl(Z, "metal_gris", [x, 6.86, zc + sz], [x, 7.75, zc + sz], 0.02, 5)
+        for sz in (-0.35, 0.35):
+            B.cyl(Z, "metal_gris", [13.15, 7.72, zc + sz], [30.85, 7.72, zc + sz], 0.022, 5)
+    B.box(Z, "metal_gris", 13.15, 13.9, 6.8, 6.86, -24.8, -17.25, style="sharp")        # passerelle de côté
+    for k in range(20):                                                                  # échelle de la scène au cintre
+        y = 1.35 + k * 0.29
+        B.cyl(Z, "metal_gris", [14.1, y, -24.75], [14.1, y, -24.25], 0.018, 5)
+    for z in (-24.75, -24.25):
+        B.cyl(Z, "metal_gris", [14.1, 1.1, z], [14.1, 7.2, z], 0.025, 6)
+    for k in range(6):                                                                   # cordages + sacs de sable
+        x = 30.3 - k * 0.12
+        B.cyl(Z, "tissu_creme", [x, 1.1, -20.0 - k * 0.3], [x, 8.9, -20.0 - k * 0.3], 0.018, 5)
+        if k % 2 == 0:
+            B.sphere(Z, "tissu_creme", (x, 2.0 + k * 0.6, -20.0 - k * 0.3), 0.13, scale=(1, 1.4, 1))
+    light((22.0, 8.0, -21.0), "#7f8fb8", 0.3, 8)
+    # coulisses : la loge (coiffeuse, miroir, un Doux sans tête assis devant), le portant de costumes
+    B.box(Z, "bois_peint_rose", 25.6, 28.0, 1.1, 1.9, -26.85, -26.15)                    # coiffeuse
+    B.box(Z, "bois_sombre", 25.55, 28.05, 1.9, 1.94, -26.88, -26.1)
+    B.quad(Z, "Miroir_Loge", mt.dressing_mirror(), (26.8, 2.65, -26.84), 1.1, 1.28, (0, 0, 1), rough=0.15)
+    bulbs = [(26.3 + 0.25 * k, 3.36) for k in range(5)] + [(x, y) for x in (26.18, 27.42) for y in (2.45, 2.95)]
+    for k, (x, y) in enumerate(bulbs):                                                   # ampoules autour du miroir (une seule marche)
+        B.sphere(Z, "lum_chaud" if k == 3 else "peinture_blanche", (x, y, -26.8), 0.045)
+    light((26.6, 3.2, -26.4), "#ffd9a0", 0.6, 3)
+    body, head = softie("ours", "doux_lilas", 420, sitting=True)                         # assis, face au miroir
+    T = tr(26.6, 1.1, -25.2) @ rot_y(180)
+    for key, m in place(body, T).items():
+        B.add_mesh(Z, key, m)
+    B.box(Z, "bois_sombre", 26.35, 26.85, 1.1, 1.55, -25.45, -24.95)                     # tabouret
+    hole = trimesh.creation.cylinder(radius=0.12, height=0.02, sections=14)               # le cou : un trou noir
+    hole.apply_translation([26.6, 1.1 + 1.29, -25.24])
+    B.add_mesh(Z, "noir_cable", hole)
+    T = tr(27.55, 1.94 - 1.22, -26.45) @ rot_y(200)                                      # sa tête posée sur la coiffeuse
+    for key, m in place(head, T).items():
+        B.add_mesh(Z, key, m)
+    B.cyl(Z, "metal_gris", [16.0, 3.0, -26.4], [22.0, 3.0, -26.4], 0.025, 6)             # portant
+    for x in (16.0, 22.0):
+        B.cyl(Z, "metal_gris", [x, 1.1, -26.4], [x, 3.0, -26.4], 0.03, 6)
+    for k in range(8):                                     # costumes vides pendus (des peaux de Doux)
+        x = 16.5 + k * 0.72
+        B.cyl(Z, "metal_gris", [x, 3.0, -26.4], [x, 2.85, -26.4], 0.01, 4)
+        suit = ell(0.28, 0.55, 0.1, (x, 2.25, -26.4), 600 + k, lump=0.12)
+        B.add_mesh(Z, furs[k % 6], suit)
+        for sx in (1, -1):
+            B.add_mesh(Z, furs[k % 6], limb([x + 0.22 * sx, 2.6, -26.4], [x + 0.26 * sx, 1.85, -26.35], 0.06))
+    B.box(Z, "bois_sombre", 28.6, 30.6, 1.1, 1.85, -26.8, -26.0)                         # malle
+    mark("Le théâtre des Doux", "Le théâtre du parc. Le rideau est entrouvert. Derrière, quelque chose attend en rang.",
+         (22.25, 3.0, -16.3), (22.25, 1.7, -13.4))
+    mark("Les Doux", "Les animateurs, coincés dans leurs costumes. Ils ne bougent que quand personne ne les regarde : « 1, 2, 3, soleil ». Celui du milieu avance si tu détournes les yeux.",
+         (22.25, 2.6, -18.6), (22.25, 2.2, -16.9))
+    mark("La Dame qui écoute", "Une marionnette géante pendue au cintre : la directrice, sans yeux, avec des bras trop longs. Le spectacle parlait d'elle.",
+         (22.25, 4.6, -21.0), (19.5, 3.4, -17.2))
+    mark("La loge", "Un Doux sans tête, assis devant le miroir. Sa tête est posée sur la coiffeuse. Au rouge à lèvres : DON'T LOOK AWAY.",
+         (26.7, 2.2, -26.2), (24.0, 2.7, -24.35))
+    mark("Le balcon (refuge)", "Grimpe : balcon, corniches, loges, passerelles du cintre. Elle ne grimpe pas. Elle attendra en bas, à écouter.",
+         (22.0, 3.7, -8.5), (22.0, 2.0, -14.5))
+
+    # ============================ REFUGES EN HAUTEUR AILLEURS ============================
+    # Hall : mezzanine au-dessus des plantes mortes, une armoire pour y monter
+    B.box("Hall", "planches", -7 + WALL, -2.0, 4.0, 4.2, -6 + WALL, -4.7, style="arch")
+    for x in np.arange(-6.7, -2.0, 0.5):
+        B.cyl("Hall", "bois_moulure", [x, 4.2, -4.72], [x, 5.0, -4.72], 0.03, 6)
+    B.box("Hall", "bois_moulure", -7 + WALL, -2.0, 5.0, 5.08, -4.78, -4.66, style="arch")
+    B.box("Hall", "bois_sombre", -5.0, -4.0, 0, 2.7, -5.85, -5.25)                        # armoire
+    B.box("Hall", "bois_moulure", -5.08, -3.92, 2.7, 2.8, -5.9, -5.2)
+    # Dortoir : deux grandes armoires dans les coins du fond
+    for x0, x1 in ((-7.85, -6.25), (6.25, 7.85)):
+        B.box("Ecole", "peinture_blanche", x0, x1, 0, 2.7, 29.05, 29.85)
+        B.box("Ecole", "bois_moulure", x0 - 0.04, x1 + 0.04, 2.7, 2.78, 29.0, 29.85)
+    # Piscine : le plongeoir (4 m au-dessus du bord), avec son échelle
+    B.box("Piscine", "carrelage_creme", 5.5, 7.3, -3.0, 0.8, -25.85, -24.6, style="arch")
+    B.box("Piscine", "bois_peint_bleu", 6.05, 6.75, 0.8, 0.9, -24.6, -21.4)                # la planche avance au-dessus de l'encre
+    for k in range(12):
+        y = -2.7 + k * 0.3
+        B.cyl("Piscine", "metal_gris", [5.65, y, -24.45], [7.15, y, -24.45], 0.02, 5)
+    mark("Les refuges en hauteur", "Mezzanine du hall, armoires du dortoir, plongeoir, passerelles des machines, balcon du théâtre : là-haut, elle ne t'attrape pas. Mais elle attend.",
+         (6.4, 0.9, -23.0), (2.0, 1.0, -17.0))
+
     # ============================ CHAISES QUI VOLENT ============================
     def kid_chair(seed):
         """Petite chaise d'école en bois peint, un peu tordue (assise, dossier, 4 pieds)."""
@@ -786,10 +1137,9 @@ def build():
         m = trimesh.util.concatenate(parts)
         return m
 
-    chairs = (("Ecole", (0.0, 2.2, 18.0), (25, 40, 10)), ("Ecole", (-2.6, 2.9, 22.0), (-160, 15, 30)),
-              ("Ecole", (2.3, 1.6, 25.4), (10, -70, -20)), ("Hall", (-1.6, 3.6, -2.0), (70, 20, 0)),
-              ("Hall", (3.4, 2.3, 3.4), (-20, 120, 35)), ("Couloir", (20.0, 1.7, 0.0), (180, 30, 0)),
-              ("Ventilateur", (-31.0, 2.6, -45.0), (40, 0, 80)), ("Ventilateur", (-29.0, 1.0, -49.4), (-30, 60, 15)),
+    # Seulement dans la salle du grand ventilateur : le souffle explique pourquoi elles volent.
+    # (Ailleurs, une chaise qui flotte sans raison ressemble à un bug de modèle.)
+    chairs = (("Ventilateur", (-31.0, 2.6, -45.0), (40, 0, 80)), ("Ventilateur", (-29.0, 1.0, -49.4), (-30, 60, 15)),
               ("Ventilateur", (-27.6, 3.9, -44.2), (120, -20, 40)), ("Ventilateur", (-32.6, 0.4, -50.2), (15, 200, -60)))
     for k, (zone, pos, (rx, ry, rz)) in enumerate(chairs):
         m = kid_chair(k)
@@ -798,8 +1148,8 @@ def build():
         m.apply_translation(pos)
         key = ("bois_peint_rose", "bois_peint_bleu", "peinture_blanche")[k % 3]
         B.unique_mesh(zone, "ChaiseVolante_%d" % k, key, m)
-    mark("Les chaises qui volent", "Des petites chaises d'école flottent dans le noir. Si tu t'approches trop, elles tombent... et le bruit l'appelle.",
-         (0.0, 2.2, 18.0), (2.5, 1.8, 15.0))
+    mark("Les chaises qui volent", "Le souffle du ventilateur fait tourner des chaises d'école en l'air. Si tu t'approches trop, elles tombent... et le bruit l'appelle.",
+         (-30.0, 1.8, -47.0), (-24.5, 1.6, -45.0))
 
     # ============================ PETITES PORTES D'ENFANTS ============================
     # 22 petites portes avec un prénom (+ la porte 23 du couloir = les « 23 friends » du dessin).
@@ -833,7 +1183,7 @@ def build():
         ("Hall", (2.6, 1.9, 6 - W2), (0, 0, -1), -4),                  # en hauteur
         ("Hall", (-7 + W2, 0.56, -3.5), (1, 0, 0), 180),               # à l'envers
         ("Ecole", (-5.5, 0.56, 12 + W2), (0, 0, 1), 3),
-        ("Ecole", (-3.4, 0.2, 12 + W2), (0, 0, 1), -8),                # à moitié dans le sol
+        ("Ecole", (-3.4, 0.56, 12 + W2), (0, 0, 1), -8),               # de travers
         ("Ecole", (4.0, 0.56, 12 + W2), (0, 0, 1), 0),
         ("Ecole", (6.2, 2.6, 12 + W2), (0, 0, 1), 12),                 # en hauteur, de travers
         ("Ecole", (5.6, 3.2, 30 - W2), (0, 0, -1), 180),               # à l'envers près du plafond
@@ -843,7 +1193,7 @@ def build():
         left = i % 2 == 0
         x = -27 + W2 if left else -24 - W2
         nrm = (1, 0, 0) if left else (-1, 0, 0)
-        y = (-2.44, -2.0, -2.44, -1.2, -2.85, -2.44, -0.9, -2.44, -2.3, -1.6)[i]
+        y = (-2.44, -2.0, -2.44, -1.2, -2.44, -2.44, -0.9, -2.44, -2.3, -1.6)[i]
         spin = (0, 6, -3, 25, 0, 90, -15, 180, 40, -100)[i]
         spots_doors.append(("Galerie", (x, y, z), nrm, spin))
     spots_doors.append(("Galerie", (-25.5, 0.2 - 0.02, -33.6), (0, -1, 0), 0))   # au plafond
@@ -865,7 +1215,7 @@ def build():
         "p03_rules":      ("Ecole", (-1.33, 1.6, 9.0), (1, 0, 0), 2, (0.6, 1.7, 9.0)),
         "p04_theo":       ("Ecole", (-2.5, 0.78, 26.85), (0, 1, 0), 8, (-2.2, 1.9, 25.4)),
         "p05_ines":       ("Ecole", (5.0, 0.012, 19.3), (0, 1, 0), 40, (3.5, 1.6, 18.2)),
-        "p06_entertainer": ("Couloir", (17.0, 0.02, -0.25), (0, 1, 0), -30, (15.6, 1.7, 0.6)),
+        "p06_entertainer": ("Theatre", (26.85, 1.945, -26.4), (0, 1, 0), -20, (26.0, 2.9, -24.6)),   # sur la coiffeuse de la loge
         "p07_lifeguard":  ("Piscine", (-3.0, -1.235, -8.6), (0, 1, 0), 12, (-2.0, 0.2, -10.6)),
         "p08_diary_a":    ("Standard", (-18.25, 0.81, -0.35), (0, 1, 0), -10, (-16.9, 1.9, -1.2)),
         "p09_diary_b":    ("Standard", (-17.95, 0.81, 0.25), (0, 1, 0), 22, (-16.9, 1.9, 1.3)),

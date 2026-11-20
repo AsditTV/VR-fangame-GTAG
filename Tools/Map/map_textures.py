@@ -343,3 +343,84 @@ def child_door(name, seed=0, scratched=False):
         x, y = w - 46 + rng.uniform(-22, 18), 186 + rng.uniform(-30, 30)
         d.ellipse([x - 4, y - 5, x + 4, y + 5], fill=tuple(int(c * 0.82) for c in bg))
     return img
+
+
+# ---------------------------------------------------------------- théâtre des Doux
+def softies_poster():
+    """Affiche du spectacle des Doux, avec un bandeau CANCELLED collé de travers par-dessus."""
+    w, h = 320, 448
+    img = Image.new("RGB", (w, h), (246, 226, 214))
+    d = HandDraw(img, wobble=1.3)
+    d.rectangle([10, 10, w - 11, h - 11], outline=(200, 120, 140), width=6)
+    title = ImageFont.truetype(FONT_KID, 40)
+    small = ImageFont.truetype(FONT_KID, 22)
+    d.text((w / 2, 58), "THE SOFTIES", fill=(200, 90, 120), font=title, anchor="mm")
+    d.text((w / 2, 100), "SHOW!", fill=(90, 140, 170), font=title, anchor="mm")
+    cx, cy = w / 2, 262                                    # tête de lapin en peluche, grand sourire cousu
+    d.ellipse([cx - 70, cy - 62, cx + 70, cy + 70], outline=(190, 120, 140), width=5, fill=(240, 200, 210))
+    for sx in (-1, 1):
+        d.ellipse([cx + sx * 40 - 16, cy - 128, cx + sx * 40 + 16, cy - 50], outline=(190, 120, 140), width=5, fill=(240, 200, 210))
+        d.ellipse([cx + sx * 28 - 10, cy - 18, cx + sx * 28 + 10, cy + 2], fill=(40, 30, 40))
+    pts = [(cx - 40 + k * 8, cy + 28 + 10 * math.sin(k / 10 * math.pi)) for k in range(11)]
+    d.line(pts, fill=(60, 40, 50), width=4)
+    for x, y in pts[1:-1:2]:
+        d.line([(x, y - 7), (x, y + 7)], fill=(60, 40, 50), width=3)
+    d.text((w / 2, 350), "every Sunday - 3 pm", fill=(110, 80, 90), font=small, anchor="mm")
+    d.text((w / 2, 384), "Marivaux Park Theatre", fill=(110, 80, 90), font=small, anchor="mm")
+    band = Image.new("RGB", (420, 70), (40, 36, 44))
+    db = ImageDraw.Draw(band)
+    db.text((210, 35), "CANCELLED", fill=(235, 225, 210), font=ImageFont.truetype(FONT_SERIF, 46), anchor="mm")
+    band = band.rotate(-24, expand=True, fillcolor=(0, 0, 0))
+    mask = band.convert("L").point(lambda v: 255 if v > 6 else 0)
+    img.paste(band, (-50, 150), mask)
+    return img
+
+
+def stage_backdrop():
+    """Toile de fond peinte : le parc ensoleillé, et par-dessus, en grosses lettres brunes : RED LIGHT... GREEN LIGHT."""
+    w, h = 1024, 448
+    rng = np.random.default_rng(55)
+    y = np.linspace(0, 1, h)[:, None, None]
+    sky = (1 - y) * np.array([0.72, 0.82, 0.9]) + y * np.array([0.93, 0.86, 0.8])
+    arr = np.ones((h, w, 3)) * sky
+    arr *= 1 + (tx.fractal(w, rng)[:h, :, None] - 0.5) * 0.18      # peinture écaillée
+    img = _img(arr)
+    d = HandDraw(img, wobble=2.2)
+    d.ellipse([820, 40, 940, 160], fill=(240, 210, 130), outline=(220, 170, 90), width=5)
+    for k in range(4):                                      # collines
+        x0 = -100 + k * 300
+        d.ellipse([x0, 260 + 20 * (k % 2), x0 + 520, 640], fill=(150 + 10 * k, 190, 150 - 5 * k), outline=(110, 150, 110), width=4)
+    for k in range(7):                                      # arbres sucettes
+        x = 60 + k * 140 + rng.uniform(-20, 20)
+        d.line([(x, 300), (x + rng.uniform(-6, 6), 380)], fill=(120, 90, 70), width=8)
+        d.ellipse([x - 40, 220, x + 40, 310], fill=(130, 180, 130), outline=(90, 130, 90), width=4)
+    font = ImageFont.truetype(FONT_KID, 66)
+    for k, (word, x) in enumerate((("RED LIGHT...", 250), ("GREEN LIGHT", 730))):
+        d.text((x, 150 + 30 * k), word, fill=(120, 50, 40), font=font, anchor="mm")
+        for j in range(4):                                  # coulures de peinture
+            xx = x - 180 + rng.uniform(0, 360)
+            d.line([(xx, 190 + 30 * k), (xx + rng.uniform(-3, 3), 190 + 30 * k + rng.uniform(30, 110))], fill=(120, 50, 40), width=5)
+    return img
+
+
+def dressing_mirror():
+    """Miroir de loge sale, avec au rouge à lèvres : DON'T LOOK AWAY / THEY ONLY MOVE WHEN YOU DON'T SEE THEM."""
+    w, h = 384, 448
+    rng = np.random.default_rng(66)
+    base = np.ones((h, w, 3)) * np.array([0.18, 0.2, 0.24])
+    base += (tx.fractal(h, rng)[:, :w, None] - 0.5) * 0.12
+    yy, xx = np.mgrid[0:h, 0:w]
+    base += (np.exp(-((xx - w * 0.35) ** 2 + (yy - h * 0.3) ** 2) / (2 * 90 ** 2)) * 0.12)[..., None]   # reflet
+    img = _img(base)
+    d = HandDraw(img, wobble=1.8)
+    lip = (190, 50, 70)
+    big = ImageFont.truetype(FONT_KID, 46)
+    small = ImageFont.truetype(FONT_KID, 26)
+    d.text((w / 2, 110), "DON'T", fill=lip, font=big, anchor="mm")
+    d.text((w / 2, 168), "LOOK AWAY", fill=lip, font=big, anchor="mm")
+    for k, line in enumerate(("they only move", "when you don't", "see them")):
+        d.text((w / 2 + rng.uniform(-10, 10), 270 + k * 40), line, fill=lip, font=small, anchor="mm")
+    for k in range(5):                                      # traces de doigts
+        x, y = rng.uniform(40, w - 40), rng.uniform(395, h - 20)
+        d.ellipse([x - 9, y - 12, x + 9, y + 12], fill=(60, 64, 70))
+    return img

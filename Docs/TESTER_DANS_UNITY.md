@@ -63,3 +63,18 @@ Détails, prix et calculs : `Docs/ECONOMIE.md`.
 2. Approche-toi d'une chaise qui flotte : elle tremble, tombe (bruit), puis remonte ~10 s après ton départ.
 3. Reste près des petites portes de la galerie : au bout d'un moment, toc toc toc (parfois une voix).
 4. Le ventilateur tourne. Deux Écoutes : une en haut, une au sous-sol.
+
+## Nouveautés à tester (menus 3, 5 et 8 ; supprime d'abord les anciennes scènes générées)
+1. **Pas de jambes** : regarde-toi dans le miroir / sur le mannequin d'essai.
+2. **Pas selon la surface** : tape sur le parquet, le carrelage de la piscine, le métal des
+   passerelles, la moquette du hall. Le son change ET la portée du bruit (métal = on t'entend de loin,
+   moquette = discret).
+3. **Grimper sur un joueur** : le « Mannequin d'essai » (salle de test, et Salle de jeux de l'Institut)
+   a la même coque qu'un joueur : pose tes mains sur sa tête et monte dessus.
+4. **La peur** : approche-toi d'une Écoute sans qu'elle chasse : le coeur bat dans les manettes,
+   ta respiration s'entend, l'ambiance se tait. Les lumières grésillent quand elle passe près.
+   Reste 1 à 2 minutes au calme loin d'elle : une fausse alerte arrive (pas derrière toi, chuchotement...).
+5. **Théâtre** : passe par la fente du rideau. Détourne les yeux du Doux du milieu, puis regarde-le :
+   il a avancé. Laisse-le te toucher pour voir le jumpscare.
+6. **Refuges** : monte au balcon du théâtre (caisses à gauche, ou colonnes) et fais du bruit : elle
+   vient en dessous mais ne t'attrape pas, puis elle repart.

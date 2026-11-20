@@ -30,7 +30,7 @@
    "pos": [
     10.3,
     1.35,
-    1.1400000000000001
+    1.09
    ],
    "color": "#f2a7b9",
    "intensity": 0.5,
@@ -40,7 +40,7 @@
    "pos": [
     17.5,
     1.35,
-    1.1400000000000001
+    1.09
    ],
    "color": "#f2a7b9",
    "intensity": 0.5,
@@ -50,7 +50,7 @@
    "pos": [
     24.7,
     1.35,
-    1.1400000000000001
+    1.09
    ],
    "color": "#f2a7b9",
    "intensity": 0.5,
@@ -265,6 +265,66 @@
    "color": "#ffe2b8",
    "intensity": 0.8,
    "distance": 3
+  },
+  {
+   "pos": [
+    22.25,
+    2.5,
+    -3.8
+   ],
+   "color": "#e8c890",
+   "intensity": 0.45,
+   "distance": 4
+  },
+  {
+   "pos": [
+    22.25,
+    1.4,
+    -15.2
+   ],
+   "color": "#ffb36b",
+   "intensity": 0.5,
+   "distance": 4
+  },
+  {
+   "pos": [
+    22.25,
+    2.8,
+    -6.6
+   ],
+   "color": "#8fe3b0",
+   "intensity": 0.35,
+   "distance": 3
+  },
+  {
+   "pos": [
+    22.25,
+    6.3,
+    -17.6
+   ],
+   "color": "#cfd8ff",
+   "intensity": 1.5,
+   "distance": 9
+  },
+  {
+   "pos": [
+    22.0,
+    8.0,
+    -21.0
+   ],
+   "color": "#7f8fb8",
+   "intensity": 0.3,
+   "distance": 8
+  },
+  {
+   "pos": [
+    26.6,
+    3.2,
+    -26.4
+   ],
+   "color": "#ffd9a0",
+   "intensity": 0.6,
+   "distance": 3
   }
  ],
  "zones": [
@@ -354,6 +414,22 @@
     11,
     2.6,
     6.2
+   ]
+  },
+  {
+   "nom": "Foyer du théâtre",
+   "pos": [
+    22.25,
+    2.6,
+    -3.8
+   ]
+  },
+  {
+   "nom": "Le théâtre des Doux",
+   "pos": [
+    22,
+    5,
+    -14
    ]
   }
  ],
@@ -653,17 +729,101 @@
    ]
   },
   {
-   "titre": "Les chaises qui volent",
-   "texte": "Des petites chaises d'école flottent dans le noir. Si tu t'approches trop, elles tombent... et le bruit l'appelle.",
+   "titre": "Le théâtre des Doux",
+   "texte": "Le théâtre du parc. Le rideau est entrouvert. Derrière, quelque chose attend en rang.",
    "pos": [
-    0.0,
-    2.2,
-    18.0
+    22.25,
+    3.0,
+    -16.3
    ],
    "cam": [
-    2.5,
+    22.25,
+    1.7,
+    -13.4
+   ]
+  },
+  {
+   "titre": "Les Doux",
+   "texte": "Les animateurs, coincés dans leurs costumes. Ils ne bougent que quand personne ne les regarde : « 1, 2, 3, soleil ». Celui du milieu avance si tu détournes les yeux.",
+   "pos": [
+    22.25,
+    2.6,
+    -18.6
+   ],
+   "cam": [
+    22.25,
+    2.2,
+    -16.9
+   ]
+  },
+  {
+   "titre": "La Dame qui écoute",
+   "texte": "Une marionnette géante pendue au cintre : la directrice, sans yeux, avec des bras trop longs. Le spectacle parlait d'elle.",
+   "pos": [
+    22.25,
+    4.6,
+    -21.0
+   ],
+   "cam": [
+    19.5,
+    3.4,
+    -17.2
+   ]
+  },
+  {
+   "titre": "La loge",
+   "texte": "Un Doux sans tête, assis devant le miroir. Sa tête est posée sur la coiffeuse. Au rouge à lèvres : DON'T LOOK AWAY.",
+   "pos": [
+    26.7,
+    2.2,
+    -26.2
+   ],
+   "cam": [
+    24.0,
+    2.7,
+    -24.35
+   ]
+  },
+  {
+   "titre": "Le balcon (refuge)",
+   "texte": "Grimpe : balcon, corniches, loges, passerelles du cintre. Elle ne grimpe pas. Elle attendra en bas, à écouter.",
+   "pos": [
+    22.0,
+    3.7,
+    -8.5
+   ],
+   "cam": [
+    22.0,
+    2.0,
+    -14.5
+   ]
+  },
+  {
+   "titre": "Les refuges en hauteur",
+   "texte": "Mezzanine du hall, armoires du dortoir, plongeoir, passerelles des machines, balcon du théâtre : là-haut, elle ne t'attrape pas. Mais elle attend.",
+   "pos": [
+    6.4,
+    0.9,
+    -23.0
+   ],
+   "cam": [
+    2.0,
+    1.0,
+    -17.0
+   ]
+  },
+  {
+   "titre": "Les chaises qui volent",
+   "texte": "Le souffle du ventilateur fait tourner des chaises d'école en l'air. Si tu t'approches trop, elles tombent... et le bruit l'appelle.",
+   "pos": [
+    -30.0,
     1.8,
-    15.0
+    -47.0
+   ],
+   "cam": [
+    -24.5,
+    1.6,
+    -45.0
    ]
   },
   {
@@ -812,21 +972,21 @@
    "secret": false,
    "verso": false,
    "pos": [
-    17.0,
-    0.02,
-    -0.25
+    26.85,
+    1.945,
+    -26.4
    ],
    "cam": [
-    15.6,
-    1.7,
-    0.6
+    26.0,
+    2.9,
+    -24.6
    ],
    "face": [
     0.0,
     1.0,
     0.0
    ],
-   "spin": -30.0
+   "spin": -20.0
   },
   {
    "id": "p07_lifeguard",
@@ -1121,6 +1281,18 @@
    ]
   },
   {
+   "x": 22.25,
+   "z": -1.5,
+   "axe": "z",
+   "largeur": 1.6000000000000014,
+   "bas": 0.0,
+   "haut": 2.6,
+   "pieces": [
+    1,
+    14
+   ]
+  },
+  {
    "x": 0.0,
    "z": 12.0,
    "axe": "z",
@@ -1238,6 +1410,18 @@
    "pieces": [
     11,
     12
+   ]
+  },
+  {
+   "x": 22.25,
+   "z": -6.0,
+   "axe": "z",
+   "largeur": 1.6000000000000014,
+   "bas": 0.0,
+   "haut": 2.6,
+   "pieces": [
+    14,
+    15
    ]
   }
  ],
@@ -1507,6 +1691,44 @@
     0.0,
     6.25
    ]
+  },
+  {
+   "zone": "Foyer",
+   "nom": "Foyer du théâtre",
+   "min": [
+    19.5,
+    0,
+    -6
+   ],
+   "max": [
+    25,
+    3.2,
+    -1.5
+   ],
+   "centre": [
+    22.25,
+    0.0,
+    -3.75
+   ]
+  },
+  {
+   "zone": "Theatre",
+   "nom": "Le théâtre",
+   "min": [
+    13,
+    0,
+    -27
+   ],
+   "max": [
+    31,
+    9,
+    -6
+   ],
+   "centre": [
+    22.25,
+    0.0,
+    -12.0
+   ]
   }
  ],
  "nav": {
@@ -1582,6 +1804,16 @@
     6.25
    ],
    [
+    22.25,
+    0.0,
+    -3.75
+   ],
+   [
+    22.25,
+    0.0,
+    -12.0
+   ],
+   [
     7.0,
     0.0,
     0.0
@@ -1600,6 +1832,11 @@
     -7.0,
     0.0,
     0.0
+   ],
+   [
+    22.25,
+    0.0,
+    -1.5
    ],
    [
     0.0,
@@ -1650,120 +1887,141 @@
     -4.5,
     -3.0,
     -26.0
+   ],
+   [
+    22.25,
+    0.0,
+    -6.0
    ]
   ],
   "liens": [
    [
     0,
-    14
-   ],
-   [
-    0,
-    15
-   ],
-   [
-    0,
     16
    ],
    [
     0,
     17
+   ],
+   [
+    0,
+    18
+   ],
+   [
+    0,
+    19
    ],
    [
     1,
-    14
-   ],
-   [
-    2,
     16
    ],
    [
+    1,
+    20
+   ],
+   [
     2,
     18
    ],
    [
+    2,
+    21
+   ],
+   [
     3,
-    18
-   ],
-   [
-    4,
-    17
+    21
    ],
    [
     4,
     19
    ],
    [
-    5,
-    19
-   ],
-   [
-    5,
-    20
-   ],
-   [
-    6,
-    20
-   ],
-   [
-    6,
-    21
-   ],
-   [
-    7,
-    21
-   ],
-   [
-    7,
+    4,
     22
    ],
    [
-    7,
-    23
-   ],
-   [
-    8,
-    23
-   ],
-   [
-    8,
-    24
-   ],
-   [
-    9,
-    24
-   ],
-   [
-    9,
-    25
-   ],
-   [
-    10,
-    25
-   ],
-   [
-    10,
-    26
-   ],
-   [
-    11,
-    26
-   ],
-   [
-    11,
-    27
-   ],
-   [
-    12,
+    5,
     22
    ],
    [
-    12,
+    5,
+    23
+   ],
+   [
+    6,
+    23
+   ],
+   [
+    6,
+    24
+   ],
+   [
+    7,
+    24
+   ],
+   [
+    7,
+    25
+   ],
+   [
+    7,
+    26
+   ],
+   [
+    8,
+    26
+   ],
+   [
+    8,
     27
+   ],
+   [
+    9,
+    27
+   ],
+   [
+    9,
+    28
+   ],
+   [
+    10,
+    28
+   ],
+   [
+    10,
+    29
+   ],
+   [
+    11,
+    29
+   ],
+   [
+    11,
+    30
+   ],
+   [
+    12,
+    25
+   ],
+   [
+    12,
+    30
    ],
    [
     13,
-    15
+    17
+   ],
+   [
+    14,
+    20
+   ],
+   [
+    14,
+    31
+   ],
+   [
+    15,
+    31
    ]
   ]
  },
@@ -1829,7 +2087,7 @@
    "name": "Ines",
    "pos": [
     -3.4,
-    0.2,
+    0.56,
     12.21
    ],
    "face": [
@@ -1941,7 +2199,7 @@
    "name": "Adele",
    "pos": [
     -26.790000000000003,
-    -2.85,
+    -2.44,
     -31.4
    ],
    "face": [

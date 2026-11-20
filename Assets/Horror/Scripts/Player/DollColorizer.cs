@@ -13,7 +13,7 @@ namespace Horror.Player
         [Tooltip("Vrai = suit les réglages du joueur local. Faux = couleur donnée par le réseau.")]
         public bool isLocal = true;
         [Tooltip("Noms (début) des pièces à teindre.")]
-        public string[] fabricParts = { "Corps", "BrasHaut_", "AvantBras_", "Epaule_Boule_", "Jambe_" };
+        public string[] fabricParts = { "Corps", "BrasHaut_", "AvantBras_", "Epaule_Boule_" };   // pas de jambes
 
         private static readonly string[] ColorProps = { "_BaseColor", "_Color", "baseColorFactor" };
         private readonly List<Renderer> _targets = new List<Renderer>();

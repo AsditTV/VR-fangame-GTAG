@@ -223,6 +223,23 @@ namespace Horror.EditorTools
                 Undo.RecordObject(footsteps, "Sons de pas");
                 footsteps.tapClips = LoadAll(Audio + "Player", "tap_");
             }
+            if (footsteps != null && (footsteps.surfaces == null || footsteps.surfaces.Length == 0))
+            {
+                // Sons de pas par surface : Audio/Steps/<surface>_soft_01.wav, <surface>_hard_01.wav...
+                Undo.RecordObject(footsteps, "Sons de pas par surface");
+                var list = new List<Horror.Noise.FootstepNoise.SurfaceSounds>();
+                foreach (Horror.Noise.SurfaceType st in System.Enum.GetValues(typeof(Horror.Noise.SurfaceType)))
+                {
+                    string key = st.ToString().ToLowerInvariant();
+                    list.Add(new Horror.Noise.FootstepNoise.SurfaceSounds
+                    {
+                        surface = st,
+                        soft = LoadAll(Audio + "Steps", key + "_soft_"),
+                        hard = LoadAll(Audio + "Steps", key + "_hard_"),
+                    });
+                }
+                footsteps.surfaces = list.ToArray();
+            }
 
             if (head.GetComponent<AmbientSoundscape>() == null)
             {
@@ -235,6 +252,20 @@ namespace Horror.EditorTools
                 shots.Add(Load<AudioClip>(Audio + "Ambience/child_giggle_far.wav"));
                 amb.defaultOneShots = shots.FindAll(c => c != null).ToArray();
                 amb.heartbeatLoop = Load<AudioClip>(Audio + "Jumpscare/heartbeat_loop.wav");
+            }
+
+            if (head.GetComponent<FearDirector>() == null)
+            {
+                // La tension : coeur dans les manettes, souffle, silence quand elle rôde, fausses alertes
+                FearDirector fear = Undo.AddComponent<FearDirector>(head.gameObject);
+                fear.breathLoop = Load<AudioClip>(Audio + "Player/breath_loop.wav");
+                fear.stepsBehind = LoadAll(Audio + "Monster", "step_");
+                var whispers = new List<AudioClip>(LoadAll(Audio + "World", "door_voice_"));
+                whispers.AddRange(LoadAll(Audio + "Monster", "whisper_"));
+                fear.earWhispers = whispers.ToArray();
+                fear.farSounds = new[] { Load<AudioClip>(Audio + "Ambience/child_giggle_far.wav"),
+                                         Load<AudioClip>(Audio + "Ambience/music_box_far.wav") };
+                fear.doorSlam = Load<AudioClip>(Audio + "Doors/door_lock.wav");
             }
         }
 

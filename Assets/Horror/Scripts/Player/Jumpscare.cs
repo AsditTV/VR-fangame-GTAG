@@ -48,10 +48,16 @@ namespace Horror.Player
         /// <summary>Lance le jumpscare (appelé par le monstre qui attrape le joueur).</summary>
         public void Trigger(BlindMonsterAI monster)
         {
-            if (!IsPlaying) StartCoroutine(Sequence(monster));
+            if (!IsPlaying) StartCoroutine(Sequence(monster != null ? monster.Head : null, 1f));
         }
 
-        private IEnumerator Sequence(BlindMonsterAI monster)
+        /// <summary>Même jumpscare avec n'importe quel visage (ex. la tête d'un Doux). scale : taille de la copie.</summary>
+        public void TriggerFace(Transform faceSource, float scale = 1f)
+        {
+            if (!IsPlaying) StartCoroutine(Sequence(faceSource, scale));
+        }
+
+        private IEnumerator Sequence(Transform faceSource, float scale)
         {
             IsPlaying = true;
             _locomotion.inputEnabled = false;
@@ -60,12 +66,14 @@ namespace Horror.Player
 
             // 1) Le visage surgit
             GameObject face = null;
-            if (monster != null && monster.Head != null)
+            if (faceSource != null)
             {
-                face = Instantiate(monster.Head.gameObject, head);
+                face = Instantiate(faceSource.gameObject, head);
                 foreach (var c in face.GetComponentsInChildren<MonoBehaviour>()) Destroy(c);
+                foreach (var c in face.GetComponentsInChildren<Collider>()) Destroy(c);
                 face.transform.localPosition = new Vector3(0f, -0.08f, 0.38f);
                 face.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // tourné vers toi
+                face.transform.localScale = Vector3.one * scale;
             }
             if (sting != null) _audio.PlayOneShot(sting, volume);
             Haptics(1f, faceTime);

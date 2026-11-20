@@ -98,8 +98,11 @@ namespace Horror.Monsters
             if (head != null) _headBase = head.localRotation;
         }
 
-        private void OnEnable() => NoiseSystem.Heard += OnNoise;
-        private void OnDisable() => NoiseSystem.Heard -= OnNoise;
+        /// <summary>Tous les monstres actifs (pour la tension, les lumières qui grésillent...).</summary>
+        public static readonly System.Collections.Generic.List<BlindMonsterAI> All = new System.Collections.Generic.List<BlindMonsterAI>();
+
+        private void OnEnable() { NoiseSystem.Heard += OnNoise; All.Add(this); }
+        private void OnDisable() { NoiseSystem.Heard -= OnNoise; All.Remove(this); }
 
         // ------------------------------------------------------------------ oreilles
 

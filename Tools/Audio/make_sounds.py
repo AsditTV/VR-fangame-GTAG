@@ -426,6 +426,110 @@ def chair_shiver():
     return reverb(x, size=1.0, mix=0.25)
 
 
+def step_surface(kind, i, hard=False):
+    """Main de poupée qui tape une surface : chaque matière a sa signature (pas = coups de mains)."""
+    d = 0.7
+    t = t_axis(d)
+    g = 1.0 if hard else 0.6
+    sharp = 1.6 if hard else 1.0
+    jit = 1 + 0.06 * (i - 1)
+    if kind == "bois":
+        body = sum(np.sin(2 * np.pi * f * jit * t) * np.exp(-t * k) for f, k in ((170, 28), (310, 40), (620, 70)))
+        x = body * 0.9 + lowpass(noise(d), 2500) * np.exp(-t * 60 * sharp) * 0.7
+        x = reverb(x, size=0.8, mix=0.18)
+    elif kind == "carrelage":
+        click = highpass(noise(d), 2500) * np.exp(-t * 140 / sharp)
+        ring = np.sin(2 * np.pi * 1850 * jit * t) * np.exp(-t * 35) * 0.25
+        x = click + ring + lowpass(noise(d), 900) * np.exp(-t * 70) * 0.5
+        x = reverb(x, size=1.6, mix=0.35)
+    elif kind == "beton":
+        x = lowpass(noise(d), 1400) * np.exp(-t * 55) + np.sin(2 * np.pi * 95 * jit * t) * np.exp(-t * 35) * 0.6
+        x += bandpass(noise(d), 2000, 5000) * np.exp(-t * 90) * 0.15 * sharp   # grain
+        x = reverb(x, size=1.2, mix=0.25)
+    elif kind == "metal":
+        parts = ((523, 6), (1311, 9), (2207, 12), (3120, 16))
+        x = sum(np.sin(2 * np.pi * f * jit * t + rng.uniform(0, 6)) * np.exp(-t * k / sharp) / (n + 1)
+                for n, (f, k) in enumerate(parts))
+        x += highpass(noise(d), 3000) * np.exp(-t * 120) * 0.5
+        rattle = bandpass(noise(d), 800, 2400) * (np.sin(2 * np.pi * 38 * t) > 0.6) * np.exp(-t * 18) * 0.25 * sharp
+        x = reverb(x + rattle, size=1.8, mix=0.3)
+    elif kind == "tissu":
+        x = lowpass(noise(d), 550) * np.exp(-t * 45) + np.sin(2 * np.pi * 85 * t) * np.exp(-t * 40) * 0.4
+        x = reverb(x, size=0.6, mix=0.1) * 0.6
+    elif kind == "encre":
+        slap = bandpass(noise(d), 300, 2500) * np.exp(-t * 30)
+        drops = np.zeros(len(t))
+        for k in range(6 + 4 * int(hard)):          # gouttelettes qui retombent
+            at = int(SR * rng.uniform(0.05, 0.45))
+            n = int(SR * 0.04)
+            tt = np.arange(n) / SR
+            f = rng.uniform(900, 2200)
+            drops[at:at + n] += np.sin(2 * np.pi * (f + 2000 * tt) * tt) * np.exp(-tt * 90)[:len(drops[at:at + n])] * 0.3
+        x = reverb(slap + drops, size=1.4, mix=0.3)
+    else:  # platre
+        x = np.sin(2 * np.pi * 240 * jit * t) * np.exp(-t * 45) + lowpass(noise(d), 1800) * np.exp(-t * 70) * 0.6
+        x = reverb(x, size=0.9, mix=0.2)
+    return x[:int(SR * d)] * g
+
+
+def breath_loop():
+    """Respiration du joueur qui panique : inspirations courtes et tremblées, expirations par la bouche (boucle 8 s)."""
+    d = 8
+    x = np.zeros(int(SR * d))
+    at = 0.0
+    while at < d - 0.8:
+        inh, exh = rng.uniform(0.35, 0.5), rng.uniform(0.45, 0.65)
+        for dur, lo, hi, amp in ((inh, 900, 3800, 0.8), (exh, 400, 2200, 1.0)):
+            n = int(SR * dur)
+            tt = np.arange(n) / SR
+            shake = 1 + 0.35 * np.sin(2 * np.pi * rng.uniform(9, 14) * tt)          # souffle qui tremble
+            e = np.sin(np.pi * tt / dur) ** 1.5 * shake
+            s0 = int(at * SR)
+            x[s0:s0 + n] += bandpass(rng.uniform(-1, 1, n), lo, hi) * e * amp
+            at += dur + 0.04
+        at += rng.uniform(0.05, 0.2)
+    return loopify(x, 0.4)
+
+
+def slow_clap():
+    """Une seule personne qui applaudit, lentement, dans un théâtre vide."""
+    x = np.zeros(int(SR * 5.5))
+    for k in range(5):
+        at = int(SR * (0.2 + k * (0.85 + 0.08 * k)))          # ralentit
+        d = 0.09
+        tt = np.arange(int(SR * d)) / SR
+        clap = bandpass(rng.uniform(-1, 1, len(tt)), 700, 3500) * np.exp(-tt * 70) * (1 - 0.1 * k)
+        x[at:at + len(tt)] += clap
+    return reverb(x, size=3.2, mix=0.6)
+
+
+def softie_shuffle():
+    """Frottement d'un gros costume de peluche qui avance (boucle 4 s) : tissu épais + pas étouffés."""
+    d = 4
+    t = t_axis(d)
+    fabric = bandpass(noise(d), 300, 1800) * (0.5 + 0.5 * np.abs(np.sin(2 * np.pi * t * 1.1)))
+    steps = np.zeros(len(t))
+    for k in range(9):
+        at = int(SR * (k * 0.45 + 0.1))
+        tt = np.arange(int(SR * 0.2)) / SR
+        steps[at:at + len(tt)] += lowpass(rng.uniform(-1, 1, len(tt)), 300) * np.exp(-tt * 30) * 2.5
+    return loopify(fabric * 0.6 + steps, 0.3)
+
+
+def softie_settle():
+    """Quand tu te retournes : le costume se fige, un craquement de rembourrage et un petit rire étouffé."""
+    d = 1.6
+    t = t_axis(d)
+    creak_ = bandpass(noise(d), 500, 2500) * np.exp(-t * 6) * (np.sin(2 * np.pi * 23 * t) > 0.3)
+    g = espeak("hee", speed=160, pitch=90)
+    g = lowpass(resample(g, 1.2), 900) * 0.6
+    x = np.zeros(len(t))
+    x += creak_ * 0.8
+    off = int(SR * 0.6)
+    x[off:off + len(g)] += g[:len(x) - off]
+    return reverb(x, size=1.4, mix=0.35)
+
+
 def main():
     lines = ["Shhh...", "I can hear you.", "Where are you, little one?", "Quiet. Quiet.",
              "Back to bed.", "Mila? Is that you?", "Nobody screams here.", "I hear everything."]
@@ -478,6 +582,20 @@ def main():
     for i in range(2):
         save("World", "chair_clatter_%02d" % (i + 1), chair_clatter(i), 0.85)
     save("World", "chair_shiver", chair_shiver(), 0.6)
+
+    # Pas selon la surface (ajoutés à la fin : les sons existants ne changent pas)
+    for kind in ("bois", "carrelage", "beton", "metal", "tissu", "encre", "platre"):
+        for i in range(3):
+            save("Steps", "%s_soft_%02d" % (kind, i + 1), step_surface(kind, i), 0.6 if kind != "tissu" else 0.4)
+        for i in range(2):
+            save("Steps", "%s_hard_%02d" % (kind, i + 1), step_surface(kind, i, hard=True), 0.85 if kind != "tissu" else 0.55)
+
+    save("Player", "breath_loop", breath_loop(), 0.5)   # la peur (ajouté à la fin)
+
+    # Théâtre des Doux (ajoutés à la fin)
+    save("World", "slow_clap", slow_clap(), 0.7)
+    save("World", "softie_shuffle", softie_shuffle(), 0.6)
+    save("World", "softie_settle", softie_settle(), 0.7)
 
     total = sum(len(fs) for _, _, fs in os.walk(OUT))
     print("OK ->", OUT, "|", total, "fichiers")

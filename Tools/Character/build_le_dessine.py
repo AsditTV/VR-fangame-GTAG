@@ -41,7 +41,7 @@ def rgb(h, a=255):
 
 
 LILAS = rgb("#B3A0C6")        # corps (tissu)
-LILAS_FONCE = rgb("#9583A9")  # jambes
+LILAS_FONCE = rgb("#9583A9")  # (anciennes jambes)
 TISSU_TETE = rgb("#D6C2BC")   # tête en tissu rose-beige délavé
 PECHE = rgb("#E6BFAE")        # mains et pieds
 SEMELLE = rgb("#B48F82")
@@ -254,22 +254,12 @@ def build():
 
     node("LeDessine", base, np.eye(4))
 
-    # --- Jambes courtes, pieds avec semelle cousue
-    for side, sx in (("G", 1), ("D", -1)):  # G = gauche du personnage (+X, il regarde vers +Z)
-        add(capsule_y(0.17, 0.055, LILAS_FONCE, lump=0.003, seed=2 if sx > 0 else 3),
-            "Jambe_" + side, "LeDessine", T(0.085 * sx, 0.26, 0))
-        add(ellipsoid(0.065, 0.04, 0.085, PECHE, lump=0.003, seed=4, texel=0.05),
-            "Pied_" + side, "LeDessine", T(0.085 * sx, 0.045, 0.025))
-        add(ellipsoid(0.068, 0.014, 0.088, SEMELLE, texel=0.05), "Semelle_" + side, "LeDessine",
-            T(0.085 * sx, 0.012, 0.025))
-        for k in range(6):  # points autour du pied
-            a = math.radians(-70 + k * 28)
-            add(running_stitch(0.012, 0.0035), "Pied_Point_%s_%d" % (side, k), "LeDessine",
-                T(0.085 * sx + 0.066 * math.sin(a), 0.03, 0.025 + 0.087 * math.cos(a)) @ R(math.degrees(a), Y) @ R(90, Z))
-    # pièce rose sur le genou gauche
-    add(box(0.05, 0.05, 0.006, ROSE), "Piece_Genou", "LeDessine", T(0.085, 0.2, 0.054) @ R(-6, Z))
-    for k, (dx, dy) in enumerate([(-0.022, 0.022), (0.022, 0.022), (-0.022, -0.022), (0.022, -0.022)]):
-        add(cross_stitch(0.01, 0.0028), "Genou_Point_%d" % k, "LeDessine", T(0.085 + dx, 0.2 + dy, 0.058))
+    # --- Pas de jambes (comme les jeux de locomotion aux bras) : le sac de tissu flotte,
+    # fermé en bas par une couture qui fait le tour.
+    for k in range(12):
+        a = k / 12 * math.tau
+        add(running_stitch(0.012, 0.0035), "Couture_Fond_%d" % k, "LeDessine",
+            T(0.117 * math.sin(a), 0.268, 0.092 * math.cos(a)) @ R(math.degrees(a), Y) @ R(90, Z))
 
     # --- Corps : un sac de tissu bombé et bosselé
     add(ellipsoid(0.19, 0.25, 0.15, LILAS, lump=0.006, seed=1), "Corps", "LeDessine", T(0, 0.47, 0))

@@ -84,6 +84,7 @@ namespace Horror.EditorTools
             DetectAxes(map);
             SetupGeometry(map);
             SetupMovingProps(map);
+            SetupSofties(map, data);
             SetupNight(data);
             RoomData playroom = SetupRooms(data);
             CosmeticItem[] items = SafeZoneShopBuilder.EnsureItems();
@@ -144,6 +145,7 @@ namespace Horror.EditorTools
                 if (n.StartsWith("Piscine_encre")) continue;   // l'encre ne porte pas : on s'y enfonce (2 m de noir)
                 if (n.Contains("Cosmetique_") || n.Contains("Prix_")) continue;
                 if (n.Contains("ChaiseVolante_") || n.Contains("Pales_Ventilateur")) continue;   // objets animés (SetupMovingProps)
+                if (n.Contains("TeteDoux_") || n.Contains("DouxMarcheur_")) continue;           // les Doux (SetupSofties)
                 MeshCollider col = mf.gameObject.AddComponent<MeshCollider>();
                 col.sharedMesh = mf.sharedMesh;
             }
@@ -198,6 +200,104 @@ namespace Horror.EditorTools
             }
         }
 
+        /// <summary>
+        /// Les Doux du théâtre : têtes qui se tournent quand on ne regarde pas, et le marcheur
+        /// (« 1, 2, 3, soleil »). Mêmes copies à pivot que les chaises.
+        /// </summary>
+        private static void SetupSofties(GameObject map, MapData data)
+        {
+            var heads = new Dictionary<string, List<MeshFilter>>();
+            var walkerBody = new List<MeshFilter>();
+            var walkerHead = new List<MeshFilter>();
+            foreach (MeshFilter mf in map.GetComponentsInChildren<MeshFilter>(true))
+            {
+                string n = mf.gameObject.name;
+                int i = n.IndexOf("TeteDoux_");
+                if (i >= 0)
+                {
+                    string id = n.Substring(i + 9).Split('_')[0];
+                    if (!heads.ContainsKey(id)) heads[id] = new List<MeshFilter>();
+                    heads[id].Add(mf);
+                }
+                else if (n.Contains("DouxMarcheur_corps_")) walkerBody.Add(mf);
+                else if (n.Contains("DouxMarcheur_tete_")) walkerHead.Add(mf);
+            }
+            if (heads.Count == 0 && walkerBody.Count == 0) return;
+
+            var root = new GameObject("Les Doux (1, 2, 3, soleil)");
+            Quaternion facing = Quaternion.LookRotation(Dir(Vector3.forward), Vector3.up);   // ils regardent le rideau
+            foreach (var kv in heads)
+            {
+                Transform pivot = MakePivot(root.transform, "Tête de Doux " + kv.Key, kv.Value, CenterOf(kv.Value), facing);
+                pivot.gameObject.AddComponent<SoftieWatcher>();
+            }
+
+            Bounds theatre = default;
+            foreach (RoomData r in data.rooms)
+                if (r.zone == "Theatre")
+                {
+                    Vector3 a = P(r.min), b = P(r.max);
+                    theatre = new Bounds((a + b) * 0.5f, new Vector3(Mathf.Abs(b.x - a.x) - 0.6f, 20f, Mathf.Abs(b.z - a.z) - 0.6f));
+                }
+            if (walkerBody.Count > 0)
+            {
+                Vector3 c = CenterOf(walkerBody);
+                Vector3 feet = new Vector3(c.x, MinYOf(walkerBody), c.z);
+                Transform body = MakePivot(root.transform, "Le Doux qui avance", walkerBody, feet, facing);
+                Transform head = walkerHead.Count > 0 ? MakePivot(body, "Tête", walkerHead, CenterOf(walkerHead), facing) : body;
+                SoftieWatcher w = body.gameObject.AddComponent<SoftieWatcher>();
+                w.head = head;
+                w.canWalk = true;
+                w.area = theatre;
+                w.shuffleLoop = Load<AudioClip>(Audio + "World/softie_shuffle.wav");
+                w.settleSound = Load<AudioClip>(Audio + "World/softie_settle.wav");
+            }
+        }
+
+        /// <summary>Copie des morceaux (sommets en coordonnées monde) sous un pivot placé où on veut ; cache les originaux.</summary>
+        private static Transform MakePivot(Transform parent, string name, List<MeshFilter> parts, Vector3 pivotPos, Quaternion pivotRot)
+        {
+            var pivot = new GameObject(name);
+            pivot.transform.SetParent(parent, false);
+            pivot.transform.SetPositionAndRotation(pivotPos, pivotRot);
+            foreach (MeshFilter mf in parts)
+            {
+                Renderer src = mf.GetComponent<Renderer>();
+                var copy = new GameObject(mf.gameObject.name);
+                copy.transform.SetPositionAndRotation(mf.transform.position, mf.transform.rotation);
+                copy.transform.localScale = mf.transform.lossyScale;
+                copy.transform.SetParent(pivot.transform, true);
+                copy.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+                MeshRenderer mr = copy.AddComponent<MeshRenderer>();
+                if (src != null) { mr.sharedMaterials = src.sharedMaterials; src.enabled = false; }
+            }
+            return pivot.transform;
+        }
+
+        private static Vector3 CenterOf(List<MeshFilter> parts)
+        {
+            Bounds b = default;
+            bool first = true;
+            foreach (MeshFilter mf in parts)
+            {
+                Renderer r = mf.GetComponent<Renderer>();
+                if (r == null) continue;
+                if (first) { b = r.bounds; first = false; } else b.Encapsulate(r.bounds);
+            }
+            return b.center;
+        }
+
+        private static float MinYOf(List<MeshFilter> parts)
+        {
+            float y = float.MaxValue;
+            foreach (MeshFilter mf in parts)
+            {
+                Renderer r = mf.GetComponent<Renderer>();
+                if (r != null) y = Mathf.Min(y, r.bounds.min.y);
+            }
+            return y == float.MaxValue ? 0f : y;
+        }
+
         private static void SetupNight(MapData data)
         {
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
@@ -220,6 +320,7 @@ namespace Horror.EditorTools
                 light.intensity = l.intensity * 3.2f;
                 light.range = l.distance * 1.6f;
                 light.shadows = LightShadows.None;   // performances en VR
+                go.AddComponent<LightFlicker>();      // grésille quand L'Écoute passe tout près
             }
         }
 
@@ -258,6 +359,12 @@ namespace Horror.EditorTools
                     respawn.transform.SetParent(go.transform, false);
                     respawn.transform.position = P(data.spawn);
                     safe.respawnPoint = respawn.transform;
+                }
+                else if (r.zone == "Theatre")
+                {
+                    // Pas de musique : le silence d'une salle vide, des grincements, et quelqu'un qui applaudit lentement
+                    zone.oneShots = Concat(creaks, new[] { Load<AudioClip>(Audio + "World/slow_clap.wav"), musicBox });
+                    zone.oneShotInterval = new Vector2(9f, 20f);
                 }
                 else if (r.zone == "Ventilateur")
                 {
@@ -584,6 +691,9 @@ namespace Horror.EditorTools
             SafeZoneShopBuilder.SetupPlayer(loco, items);
             LoreSetupBuilder.SetupHands(loco);
             AvatarSetupBuilder.Build();   // la poupée, les doigts, la bouche, la glisse
+            // Mannequin d'essai dans la Salle de jeux : pour tester qu'on grimpe sur la tête d'un joueur
+            // (à retirer quand le multijoueur sera là).
+            TestRoomBuilder.BuildClimbDummy(P(data.spawn) + Dir(new Vector3(1.6f, 0f, 1.2f)));
         }
 
         // ------------------------------------------------------------------ utilitaires

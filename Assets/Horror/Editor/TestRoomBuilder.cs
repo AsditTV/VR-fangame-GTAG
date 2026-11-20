@@ -52,6 +52,7 @@ namespace Horror.EditorTools
 
             BuildRoom();
             BuildPlayer(new Vector3(0f, 0f, -3f));
+            BuildClimbDummy(new Vector3(1.5f, 0f, -1.5f));
 
             EnsureFolder("Assets/Horror/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -95,6 +96,37 @@ namespace Horror.EditorTools
             // Lumière d'appoint douce (la vraie ambiance sombre viendra à l'étape 5).
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.35f, 0.33f, 0.40f);
+        }
+
+        /// <summary>
+        /// Mannequin d'essai : un « faux joueur » immobile avec la même coque solide qu'un vrai joueur,
+        /// pour tester qu'on peut lui grimper sur la tête (en attendant le multijoueur).
+        /// </summary>
+        internal static GameObject BuildClimbDummy(Vector3 position)
+        {
+            var root = new GameObject("Mannequin d'essai (grimpe sur sa tête)");
+            root.transform.position = position;
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Horror/Art/Character/LeDessine.glb");
+            if (model != null)
+            {
+                var doll = (GameObject)PrefabUtility.InstantiatePrefab(model);
+                doll.transform.SetParent(root.transform, false);
+            }
+            else
+            {
+                GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                body.name = "Corps (silhouette)";
+                Object.DestroyImmediate(body.GetComponent<Collider>());
+                body.transform.SetParent(root.transform, false);
+                body.transform.localPosition = new Vector3(0f, 0.55f, 0f);
+                body.transform.localScale = new Vector3(0.38f, 0.3f, 0.32f);
+            }
+            var head = new GameObject("Tête");
+            head.transform.SetParent(root.transform, false);
+            head.transform.localPosition = new Vector3(0f, 0.92f, 0f);
+            root.AddComponent<Horror.Player.PlayerBodyShell>().head = head.transform;
+            Undo.RegisterCreatedObjectUndo(root, "Mannequin d'essai");
+            return root;
         }
 
         private static GameObject Block(GameObject parent, string name, Vector3 position, Vector3 size, Material material)
@@ -150,6 +182,7 @@ namespace Horror.EditorTools
             locomotion.leftHandVisual = leftVisual;
             locomotion.rightHandVisual = rightVisual;
             player.AddComponent<LeanSlide>();   // pencher la tête / le corps = glisser au sol
+            player.AddComponent<Horror.Player.PlayerBodyShell>().head = head.transform;   // les autres peuvent grimper sur toi
 
             Selection.activeGameObject = player;
             return player;

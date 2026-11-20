@@ -64,16 +64,17 @@ namespace Horror.Audio
 
             float k = fadeSpeed * Time.deltaTime;
             float targetZone = _zone != null && _zone.loop != null ? _zone.loopVolume : 0f;
-            _current.volume = Mathf.MoveTowards(_current.volume, targetZone, k);
+            float hush = 1f - 0.85f * FearDirector.Silence;   // elle rôde tout près : presque plus rien
+            _current.volume = Mathf.MoveTowards(_current.volume, targetZone * hush, k);
             AudioSource other = _current == _zoneA ? _zoneB : _zoneA;
             other.volume = Mathf.MoveTowards(other.volume, 0f, k);
             if (other.volume <= 0f && other.isPlaying) other.Stop();
 
             bool safe = _zone != null && _zone.isSafe;
-            _base.volume = Mathf.MoveTowards(_base.volume, safe ? baseVolume * 0.15f : baseVolume, k);
+            _base.volume = Mathf.MoveTowards(_base.volume, (safe ? baseVolume * 0.15f : baseVolume) * hush, k);
 
             // 2) Bruits ponctuels autour du joueur
-            if (!safe && Time.time >= _nextOneShot)
+            if (!safe && FearDirector.Silence < 0.3f && Time.time >= _nextOneShot)
             {
                 AudioClip[] pool = _zone != null && _zone.oneShots != null && _zone.oneShots.Length > 0 ? _zone.oneShots : defaultOneShots;
                 Vector2 interval = _zone != null && _zone.oneShots != null && _zone.oneShots.Length > 0 ? _zone.oneShotInterval : defaultInterval;
@@ -99,6 +100,7 @@ namespace Horror.Audio
                 float d = Vector3.Distance(m.transform.position, me);
                 danger = Mathf.Max(danger, 1f - d / heartbeatRange);
             }
+            danger = Mathf.Max(danger, FearDirector.Fear * 0.75f);   // le coeur bat dès qu'elle est proche
             if (safe) danger = 0f;
             _heart.volume = Mathf.MoveTowards(_heart.volume, Mathf.Clamp01(danger) * 0.9f, Time.deltaTime * 1.5f);
             _heart.pitch = 1f + Mathf.Clamp01(danger) * 0.25f;
