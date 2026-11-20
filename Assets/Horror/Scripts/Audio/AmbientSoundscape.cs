@@ -113,7 +113,9 @@ namespace Horror.Audio
         {
             if (Time.time >= _nextMonsterScan)
             {
-#if UNITY_2022_2_OR_NEWER
+#if UNITY_6000_6_OR_NEWER
+                _monsters = FindObjectsByType<BlindMonsterAI>();
+#elif UNITY_2022_2_OR_NEWER
                 _monsters = FindObjectsByType<BlindMonsterAI>(FindObjectsSortMode.None);
 #else
                 _monsters = FindObjectsOfType<BlindMonsterAI>();

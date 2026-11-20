@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30059a7eb563b6d4296c8e68efe4ae03, type: 3}
+  m_Name: p05_ines
+  m_EditorClassIdentifier: Assembly-CSharp::Horror.Lore.LoreDocument
+  id: p05_ines
+  title: Letter never sent
+  order: 5
+  isSecret: 0
+  front: {fileID: 2800000, guid: 71bf9558885015f4e89c672bfd0549f9, type: 3}
+  back: {fileID: 0}
+  size: {x: 0.148, y: 0.20928125}
+  coinReward: 25

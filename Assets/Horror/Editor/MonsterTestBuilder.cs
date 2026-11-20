@@ -58,7 +58,9 @@ namespace Horror.EditorTools
 
         private static ArmLocomotion FindPlayer()
         {
-#if UNITY_2022_2_OR_NEWER
+#if UNITY_6000_6_OR_NEWER
+            ArmLocomotion[] all = Object.FindObjectsByType<ArmLocomotion>();
+#elif UNITY_2022_2_OR_NEWER
             ArmLocomotion[] all = Object.FindObjectsByType<ArmLocomotion>(FindObjectsSortMode.None);
 #else
             ArmLocomotion[] all = Object.FindObjectsOfType<ArmLocomotion>();

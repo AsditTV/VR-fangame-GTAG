@@ -222,7 +222,9 @@ namespace Horror.EditorTools
 
         private static void MakeBoxesGrabbable()
         {
-#if UNITY_2022_2_OR_NEWER
+#if UNITY_6000_6_OR_NEWER
+            ImpactNoise[] all = Object.FindObjectsByType<ImpactNoise>();
+#elif UNITY_2022_2_OR_NEWER
             ImpactNoise[] all = Object.FindObjectsByType<ImpactNoise>(FindObjectsSortMode.None);
 #else
             ImpactNoise[] all = Object.FindObjectsOfType<ImpactNoise>();

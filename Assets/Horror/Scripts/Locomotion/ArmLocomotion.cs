@@ -160,10 +160,21 @@ namespace Horror.Locomotion
 
             if (matchPhysicsRateToHeadset)
             {
-                float refreshRate = XRDevice.refreshRate; // 0 si aucun casque n'est connecté
+                float refreshRate = HeadsetRefreshRate(); // 0 si aucun casque n'est connecté
                 if (refreshRate > 30f)
                     Time.fixedDeltaTime = 1f / refreshRate;
             }
+        }
+
+        /// <summary>Fréquence d'affichage du casque (Hz), 0 si aucun écran XR ne tourne.
+        /// Remplace XRDevice.refreshRate, obsolète dans Unity 6.</summary>
+        private static float HeadsetRefreshRate()
+        {
+            var displays = new List<XRDisplaySubsystem>();
+            SubsystemManager.GetSubsystems(displays);
+            foreach (XRDisplaySubsystem d in displays)
+                if (d.running && d.TryGetDisplayRefreshRate(out float hz)) return hz;
+            return 0f;
         }
 
         private void OnEnable() => All.Add(this);

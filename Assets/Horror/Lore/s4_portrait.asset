@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30059a7eb563b6d4296c8e68efe4ae03, type: 3}
+  m_Name: s4_portrait
+  m_EditorClassIdentifier: Assembly-CSharp::Horror.Lore.LoreDocument
+  id: s4_portrait
+  title: The 24th face
+  order: 17
+  isSecret: 1
+  front: {fileID: 2800000, guid: 508926ae296a4484b8456fcaf79954c2, type: 3}
+  back: {fileID: 2800000, guid: 0345d4bbc443e84448019914cc1adfe9, type: 3}
+  size: {x: 0.148, y: 0.20928125}
+  coinReward: 150

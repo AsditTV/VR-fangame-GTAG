@@ -27,7 +27,8 @@ namespace Horror.Noise
             ("mur_", SurfaceType.Platre), ("plafond", SurfaceType.Platre), ("papier", SurfaceType.Platre),
         };
 
-        private static readonly Dictionary<int, SurfaceType> Cache = new Dictionary<int, SurfaceType>();
+        // Clé = le collider lui-même (GetInstanceID est interdit depuis Unity 6.6).
+        private static readonly Dictionary<Collider, SurfaceType> Cache = new Dictionary<Collider, SurfaceType>();
 
         /// <summary>Matière par défaut quand rien ne correspond.</summary>
         public static SurfaceType fallback = SurfaceType.Bois;
@@ -35,8 +36,7 @@ namespace Horror.Noise
         public static SurfaceType Of(Collider c)
         {
             if (c == null) return fallback;
-            int id = c.GetInstanceID();
-            if (Cache.TryGetValue(id, out SurfaceType t)) return t;
+            if (Cache.TryGetValue(c, out SurfaceType t)) return t;
 
             SurfaceTag tag = c.GetComponentInParent<SurfaceTag>();
             if (tag != null) t = tag.type;
@@ -45,7 +45,7 @@ namespace Horror.Noise
                 Renderer r = c.GetComponent<Renderer>();
                 if (r == null || r.sharedMaterial == null || !Guess(r.sharedMaterial.name, out t)) t = fallback;
             }
-            Cache[id] = t;
+            Cache[c] = t;
             return t;
         }
 
