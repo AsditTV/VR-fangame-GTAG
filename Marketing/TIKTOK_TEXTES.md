@@ -31,3 +31,14 @@
   écris « fan game » quand on te le demande.
 - Garde le son original des vidéos (pas de musique TikTok par-dessus) : la peur vient du silence.
 - Ne promets « coming soon on Meta Quest Store » que si une page store arrive vraiment.
+
+## Vidéo 3 — le monstre (L'Écoute)
+**Description :**
+> She's blind. She doesn't need to see you. 🤫👂
+> #calmfaces #vrhorror #gtagfangame #gtag #metaquest3 #vr #horrorgame #indiegame #monster
+
+**Commentaire épinglé :**
+> In CALM FACES your mic is ON. Every footstep, every scream… she hears it. Would you survive? 🎙️👀
+
+**Commentaire de relance :**
+> Comment a word. If she hears you, she comes. 🤐
