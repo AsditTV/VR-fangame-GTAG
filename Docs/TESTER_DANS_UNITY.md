@@ -121,3 +121,16 @@ la Laverie inondée.
 4. **Étalonnage** (toute la map) : ombres lilas, lumières pêche, vignette, grain, halo des lampes. Réglable
    dans Assets/Horror/Art/Map/Genere/Institut_Etalonnage.asset (s'il fait trop sombre au casque :
    Color Adjustments > Post Exposure).
+
+## Lobby, but du mode Exploration, screamers sur fond noir, décor (menu 8)
+1. **Lobby** : dans la Salle de jeux, mur sud à droite de la porte, « CHOOSE YOUR GAME » : EXPLORATION
+   (disponible), INK TAG et HIDE & SEEK (« ONLINE SOON », arriveront avec le multijoueur).
+2. **Objectifs** (à gauche de la porte) : PAPERS x/17, PLACES x/14. Chaque nouveau lieu s'annonce devant
+   tes yeux (ex. « - THE LAUNDRY - »). Tout trouvé -> la machine 23 de la Laverie s'éclaire, le masque
+   blanc du 23e enfant y attend, +500 crayons (une fois).
+3. **Screamers** : le décor disparaît (fond noir), seul le monstre entier fonce sur toi (bras compris),
+   avec son cri à lui (L'Écoute : crissement métallique ; les Doux : rire de jouet qui déraille ;
+   Le Drap : râle mouillé). Pour retester la progression : supprime les clés « horror.place.* » et
+   « horror.fin23 » des PlayerPrefs (Edit > Clear All PlayerPrefs efface tout, crayons compris).
+4. **Décor** : dessins d'enfants encadrés de travers, guirlandes de fanions, peluches et cubes oubliés,
+   dans toutes les pièces. **Laverie** : l'eau est maintenant aux chevilles.

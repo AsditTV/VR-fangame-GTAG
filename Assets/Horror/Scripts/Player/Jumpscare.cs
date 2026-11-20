@@ -45,16 +45,23 @@ namespace Horror.Player
             _audio.playOnAwake = false;
         }
 
-        /// <summary>Lance le jumpscare (appelé par le monstre qui attrape le joueur).</summary>
+        /// <summary>Lance le jumpscare de L'Écoute (appelé par elle quand elle attrape le joueur).</summary>
         public void Trigger(BlindMonsterAI monster)
         {
-            if (!IsPlaying) StartCoroutine(Sequence(monster != null ? monster.Head : null, 1f));
+            if (monster == null) { TriggerScreamer(null, null, null, 1f); return; }
+            TriggerScreamer(monster.transform, monster.Head, monster.jumpscareSound, 0.5f);
         }
 
-        /// <summary>Même jumpscare avec n'importe quel visage (ex. la tête d'un Doux). scale : taille de la copie.</summary>
-        public void TriggerFace(Transform faceSource, float scale = 1f)
+        /// <summary>Ancien appel : seulement une tête (gardé pour compatibilité).</summary>
+        public void TriggerFace(Transform faceSource, float scale = 1f) => TriggerScreamer(faceSource, faceSource, null, scale);
+
+        /// <summary>
+        /// Le screamer : <paramref name="body"/> (le monstre entier, bras compris) fonce sur toi, sa tête
+        /// <paramref name="face"/> pile devant tes yeux, sur fond noir, avec son cri à lui (<paramref name="scream"/>).
+        /// </summary>
+        public void TriggerScreamer(Transform body, Transform face, AudioClip scream, float scale)
         {
-            if (!IsPlaying) StartCoroutine(Sequence(faceSource, scale));
+            if (!IsPlaying) StartCoroutine(Sequence(body, face, scream, scale));
         }
 
         [Header("Screamer")]
@@ -65,45 +72,124 @@ namespace Horror.Player
         [Tooltip("Durée de la ruée du visage (s) : très court = plus violent.")]
         public float lungeTime = 0.14f;
 
-        private IEnumerator Sequence(Transform faceSource, float scale)
+        /// <summary>Calque réservé au screamer : pendant le jumpscare, la caméra ne voit que lui.</summary>
+        public const int ScreamerLayer = 30;
+
+        private IEnumerator Sequence(Transform body, Transform face, AudioClip scream, float scale)
         {
             IsPlaying = true;
             _locomotion.inputEnabled = false;
             Transform head = _locomotion.head;
             EnsureFader(head);
+            Camera cam = head.GetComponent<Camera>();
+            int oldMask = cam != null ? cam.cullingMask : 0;
+            CameraClearFlags oldClear = cam != null ? cam.clearFlags : CameraClearFlags.Skybox;
+            Color oldBg = cam != null ? cam.backgroundColor : Color.black;
 
-            // 0) coupure sèche au noir (une fraction de seconde de silence)
+            // 0) coupure sèche au noir
             SetFade(1f, Color.black);
-            yield return new WaitForSeconds(0.12f);
+            yield return new WaitForSeconds(0.1f);
 
-            // 1) le visage apparaît au loin, éclairé par en dessous (sinon il serait invisible dans le noir)
-            GameObject face = null;
-            if (faceSource != null)
+            // 1) le monstre entier, sur son calque ; plus rien d'autre n'existe (fond noir)
+            GameObject clone = null; Transform cloneHead = null;
+            if (body != null)
             {
-                face = Instantiate(faceSource.gameObject, head);
-                foreach (var c in face.GetComponentsInChildren<MonoBehaviour>()) Destroy(c);
-                foreach (var c in face.GetComponentsInChildren<Collider>()) Destroy(c);
-                face.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);      // tourné vers toi
-                var lightGo = new GameObject("Lumière du screamer");
-                lightGo.transform.SetParent(face.transform, false);
-                lightGo.transform.localPosition = new Vector3(0f, -0.35f, -0.35f);
+                clone = Instantiate(body.gameObject);   // pas encore sous la tête : ses collisions ne touchent pas le joueur
+                foreach (var c in clone.GetComponentsInChildren<Collider>(true)) DestroyImmediate(c);
+                var scripts = clone.GetComponentsInChildren<MonoBehaviour>(true);
+                foreach (var c in scripts) c.enabled = false;                        // le cerveau de la copie s'éteint tout de suite
+                for (int i = scripts.Length - 1; i >= 0; i--) Destroy(scripts[i]);   // à l'envers : les dépendants d'abord
+                clone.transform.SetParent(head, false);
+                foreach (var c in clone.GetComponentsInChildren<AudioSource>(true)) Destroy(c);
+                foreach (var r in clone.GetComponentsInChildren<Renderer>(true)) r.enabled = true;
+                foreach (var t in clone.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = ScreamerLayer;
+                clone.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);      // tourné vers toi
+                clone.transform.localScale = Vector3.one * scale;
+                if (face != null)
+                    foreach (Transform t in clone.GetComponentsInChildren<Transform>(true))
+                        if (t.name == face.name) { cloneHead = t; break; }
+                if (cloneHead == null) cloneHead = clone.transform;
+                // visage de cri s'il existe (Le Drap) : montré, le calme caché
+                foreach (Transform t in clone.GetComponentsInChildren<Transform>(true))
+                {
+                    if (t.name == "Visage_Cri") foreach (var r in t.GetComponentsInChildren<Renderer>(true)) r.enabled = true;
+                    else if (t.name == "Visage") foreach (var r in t.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+                }
+                var lightGo = new GameObject("Lumière du screamer") { layer = ScreamerLayer };
+                lightGo.transform.SetParent(head, false);
+                lightGo.transform.localPosition = new Vector3(0f, -0.35f, 0.15f);
                 Light l = lightGo.AddComponent<Light>();
-                l.type = LightType.Point; l.color = new Color(1f, 0.82f, 0.75f); l.intensity = 6f; l.range = 2.5f;
+                l.type = LightType.Point; l.color = new Color(1f, 0.8f, 0.72f); l.intensity = 5f; l.range = 3f;
+                l.cullingMask = 1 << ScreamerLayer;
+                lightGo.transform.SetParent(clone.transform, true);
+            }
+            if (cam != null)
+            {
+                cam.cullingMask = 1 << ScreamerLayer;
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = Color.black;
             }
             SetFade(0f, Color.black);
-            if (sting != null) _audio.PlayOneShot(sting, volume);
+            AudioClip clip = scream != null ? scream : sting;
+            if (clip != null) _audio.PlayOneShot(clip, volume);
             Haptics(1f, lungeTime + faceTime + 0.2f);
 
-            // 2) la ruée : il fonce sur toi (accélère jusqu'au bout)
+            // centre réel du visage (pas le pivot : celui du Doux est au cou) et point « avant » du visage
+            Transform facePart = null;
+            if (clone != null)
+                foreach (string n in new[] { "Visage_Cri", "Portrait", "Masque", "Tete_Details", "Visage", "Tete_Creme" })
+                {
+                    foreach (Transform t in cloneHead.GetComponentsInChildren<Transform>(true))
+                        if (t.name == n && t.GetComponentInChildren<Renderer>() != null) { facePart = t; break; }
+                    if (facePart != null) break;
+                }
+            Vector3 Center(Transform t)
+            {
+                Bounds b = default; bool first = true;
+                foreach (Renderer r in t.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (!r.enabled) continue;
+                    if (first) { b = r.bounds; first = false; } else b.Encapsulate(r.bounds);
+                }
+                return first ? t.position : b.center;
+            }
+            // tourne la copie pour que le visage te regarde, quelle que soit la pose de la tête (elle écoutait de côté...)
+            Quaternion baseRot = Quaternion.Euler(0f, 180f, 0f);
+            if (clone != null)
+            {
+                clone.transform.localScale = Vector3.one * scale;
+                clone.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                clone.transform.position += head.TransformPoint(new Vector3(0f, 0f, 1.5f)) - Center(cloneHead);   // d'abord devant toi
+                Vector3 hc = Center(cloneHead);
+                Vector3 faceDir = facePart != null ? (Center(facePart) - hc) : clone.transform.forward;
+                if (faceDir.sqrMagnitude > 1e-6f)
+                {
+                    Quaternion fix = Quaternion.FromToRotation(faceDir.normalized, (head.position - hc).normalized);
+                    clone.transform.rotation = fix * clone.transform.rotation;
+                    // garder la tête droite (pas à l'envers) : on remet le haut du visage vers le haut
+                    Vector3 up = Vector3.ProjectOnPlane(cloneHead.up, (head.position - hc).normalized);
+                    Vector3 want = Vector3.ProjectOnPlane(head.up, (head.position - hc).normalized);
+                    if (up.sqrMagnitude > 1e-4f && want.sqrMagnitude > 1e-4f)
+                        clone.transform.rotation = Quaternion.FromToRotation(up.normalized, want.normalized) * clone.transform.rotation;
+                }
+                baseRot = clone.transform.localRotation;
+            }
+
+            // place le clone pour que le CENTRE DU VISAGE soit au point voulu devant tes yeux
+            void PlaceHead(Vector3 local, Quaternion extra, float s)
+            {
+                if (clone == null) return;
+                clone.transform.localRotation = baseRot * extra;
+                clone.transform.localScale = Vector3.one * s;
+                Vector3 target = head.TransformPoint(local);
+                clone.transform.position += target - Center(cloneHead);
+            }
+
+            // 2) la ruée : il fonce sur toi
             for (float t = 0f; t < lungeTime; t += Time.deltaTime)
             {
-                float k = t / lungeTime;
-                k = k * k * k;
-                if (face != null)
-                {
-                    face.transform.localPosition = new Vector3(0f, 0.01f, Mathf.Lerp(lungeFrom, 0.32f, k));
-                    face.transform.localScale = Vector3.one * scale * Mathf.Lerp(0.6f, 1.15f, k);
-                }
+                float k = t / lungeTime; k = k * k * k;
+                PlaceHead(new Vector3(0f, 0.0f, Mathf.Lerp(lungeFrom, 0.3f, k)), Quaternion.identity, scale * Mathf.Lerp(0.7f, 1.1f, k));
                 yield return null;
             }
 
@@ -114,18 +200,13 @@ namespace Horror.Player
             while (tt < faceTime)
             {
                 tt += Time.deltaTime;
-                if (face != null)
+                if (tt >= nextSnap)
                 {
-                    if (tt >= nextSnap)
-                    {
-                        nextSnap = tt + Random.Range(0.03f, 0.07f);
-                        snap = Quaternion.Euler(Random.Range(-9f, 9f), Random.Range(-7f, 7f), Random.Range(-14f, 14f));
-                    }
-                    face.transform.localRotation = Quaternion.Euler(0f, 180f, 0f) * snap;
-                    face.transform.localPosition = new Vector3(Random.Range(-0.018f, 0.018f), 0.01f + Random.Range(-0.015f, 0.015f),
-                                                               Mathf.Lerp(0.32f, 0.25f, tt / faceTime));
-                    face.transform.localScale = Vector3.one * scale * (1.12f + 0.08f * Mathf.Sin(tt * 55f));
+                    nextSnap = tt + Random.Range(0.03f, 0.07f);
+                    snap = Quaternion.Euler(Random.Range(-9f, 9f), Random.Range(-7f, 7f), Random.Range(-14f, 14f));
                 }
+                PlaceHead(new Vector3(Random.Range(-0.02f, 0.02f), Random.Range(-0.015f, 0.015f), Mathf.Lerp(0.3f, 0.23f, tt / faceTime)),
+                          snap, scale * (1.08f + 0.07f * Mathf.Sin(tt * 55f)));
                 if (strobe && tt >= nextFlash)
                 {
                     nextFlash = tt + 0.09f;
@@ -135,9 +216,10 @@ namespace Horror.Player
                 yield return null;
             }
 
-            // 4) coupure au noir d'un coup, puis retour à la Salle de jeux
+            // 4) coupure au noir, on rend le monde à la caméra, retour à la Salle de jeux
             SetFade(1f, Color.black);
-            if (face != null) Destroy(face);
+            if (clone != null) Destroy(clone);
+            if (cam != null) { cam.cullingMask = oldMask; cam.clearFlags = oldClear; cam.backgroundColor = oldBg; }
             _locomotion.TeleportTo(_locomotion.SpawnPosition);
             yield return new WaitForSeconds(blackTime);
 
@@ -176,6 +258,7 @@ namespace Horror.Player
             quad.name = "Fondu au noir";
             Destroy(quad.GetComponent<Collider>());
             quad.transform.SetParent(head, false);
+            quad.layer = ScreamerLayer;   // visible aussi quand la caméra ne voit plus que le screamer
             quad.transform.localPosition = new Vector3(0f, 0f, 0.05f);
             quad.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
             Shader shader = Shader.Find("Sprites/Default");

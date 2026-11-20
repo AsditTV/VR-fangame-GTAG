@@ -39,6 +39,8 @@ namespace Horror.Monsters
         public float stareAfter = 7f;
         public AudioClip sloshLoop;
         public AudioClip riseSound;
+        [Tooltip("Son du screamer quand il t'attrape (unique au Drap).")]
+        public AudioClip jumpscareSound;
 
         public enum Etat { Dort, Glisse, Surgit }
         public Etat etat = Etat.Dort;
@@ -180,7 +182,7 @@ namespace Horror.Monsters
                 {
                     _cooldown = 4f;
                     Jumpscare js = p.GetComponent<Jumpscare>();
-                    if (js != null) js.TriggerFace(face != null ? face : transform, 0.5f);
+                    if (js != null) js.TriggerScreamer(transform, face != null ? face : transform, jumpscareSound, 0.5f);
                     else p.TeleportTo(p.SpawnPosition);
                 }
             }

@@ -37,7 +37,9 @@ namespace Horror.Monsters
         [Tooltip("Taille de la copie de la tête pendant le jumpscare (sa tête est énorme).")]
         public float jumpscareFaceScale = 0.55f;
         public AudioClip shuffleLoop;     // frottement de costume pendant qu'il bouge
-        public AudioClip settleSound;     // « crrr » quand tu te retournes et qu'il s'est figé
+        public AudioClip settleSound;
+        [Tooltip("Son du screamer quand il t'attrape (unique aux Doux).")]
+        public AudioClip jumpscareSound;     // « crrr » quand tu te retournes et qu'il s'est figé
 
         private Quaternion _headRest;
         private Vector3 _home;
@@ -127,7 +129,7 @@ namespace Horror.Monsters
         {
             _cooldown = 4f;
             Jumpscare scare = player.GetComponent<Jumpscare>();
-            if (scare != null) scare.TriggerFace(head, jumpscareFaceScale);
+            if (scare != null) scare.TriggerScreamer(transform, head, jumpscareSound, jumpscareFaceScale);
             else player.TeleportTo(player.SpawnPosition);
             transform.SetPositionAndRotation(_home, _homeRot);   // il retourne à sa place, dans le rang
         }

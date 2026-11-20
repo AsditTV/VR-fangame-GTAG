@@ -1,4 +1,4 @@
-using Horror.Locomotion;
+﻿using Horror.Locomotion;
 using Horror.Monsters;
 using Horror.Noise;
 using Horror.Player;
@@ -121,6 +121,7 @@ namespace Horror.EditorTools
 
             BlindMonsterAI ai = root.AddComponent<BlindMonsterAI>();
             ai.head = head;
+            ai.jumpscareSound = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Horror/Audio/Jumpscare/ecoute_cri.wav");   // son unique de L'Écoute
             SafeZoneShopBuilder.SetupMonsterVoice(ai);   // murmures, réaction, cri, pas, clés
 
             // Points de ronde aux 4 coins de la pièce de test

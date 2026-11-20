@@ -102,6 +102,8 @@ namespace Horror.EditorTools
             SetupJournal(playroom, docs);
             WaypointGraph graph = SetupNav(data);
             SetupLaverie(map);
+            SetupLobbyAndGoals(data, playroom);
+            SetupDecor(data);
             SetupInkTrails(graph, playroom);
             SetupBlackout();
             SetupMonster(data, graph);
@@ -431,7 +433,7 @@ namespace Horror.EditorTools
             Box("Laverie_Mur_O_n", wall, X0 - 0.15f, X0, 0f, H, 0.85f, Z1);
             Box("Laverie_Mur_O_s", wall, X0 - 0.15f, X0, 0f, H, Z0, -0.85f);
             Box("Laverie_Plafond", wall, X0, X1, H, H + 0.15f, Z0, Z1);
-            Box("Laverie_Eau", water, X0, X1, 0f, 0.25f, Z0, Z1, solid: false);
+            Box("Laverie_Eau", water, X0, X1, 0f, 0.07f, Z0, Z1, solid: false);   // eau aux chevilles
             Box("Laverie_Rebord_entree_carrelage", tile, X0, X0 + 1.2f, 0f, 0.8f, -1.6f, 1.6f);
 
             // 4) les machines : deux îlots + une rangée contre chaque grand mur ; quelques sèche-linge empilés
@@ -559,6 +561,7 @@ namespace Horror.EditorTools
                 ai.face = FindChild(drap.transform, "Tete");
                 ai.sloshLoop = Load<AudioClip>(Audio + "World/drap_eau_loop.wav");
                 ai.riseSound = Load<AudioClip>(Audio + "World/drap_surgit.wav");
+                ai.jumpscareSound = Load<AudioClip>(Audio + "Jumpscare/drap_cri.wav");
             }
         }
 
@@ -668,6 +671,217 @@ namespace Horror.EditorTools
                            ?? cam.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
                 data.renderPostProcessing = true;
             }
+        }
+
+        // ------------------------------------------------------------------ lobby (modes) et but du mode Exploration
+
+        /// <summary>
+        /// Dans la Salle de jeux, mur sud : à droite de la porte, le mur des modes (EXPLORATION, INK TAG, HIDE & SEEK) ;
+        /// à gauche, le tableau des objectifs (papiers, lieux). Les 14 lieux à découvrir viennent des pièces de la
+        /// maquette (+ la Laverie). À la fin, la machine 23 de la Laverie s'éclaire.
+        /// </summary>
+        private static void SetupLobbyAndGoals(MapData data, RoomData playroom)
+        {
+            if (playroom == null) return;
+            var root = new GameObject("Lobby et objectifs (Salle de jeux)");
+            Vector3 roomCenter = P(playroom.center);
+            AudioClip click = Load<AudioClip>(Audio + "UI/button_click.wav");
+            AudioClip coin = Load<AudioClip>(Audio + "UI/coin.wav");
+            AudioClip denied = Load<AudioClip>(Audio + "UI/denied.wav");
+            Material panel = MakeMat("Lobby_Panneau", new Color(0.30f, 0.24f, 0.34f));
+            Material btnMat = MakeMat("Lobby_Bouton", new Color(0.95f, 0.62f, 0.72f));
+            Material soonMat = MakeMat("Lobby_Bouton_Bientot", new Color(0.55f, 0.55f, 0.6f));
+            float wallZ = playroom.min.z + 0.06f;
+
+            GameObject Label(string text, Vector3 maq, float size, Color c)
+            {
+                GameObject l = SafeZoneShopBuilder.Label(root.transform, text, Vector3.zero, size, c);
+                l.transform.position = P(maq);
+                l.transform.rotation = Quaternion.LookRotation(-Flat(roomCenter - P(maq)));
+                return l;
+            }
+            GameObject Plate(string name, Vector3 maq, Vector3 size, Material m)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                go.name = name;
+                go.transform.SetParent(root.transform, false);
+                go.transform.position = P(maq);
+                go.transform.rotation = Quaternion.LookRotation(Flat(roomCenter - P(maq)));
+                go.transform.localScale = size * s_w;
+                go.GetComponent<Renderer>().sharedMaterial = m;
+                return go;
+            }
+
+            // --- le mur des modes (à droite de la porte)
+            var selector = root.AddComponent<ModeSelector>();
+            Plate("Panneau des modes", new Vector3(18.4f, 1.55f, wallZ), new Vector3(3.6f, 2.1f, 0.04f), panel);
+            Label("CHOOSE YOUR GAME", new Vector3(18.4f, 2.45f, wallZ + 0.04f), 0.03f, new Color(0.98f, 0.9f, 0.8f));
+            GameObject screen = Label("", new Vector3(18.4f, 1.95f, wallZ + 0.04f), 0.014f, new Color(0.95f, 0.95f, 0.9f));
+            selector.screen = screen.GetComponent<TextMesh>();
+            selector.selectSound = coin; selector.deniedSound = denied;
+            var defs = new (string id, string title, string desc, bool ok, float x)[]
+            {
+                ("exploration", "EXPLORATION", "Run from them. Find the papers.\nFind every place. Find the 23rd.", true, 17.2f),
+                ("inktag", "INK TAG", "Caught? You turn to ink.\nYour noise calls them.", false, 18.4f),
+                ("hideseek", "HIDE & SEEK", "One hides among the dolls.\nThe others listen.", false, 19.6f),
+            };
+            var modes = new List<ModeSelector.Mode>();
+            foreach (var d in defs)
+            {
+                GameObject b = Plate("Bouton " + d.title, new Vector3(d.x, 1.0f, wallZ + 0.03f), new Vector3(0.22f, 0.22f, 0.08f), d.ok ? btnMat : soonMat);
+                b.GetComponent<Collider>().isTrigger = true;
+                PressButton press = b.AddComponent<PressButton>();
+                press.clickSound = click;
+                Label(d.title + (d.ok ? "" : "\n(soon)"), new Vector3(d.x, 1.3f, wallZ + 0.04f), 0.011f, new Color(0.95f, 0.92f, 0.86f));
+                modes.Add(new ModeSelector.Mode { id = d.id, title = d.title, description = d.desc, available = d.ok, button = press });
+            }
+            selector.modes = modes.ToArray();
+
+            // --- le tableau des objectifs (à gauche de la porte)
+            Plate("Tableau des objectifs", new Vector3(10.2f, 1.9f, wallZ), new Vector3(2.6f, 1.9f, 0.04f), panel);
+            GameObject board = Label("", new Vector3(10.2f, 2.0f, wallZ + 0.04f), 0.016f, new Color(0.98f, 0.93f, 0.82f));
+            var goals = root.AddComponent<ExplorationGoals>();
+            goals.board = board.GetComponent<TextMesh>();
+            goals.discoverSound = Load<AudioClip>(Audio + "Ambience/music_box_far.wav");
+
+            // --- les lieux (pièces de la maquette regroupées par zone) + la Laverie
+            var titles = new Dictionary<string, string>
+            {
+                { "Hall", "THE HALL" }, { "Couloir", "THE CORRIDOR" }, { "Ecole", "THE DORMITORY" }, { "Standard", "THE SWITCHBOARD" },
+                { "Escalier", "THE STAIRS" }, { "Machines", "THE BOILER ROOM" }, { "Galerie", "THE GALLERY OF DOORS" },
+                { "Ventilateur", "THE BIG FAN" }, { "Citerne", "THE INK TANK" }, { "Douches", "THE SHOWERS" },
+                { "Piscine", "THE INK POOL" }, { "Foyer", "THE FOYER" }, { "Theatre", "THE THEATRE" }
+            };
+            var boxes = new Dictionary<string, List<Bounds>>();
+            foreach (RoomData r in data.rooms)
+            {
+                if (r.zone == "SalleDeJeux" || !titles.ContainsKey(r.zone)) continue;
+                Vector3 a = P(r.min), b = P(r.max);
+                var bb = new Bounds((a + b) * 0.5f, new Vector3(Mathf.Abs(b.x - a.x), Mathf.Abs(b.y - a.y) + 1f, Mathf.Abs(b.z - a.z)));
+                if (!boxes.ContainsKey(r.zone)) boxes[r.zone] = new List<Bounds>();
+                boxes[r.zone].Add(bb);
+            }
+            var places = new List<ExplorationGoals.Place>();
+            foreach (var kv in boxes) places.Add(new ExplorationGoals.Place { id = kv.Key, title = titles[kv.Key], boxes = kv.Value.ToArray() });
+            Vector3 la = P(new Vector3(34.3f, 0f, -7f)), lb = P(new Vector3(47f, 5.5f, 7f));
+            places.Add(new ExplorationGoals.Place { id = "Laverie", title = "THE LAUNDRY",
+                boxes = new[] { new Bounds((la + lb) * 0.5f, new Vector3(Mathf.Abs(lb.x - la.x), Mathf.Abs(lb.y - la.y), Mathf.Abs(lb.z - la.z))) } });
+            goals.places = places.ToArray();
+            goals.totalPapers = data.papers != null && data.papers.Length > 0 ? data.papers.Length : 17;
+
+            // --- la fin : la machine 23 s'éclaire, l'enfant n°23 (un masque blanc, sans visage) attend dedans
+            var end = new GameObject("Fin : le 23e enfant (machine 23)");
+            end.transform.position = P(new Vector3(47f - 0.85f, 1.35f, 0f));
+            Light el = new GameObject("Lumière").AddComponent<Light>();
+            el.transform.SetParent(end.transform, false);
+            el.transform.localPosition = new Vector3(0f, 0.6f, 0f);
+            el.type = LightType.Point; el.color = new Color(0.85f, 0.9f, 1f); el.intensity = 1.6f; el.range = 4f * s_w;
+            var mask = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            mask.name = "Le masque du 23e (blanc, sans visage)";
+            Object.DestroyImmediate(mask.GetComponent<Collider>());
+            mask.transform.SetParent(end.transform, false);
+            mask.transform.localScale = new Vector3(0.22f, 0.28f, 0.05f) * s_w;
+            mask.GetComponent<Renderer>().sharedMaterial = MakeMat("Masque_Blanc", new Color(0.96f, 0.94f, 0.88f));
+            GameObject msg = SafeZoneShopBuilder.Label(end.transform, "YOU FOUND ME.\nNOW SHE CAN'T HEAR ME.\n- 23", Vector3.zero, 0.02f, new Color(0.85f, 0.9f, 1f));
+            msg.transform.position = P(new Vector3(47f - 0.06f, 2.4f, 0f));
+            msg.transform.rotation = Quaternion.LookRotation(-Flat(Dir(new Vector3(-1f, 0f, 0f))));
+            end.SetActive(false);
+            goals.ending = end;
+        }
+
+        // ------------------------------------------------------------------ décor de toutes les pièces (DA)
+
+        /// <summary>
+        /// Habille chaque pièce de la maquette avec le décor Blender (Art/Map/Decor) : dessins d'enfants encadrés
+        /// de travers sur les vrais murs (trouvés par rayon, jamais dans une porte), une guirlande de fanions en
+        /// travers de la pièce, une peluche ou des cubes oubliés au sol (pas dans l'encre). Placement déterministe.
+        /// </summary>
+        private static void SetupDecor(MapData data)
+        {
+            const string D = "Assets/Horror/Art/Map/Decor/";
+            GameObject[] frames = { Load<GameObject>(D + "Cadre_family.glb"), Load<GameObject>(D + "Cadre_friends.glb"),
+                                    Load<GameObject>(D + "Cadre_lady.glb"), Load<GameObject>(D + "Cadre_pool.glb") };
+            GameObject garland = Load<GameObject>(D + "Guirlande.glb");
+            GameObject[] toys = { Load<GameObject>(D + "Lapin.glb"), Load<GameObject>(D + "Cubes.glb") };
+            if (frames[0] == null) return;
+            Physics.SyncTransforms();
+            var root = new GameObject("Décor (cadres, guirlandes, jouets)");
+            var rnd = new System.Random(7);
+            int nFrames = 0, nGarlands = 0, nToys = 0;
+
+            GameObject Put(GameObject proto, Vector3 pos, Quaternion rot, Vector3 scale)
+            {
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(proto);
+                go.transform.SetParent(root.transform, false);
+                go.transform.SetPositionAndRotation(pos, rot);
+                go.transform.localScale = scale;
+                go.isStatic = true;
+                return go;
+            }
+            bool Wall(Vector3 from, Vector3 dir, float max, out RaycastHit hit)
+            {
+                if (!Physics.Raycast(from, dir, out hit, max, ~0, QueryTriggerInteraction.Ignore)) return false;
+                if (Mathf.Abs(hit.normal.y) > 0.3f) return false;
+                string n = hit.collider.name.ToLowerInvariant();
+                return !(n.Contains("porte") || n.Contains("door") || n.Contains("bouton") || n.Contains("rideau"));
+            }
+
+            foreach (RoomData r in data.rooms)
+            {
+                Vector3 a = P(r.min), b = P(r.max);
+                Vector3 lo = Vector3.Min(a, b), hi = Vector3.Max(a, b);
+                Vector3 size = hi - lo;
+                if (size.x < 2.5f || size.z < 2.5f) continue;                  // couloirs très étroits : rien
+                float eye = lo.y + 1.55f * s_w;
+                Vector3 c = new Vector3((lo.x + hi.x) * 0.5f, eye, (lo.z + hi.z) * 0.5f);
+
+                // 1) cadres : deux par mur (décalés), sur le premier mur touché
+                foreach (Vector3 dir in new[] { Vector3.right, Vector3.left, Vector3.forward, Vector3.back })
+                {
+                    Vector3 tangent = Vector3.Cross(Vector3.up, dir);
+                    float half = Mathf.Abs(Vector3.Dot(size, tangent)) * 0.5f;
+                    foreach (float off in new[] { -0.3f, 0.3f })
+                    {
+                        Vector3 from = c + tangent * off * half;
+                        if (!Wall(from, dir, Mathf.Abs(Vector3.Dot(size, dir)) * 0.5f + 1.5f, out RaycastHit hit)) continue;
+                        float sway = (float)(rnd.NextDouble() - 0.5) * 10f;
+                        Put(frames[nFrames % frames.Length], hit.point + hit.normal * 0.025f + Vector3.up * (float)(rnd.NextDouble() * 0.25f),
+                            Quaternion.LookRotation(hit.normal, Vector3.up) * Quaternion.Euler(0f, 0f, sway), Vector3.one * 1.3f);
+                        nFrames++;
+                    }
+                }
+
+                // 2) une guirlande dans la longueur de la pièce, sous le plafond
+                if (garland != null)
+                {
+                    Vector3 axis = size.x >= size.z ? Vector3.right : Vector3.forward;
+                    Vector3 top = new Vector3(c.x, Mathf.Min(hi.y - 0.6f * s_w, lo.y + 2.9f * s_w), c.z);
+                    if (Wall(top, axis, 40f, out RaycastHit h1) && Wall(top, -axis, 40f, out RaycastHit h2))
+                    {
+                        float len = Vector3.Distance(h1.point, h2.point);
+                        if (len > 2f && len < 30f)
+                        {
+                            Vector3 mid = (h1.point + h2.point) * 0.5f;
+                            Put(garland, mid, Quaternion.FromToRotation(Vector3.right, (h1.point - h2.point).normalized),
+                                new Vector3(len * 0.98f, 1.4f, 1.4f));
+                            nGarlands++;
+                        }
+                    }
+                }
+
+                // 3) un jouet oublié au sol (pas dans l'encre de la piscine ni de la citerne)
+                if (r.zone == "Piscine" || r.zone == "Citerne" || toys[0] == null) continue;
+                for (int k = 0; k < 2; k++)
+                {
+                    Vector3 p = new Vector3(Mathf.Lerp(lo.x, hi.x, 0.2f + 0.6f * (float)rnd.NextDouble()), hi.y - 0.2f,
+                                            Mathf.Lerp(lo.z, hi.z, 0.2f + 0.6f * (float)rnd.NextDouble()));
+                    if (!Physics.Raycast(p, Vector3.down, out RaycastHit fh, size.y + 1f, ~0, QueryTriggerInteraction.Ignore)) continue;
+                    if (fh.normal.y < 0.85f) continue;
+                    Put(toys[(nToys + k) % toys.Length], fh.point, Quaternion.Euler(0f, (float)rnd.NextDouble() * 360f, 0f), Vector3.one * 1.3f);
+                    nToys++;
+                }
+            }
+            Debug.Log("[Horror] Décor : " + nFrames + " cadres, " + nGarlands + " guirlandes, " + nToys + " jouets.");
         }
 
         // ------------------------------------------------------------------ traces et coupures
@@ -804,6 +1018,8 @@ namespace Horror.EditorTools
             ww.area = theatre;
             ww.shuffleLoop = Load<AudioClip>(Audio + "World/softie_shuffle.wav");
             ww.settleSound = Load<AudioClip>(Audio + "World/softie_settle.wav");
+            ww.jumpscareSound = Load<AudioClip>(Audio + "Jumpscare/doux_cri.wav");
+            ww.jumpscareFaceScale = 0.3f;   // sa grosse tête doit tenir dans le champ de vision
             spots.Add(walkerFeet);
 
             // les anciens Doux de la maquette

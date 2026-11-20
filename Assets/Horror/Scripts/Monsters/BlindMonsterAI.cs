@@ -37,6 +37,8 @@ namespace Horror.Monsters
         public AudioSource keysLoop;
         [Tooltip("Cri joué quand elle passe en chasse. Facultatif.")]
         public AudioSource screamSource;
+        [Tooltip("Son du screamer quand elle t'attrape (unique à ce monstre).")]
+        public AudioClip jumpscareSound;
 
         [Header("Ouïe")]
         [Tooltip("Multiplie la portée de tous les bruits pour elle (1 = normal, 1.5 = ouïe très fine).")]
