@@ -314,6 +314,31 @@ def denied():
     return np.sign(np.sin(2 * np.pi * 140 * t)) * np.exp(-t * 6) * 0.6
 
 
+# ---------------------------------------------------------------- papiers
+def paper_rustle(dur, crackles):
+    """Froissement de papier : souffle filtré + petits craquements."""
+    t = t_axis(dur)
+    hiss = bandpass(noise(dur), 2000, 9000) * (0.3 + 0.7 * np.abs(np.sin(np.pi * t / dur * 2.5)))
+    x = hiss * 0.5
+    for _ in range(crackles):
+        at = int(rng.uniform(0, dur - 0.03) * SR)
+        n = int(SR * 0.012)
+        x[at:at + n] += highpass(noise(0.012), 3000)[:len(x) - at] * rng.uniform(0.4, 1.0)
+    return x * np.sin(np.pi * t / dur) ** 0.5
+
+
+def found_chime():
+    """Papier trouvé : deux notes de boîte à musique, douces (pas une récompense "jeu vidéo")."""
+    x = np.zeros(int(SR * 2.2))
+    for i, m in enumerate((76, 83)):
+        f = 440 * 2 ** ((m - 69) / 12)
+        t = t_axis(1.6)
+        bell = sum(np.sin(2 * np.pi * f * h * t) * np.exp(-t * (3 + 2 * h)) / h for h in (1, 2.0, 3.0))
+        at = int(i * 0.28 * SR)
+        x[at:at + len(t)] += bell
+    return reverb(x, size=2.0, mix=0.4)[:len(x)]
+
+
 # ---------------------------------------------------------------- tout fabriquer
 def main():
     lines = ["Shhh...", "I can hear you.", "Where are you, little one?", "Quiet. Quiet.",
@@ -347,6 +372,11 @@ def main():
     save("UI", "coin", coin(), 0.7)
     save("UI", "button_click", button_click(), 0.6)
     save("UI", "denied", denied(), 0.5)
+
+    # Papiers (ajoutés à la fin pour ne pas changer les sons déjà générés)
+    save("Papers", "paper_pickup", paper_rustle(0.45, 9), 0.7)
+    save("Papers", "paper_rustle", paper_rustle(0.9, 16), 0.6)
+    save("Papers", "paper_found", found_chime(), 0.55)
 
     total = sum(len(fs) for _, _, fs in os.walk(OUT))
     print("OK ->", OUT, "|", total, "fichiers")

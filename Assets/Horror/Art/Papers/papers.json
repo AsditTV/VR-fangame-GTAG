@@ -1,0 +1,190 @@
+[
+ {
+  "id": "p01_brochure",
+  "title": "Brochure, 1974",
+  "zone": "Lobby",
+  "order": 1,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p02_news1977",
+  "title": "Newspaper, August 16, 1977",
+  "zone": "Lobby",
+  "order": 2,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p03_rules",
+  "title": "Rules of the Marivaux Institute, 1978",
+  "zone": "School wing",
+  "order": 3,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p04_theo",
+  "title": "Theo's note",
+  "zone": "School wing",
+  "order": 4,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p05_ines",
+  "title": "Letter never sent",
+  "zone": "School wing",
+  "order": 5,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p06_entertainer",
+  "title": "Note in a dressing room",
+  "zone": "Closed park",
+  "order": 6,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p07_lifeguard",
+  "title": "Lifeguard's notebook",
+  "zone": "Pool",
+  "order": 7,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p08_diary_a",
+  "title": "Céleste's diary, page A",
+  "zone": "Manor",
+  "order": 8,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p09_diary_b",
+  "title": "Céleste's diary, page B",
+  "zone": "Manor",
+  "order": 9,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p10_inspection",
+  "title": "Inspection report, October 1985",
+  "zone": "Manor",
+  "order": 10,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p11_watchman",
+  "title": "Night watchman's logbook",
+  "zone": "Manor",
+  "order": 11,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p12_news1985",
+  "title": "Newspaper, November 20, 1985",
+  "zone": "Manor",
+  "order": 12,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "p13_pencil",
+  "title": "Pencil note",
+  "zone": "Darkest area",
+  "order": 13,
+  "secret": false,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "s1_mila",
+  "title": "Mila's last drawing",
+  "zone": "Secret",
+  "order": 14,
+  "secret": true,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "s2_cassette",
+  "title": "Note in the music box",
+  "zone": "Secret",
+  "order": 15,
+  "secret": true,
+  "size": [
+   1024,
+   760
+  ]
+ },
+ {
+  "id": "s3_payroll",
+  "title": "Staff payroll, 1985",
+  "zone": "Secret",
+  "order": 16,
+  "secret": true,
+  "size": [
+   1024,
+   1448
+  ]
+ },
+ {
+  "id": "s4_portrait",
+  "title": "The 24th face",
+  "zone": "Secret",
+  "order": 17,
+  "secret": true,
+  "size": [
+   1024,
+   1448
+  ],
+  "back": true
+ }
+]
