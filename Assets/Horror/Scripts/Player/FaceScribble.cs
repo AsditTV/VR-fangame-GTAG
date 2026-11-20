@@ -65,6 +65,9 @@ namespace Horror.Player
         {
             if (mic == null) mic = GetComponentInParent<MicMouth>();
             _block = new MaterialPropertyBlock();
+            // Image "au repos" non renseignée : on garde celle du matériau d'origine (modèle 3D)
+            if (faceIdle == null) faceIdle = CurrentTexture(faceRenderer);
+            if (mouthIdle == null) mouthIdle = CurrentTexture(mouthRenderer);
 
             if (faceRenderer is SpriteRenderer faceSprite)
             {
@@ -156,6 +159,15 @@ namespace Horror.Player
                     _block.SetTexture(property, tex);
             }
             target.SetPropertyBlock(_block);
+        }
+
+        private static Texture2D CurrentTexture(Renderer r)
+        {
+            if (r == null || r is SpriteRenderer || r.sharedMaterial == null) return null;
+            foreach (string property in TextureProperties)
+                if (r.sharedMaterial.HasProperty(property) && r.sharedMaterial.GetTexture(property) is Texture2D t)
+                    return t;
+            return null;
         }
 
         private Texture2D Pick(Texture2D[] frames)
