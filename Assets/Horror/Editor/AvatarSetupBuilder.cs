@@ -57,6 +57,9 @@ namespace Horror.EditorTools
             SetLayer(doll, player.gameObject.layer);   // les mains ne s'accrochent pas à son propre corps
 
             DollAvatarRig rig = Undo.AddComponent<DollAvatarRig>(doll);
+            Undo.AddComponent<DollColorizer>(doll);                       // couleur choisie sur le Minitel
+            if (player.GetComponent<MicModeApplier>() == null)
+                Undo.AddComponent<MicModeApplier>(player.gameObject);    // micro : ouvert / appuyer pour parler / muet
             rig.head = player.head;
             rig.leftHandTarget = player.leftHandVisual;
             rig.rightHandTarget = player.rightHandVisual;

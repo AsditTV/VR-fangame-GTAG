@@ -83,6 +83,7 @@ namespace Horror.EditorTools
             RoomData playroom = SetupRooms(data);
             CosmeticItem[] items = SafeZoneShopBuilder.EnsureItems();
             SetupShop(map, playroom, items);
+            SetupMinitel();
             SetupDoors(data);
             LoreDocument[] docs = LoreSetupBuilder.LoadDocuments();
             SetupPapers(data, docs);
@@ -266,6 +267,44 @@ namespace Horror.EditorTools
             coins.transform.position = coinsPos;
             coins.transform.rotation = Quaternion.LookRotation(-Flat(roomCenter - coinsPos));
             coins.AddComponent<CoinDisplay>();
+        }
+
+        /// <summary>Le Minitel de l'accueil (maquette : écran vert sur le comptoir du hall).</summary>
+        private static void SetupMinitel()
+        {
+            var root = new GameObject("Minitel (réglages)");
+            Vector3 toPlayer = Dir(new Vector3(0f, 0f, -1f));   // l'écran regarde le joueur devant le comptoir
+            GameObject screen = SafeZoneShopBuilder.Label(root.transform, "", Vector3.zero, 0.0042f, new Color(0.45f, 1f, 0.6f));
+            screen.name = "Écran";
+            screen.transform.position = P(new Vector3(-4.2f, 1.4f, 2.795f));
+            screen.transform.rotation = Quaternion.LookRotation(-toPlayer);
+            TextMesh tm = screen.GetComponent<TextMesh>();
+            tm.fontSize = 48;
+            tm.anchor = TextAnchor.MiddleCenter;
+            tm.alignment = TextAlignment.Left;
+
+            Material keyMat = MakeMat("Touche Minitel", new Color(0.85f, 0.8f, 0.7f));
+            AudioClip click = Load<AudioClip>(Audio + "UI/button_click.wav");
+            string[] names = { "Touche <", "Touche >", "Touche OK", "Touche BACK" };
+            var keys = new PressButton[4];
+            for (int i = 0; i < 4; i++)
+            {
+                GameObject key = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                key.name = names[i];
+                key.transform.SetParent(root.transform, false);
+                key.transform.position = P(new Vector3(-4.38f + i * 0.12f, 1.225f, 2.7f));
+                key.transform.rotation = Quaternion.LookRotation(toPlayer);
+                key.transform.localScale = new Vector3(0.08f, 0.04f, 0.08f);
+                key.GetComponent<Renderer>().sharedMaterial = keyMat;
+                keys[i] = key.AddComponent<PressButton>();
+                keys[i].clickSound = click;
+                SafeZoneShopBuilder.Label(key.transform, names[i].Replace("Touche ", ""), new Vector3(0f, 0.8f, 0f), 0.05f, new Color(0.2f, 0.18f, 0.2f))
+                    .transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   // inscription sur le dessus de la touche
+            }
+            MinitelTerminal minitel = root.AddComponent<MinitelTerminal>();
+            minitel.screen = tm;
+            minitel.left = keys[0]; minitel.right = keys[1]; minitel.ok = keys[2]; minitel.back = keys[3];
+            minitel.beep = click;
         }
 
         private static void SetupJournal(RoomData playroom, LoreDocument[] docs)

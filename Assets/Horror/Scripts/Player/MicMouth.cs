@@ -20,6 +20,9 @@ namespace Horror.Player
         [Tooltip("Vrai = lit le micro. Faux = attend SetRemoteOpenness (autres joueurs).")]
         public bool isLocal = true;
 
+        [Tooltip("Faux = micro coupé (mode Muet, ou 'appuyer pour parler' sans appuyer) : la bouche reste fermée.")]
+        public bool micEnabled = true;
+
         [Header("Réglages micro")]
         [Tooltip("Vide = micro par défaut de Windows (conseillé). Sinon, un morceau du nom du micro, " +
                  "ex. \"Oculus\" pour le micro du Quest via Link.")]
@@ -125,6 +128,7 @@ namespace Horror.Player
                     else { Apply(0f); return; }
                 }
                 target = ReadMicLevel();
+                if (!micEnabled) target = 0f;
             }
             else
             {

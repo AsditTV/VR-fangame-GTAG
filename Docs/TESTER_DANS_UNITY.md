@@ -35,7 +35,9 @@ ambiances par pièce, Salle de jeux (départ, zone sûre, boutique, journal), 9 
 - L'Écoute part du fond du dortoir, fait sa ronde, ouvre les portes avec ses clés ;
 - les papiers sont lisibles quand tu les approches de ton visage ; le journal de la Salle de jeux compte ;
 - on peut descendre l'escalier du Standard vers la salle des machines et la piscine ;
-- l'encre de la piscine ne porte pas : on s'y enfonce (une échelle permet de ressortir).
+- l'encre de la piscine ne porte pas : on s'y enfonce (une échelle permet de ressortir) ;
+- le **Minitel** du comptoir de l'accueil (4 touches : ◄ ► OK BACK) : change ton pseudo, la couleur de
+  ta poupée, et le micro (OPEN / PUSH TO TALK avec A ou X / MUTED). En MUTED, L'Écoute ne t'entend plus parler.
 
 ## 3. Si ça ne marche pas
 | Problème | Piste |
