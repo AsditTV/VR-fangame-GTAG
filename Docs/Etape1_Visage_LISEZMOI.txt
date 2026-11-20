@@ -1,0 +1,31 @@
+VISAGE AVEC BOUCHE QUI BOUGE (étape 1 du jeu d'horreur)
+=========================================================
+
+Ce que ça fait : ton croquis devient un visage dont la bouche s'ouvre selon le volume de ta voix.
+
+INSTALLATION (5 minutes, sur ton PC)
+1. Dans Unity Hub, crée un nouveau projet "3D" (Built-in ou URP, version LTS la plus récente).
+2. Dézippe ce dossier, puis copie le dossier "Assets" dans ton projet (fusionne si Unity demande).
+3. Attends la fin de la compilation. Si des erreurs rouges apparaissent dans la Console, copie-les moi.
+4. Menu en haut : Horror > "1 - Créer l'avatar visage".
+5. Menu : Horror > "2 - Créer la scène de test (bouche)".
+6. Appuie sur Play et parle : la bouche bouge, et un petit indicateur en haut à gauche montre le niveau du micro.
+
+SI LA BOUCHE NE BOUGE PAS
+- Dans les paramètres son de Windows, mets ton micro (ou celui du Quest) comme micro par défaut.
+- Regarde "Niveau brut" dans l'indicateur. S'il reste à 0, Unity ne reçoit pas le micro.
+- Si le niveau bouge mais la bouche réagit trop peu : sélectionne FaceAvatar dans la scène et augmente "Sensitivity".
+- Si elle bouge toute seule : augmente "Noise Gate".
+
+RÉGLAGES (sur le composant Mic Mouth)
+- Sensitivity : sensibilité au volume.
+- Noise Gate : bruit de fond ignoré.
+- Attack / Release : vitesse d'ouverture et de fermeture.
+- Closed Scale Y / Open Scale Y : forme de la bouche fermée et ouverte.
+
+POUR LE MULTIJOUEUR (plus tard)
+- La valeur "Openness" (0 à 1) est celle à envoyer sur le réseau.
+- Sur le visage des autres joueurs, mets "Is Local" à faux et appelle SetRemoteOpenness(valeur).
+
+Note : le visage est un sprite sans éclairage. Quand on fera les zones sombres, on lui donnera
+un matériau éclairé pour qu'il ne brille pas dans le noir.
