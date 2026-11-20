@@ -18,6 +18,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 
 const camera = new THREE.PerspectiveCamera(35, W / H, 0.01, 200);
+let monster = null; const mBase = new Map();
 let scene, doll, map, maskNode, maskBase, maskMat, maskIdle, mouthMat, mouthIdle, mouth, mouthBaseY;
 const base = {};               // rotations de repos des os
 const frames = { cry: [], talk: [], mouth: [] };
@@ -108,7 +109,17 @@ function offsetParts(prefix, d, yawDeg) {    // déplace / tourne un groupe de m
 
 let lightGroup = null;
 window.ready = false;
-window.setup = async (which) => { if (which === "map") await loadMap(); else await loadDoll(); window.ready = true; return true; };
+async function loadMonster() {        // la maquette + L'Écoute posée dedans
+  await loadMap();
+  const gltf = await new GLTFLoader().loadAsync("LEcoute.glb");
+  monster = gltf.scene;
+  monster.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(monster);
+}
+window.setup = async (which) => {
+  if (which === "map") await loadMap(); else if (which === "monster") await loadMonster(); else await loadDoll();
+  window.ready = true; return true;
+};
 
 // Rend une image : renvoie un PNG en base64
 window.shot = (p) => {
@@ -120,6 +131,15 @@ window.shot = (p) => {
     sp.position.set(...p.spot); sp.target.position.set(...p.spotTarget); lightGroup.add(sp, sp.target);
     const foot = new THREE.PointLight(0xffa860, 6, 9, 1.6); foot.position.set(...p.foot); lightGroup.add(foot);
     if (p.extra) for (const e of p.extra) { const l = new THREE.PointLight(e.c, e.i, e.d, 1.6); l.position.set(...e.p); lightGroup.add(l); }
+  } else if (p.lights === "custom") {
+    lightGroup = new THREE.Group();
+    lightGroup.add(new THREE.AmbientLight(p.ambient || 0x120e16, p.ambientI || 0.4));
+    for (const e of p.extra || []) {
+      if (e.spot) {
+        const l = new THREE.SpotLight(e.c, e.i, e.d, e.angle || 0.5, 0.7, 1.5);
+        l.position.set(...e.p); l.target.position.set(...e.spot); l.castShadow = !!e.shadow; lightGroup.add(l, l.target);
+      } else { const l = new THREE.PointLight(e.c, e.i, e.d, 1.6); l.position.set(...e.p); lightGroup.add(l); }
+    }
   } else lightGroup = lights(p.lights || "dark");
   scene.add(lightGroup);
   if (p.fog) scene.fog = new THREE.FogExp2(0x000000, p.fog); else scene.fog = null;
@@ -145,6 +165,16 @@ window.shot = (p) => {
     }
   }
   if (map && p.parts) for (const [prefix, v] of Object.entries(p.parts)) offsetParts(prefix, v.d, v.yaw);
+  if (monster && p.monster) {
+    monster.position.set(...p.monster.pos);
+    monster.rotation.set(0, THREE.MathUtils.degToRad(p.monster.yaw || 0), 0);
+    for (const [n, b] of mBase) { const o = monster.getObjectByName(n); o.quaternion.copy(b); }
+    for (const [n, r] of Object.entries(p.monster.rot || {})) {
+      const o = monster.getObjectByName(n); if (!o) continue;
+      if (!mBase.has(n)) mBase.set(n, o.quaternion.clone());
+      o.quaternion.copy(mBase.get(n)).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...r.map(THREE.MathUtils.degToRad), "XYZ")));
+    }
+  }
 
   camera.fov = p.fov || 35;
   camera.position.set(...p.cam);

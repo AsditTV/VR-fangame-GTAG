@@ -4,6 +4,7 @@
 |---|---|---|
 | `calm_faces_teaser_tiktok.mp4` | 17 s | Dans le noir, la poupée crie (visage qui gribouille) ; l'image se déchire avec des phrases du lore et des murmures ; coupure ; elle fait coucou sans qu'on voie sa tête, le masque tombe à ses pieds ; logo + COMING SOON on Meta Quest Store. |
 | `calm_faces_red_light_tiktok.mp4` | 13 s | « Red light... green light » au théâtre : à chaque noir, le Doux avance ; au dernier, il est collé à nous (jumpscare) ; logo + COMING SOON. |
+| `calm_faces_monster_tiktok.mp4` | 14 s | L'Écoute au fond du couloir murmure ; un petit « tac » : elle se retourne d'un coup ; « She can't see you. » ; elle avance bras écartés ; « She HEARS you. » ; « Don't. Breathe. » ; jumpscare ; logo + COMING SOON. |
 | `calm_faces_logo_frame.jpg` | — | Image du logo (pour la miniature / la photo de profil). |
 
 Format : vertical 1080 × 1920, 30 images/s, H.264 + AAC (prêt pour TikTok, Reels, Shorts).
