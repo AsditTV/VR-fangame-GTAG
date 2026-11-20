@@ -87,6 +87,8 @@ def textures(kind, seed):
         h = weave_height(size, 40, seed)
         mottle = tile_noise(size, [(3, 1.0), (7, 0.5)], seed + 9)
         lum = 0.80 + 0.14 * h + 0.06 * (mottle - 0.5)
+        stain = np.clip((tile_noise(size, [(1, 1.0), (2, 0.6)], seed + 20) - 0.45) / 0.55, 0, 1)
+        lum = lum * (1 - 0.09 * stain)          # tissu un peu passé par endroits (vieille poupée)
         strength = 2.2
     elif kind == "feutre":
         h = felt_height(size, seed)

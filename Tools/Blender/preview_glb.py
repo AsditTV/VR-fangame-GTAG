@@ -16,13 +16,18 @@ from mathutils import Vector
 argv = sys.argv[sys.argv.index("--") + 1:]
 src, out = argv[0], argv[1]
 angle = float(argv[2]) if len(argv) > 2 else 25.0
+focus = argv[3] if len(argv) > 3 else None     # facultatif : nom d'un noeud à cadrer en gros plan (ex. Tete, Main_G)
 
 # Scène vide
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=src)
 
-# Boîte englobante de tout ce qui est visible
+# Boîte englobante de tout ce qui est visible (ou seulement du noeud demandé et de ses enfants)
 meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+if focus and focus in bpy.data.objects:
+    root_f = bpy.data.objects[focus]
+    keep = set(root_f.children_recursive) | {root_f}
+    meshes = [o for o in meshes if o in keep] or meshes
 pts = [o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box]
 lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
 hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))

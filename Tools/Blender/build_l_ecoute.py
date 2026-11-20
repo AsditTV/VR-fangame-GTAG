@@ -274,6 +274,82 @@ for S in ("G", "D"):
     ellipsoid(bm, c, (h.x * 0.95, h.y * 0.95, h.z), 0.004, 45, 7, 24, 16)   # jointures qui saillent
     finish(paume, bm, [M_PEAU], 0.05)
 
+# ============================================================== cou trop long, vertèbres qui saillent
+cou_mesh = O["Cou_Mesh"]
+bm = bmesh.new()
+tube(bm, -0.03, 0.29, lambda t, a: 0.023 + 0.007 * max(0.0, math.sin(t * math.pi * 7)) ** 3 * (0.6 + 0.4 * math.cos(a - math.pi / 2))
+     + 0.003 * math.sin(2 * a), 20, 40, 0.0015, 40, 8)
+finish(cou_mesh, bm, [M_PEAU], 0.05)
+
+# ============================================================== doigts : longs, noueux, ongles d'encre en griffes
+for ob in [o for o in O if o.name.startswith("Doigt_") and o.name.endswith("_Mesh")]:
+    zs = [v.co.z for v in ob.data.vertices]
+    L = -min(zs)
+    r0 = 0.0072 if "Pouce" not in ob.name else 0.0078
+
+    def finger_r(t, a, r0=r0):
+        knob = 0.0022 * (math.exp(-(t / 0.08) ** 2) + math.exp(-((t - 1) / 0.08) ** 2))   # jointures
+        return (r0 * (1 - 0.25 * t) + knob) * (1 + 0.1 * math.sin(2 * a))
+    bm = bmesh.new()
+    tube(bm, 0.004, -L, finger_r, 10, 16, 0.0008, 90, hash(ob.name) % 89)
+    finish(ob, bm, [M_PEAU], 0.03)
+for ob in [o for o in O if o.name.endswith("_Ongle")]:
+    bm = bmesh.new()
+    tube(bm, 0.004, -0.04, lambda t, a: 0.0062 * (1 - t) ** 1.4 + 0.0004, 8, 10, 0.0, 10, 0)
+    for v in bm.verts:                     # griffe recourbée vers la paume
+        v.co.y -= 0.012 * (v.co.z / -0.04) ** 2
+    finish(ob, bm, [M_ENCRE], 0.03)
+
+# ============================================================== portrait épinglé sur la tête
+por = O["Portrait"]
+wverts = [por.matrix_world @ v.co for v in por.data.vertices]
+tw = TETE.matrix_world.translation
+top = max(wverts, key=lambda p: p.z)
+left = min(wverts, key=lambda p: p.x)
+right = max(wverts, key=lambda p: p.x)
+bm_pin, bm_head = bmesh.new(), bmesh.new()
+for p in (top, left, right):
+    d = (tw - p).normalized()
+    pts = [tuple(p - d * 0.012), tuple(p + d * 0.05)]
+    merge_bm = curve_mesh([pts], 0.0012, "epingle")
+    me = bpy.data.meshes.new("tmp"); merge_bm.to_mesh(me); merge_bm.free(); bm_pin.from_mesh(me); bpy.data.meshes.remove(me)
+    ellipsoid(bm_head, p - d * 0.014, (0.006, 0.006, 0.006), 0.0, 10, 1, 10, 8)
+M_PIN = material("Epingle_Metal", srgb("#C9C9CF"), None, 0.25)
+M_PIN.node_tree.nodes["Principled BSDF"].inputs["Metallic"].default_value = 1.0
+M_PIN_TETE = material("Tete_Epingle", srgb("#E6A0B4"), None, 0.3)
+new_object("Epingles", TETE, bm_pin, [M_PIN], 0.03)
+new_object("Tetes_Epingles", TETE, bm_head, [M_PIN_TETE], 0.03)
+
+# ============================================================== nœud du tablier dans le dos + pièces sur la robe
+bm = bmesh.new()
+bow_c = Vector((0.0, robe_r(math.pi / 2, 1.30) * 0.92 + 0.004, 1.30))
+loops2 = []
+for sign in (1, -1):
+    loops2.append([tuple(bow_c + Vector((sign * (0.11 * (1 - math.cos(t)) * 0.5), 0.016 * math.sin(t) + 0.012, 0.05 * math.sin(t))))
+                   for t in [s / 20 * 2 * math.pi for s in range(21)]])
+    loops2.append([tuple(bow_c), tuple(bow_c + Vector((sign * 0.04, 0.016, -0.15))), tuple(bow_c + Vector((sign * 0.07, 0.012, -0.36)))])
+new_object("Noeud_Tablier", ROOT, curve_mesh(loops2, 0.009, "noeud"), [M_DENTELLE], 0.03)
+M_PIECE = material("Robe_Piece", srgb("#968AA6"), "tissu", 0.9, seed=16)
+bm_p, bm_s = bmesh.new(), bmesh.new()
+for th0, z0, w, h in ((2.4, 0.92, 0.22, 0.08), (-0.5, 0.62, 0.18, 0.07)):
+    c = bm_p.verts.new(Vector((math.cos(th0) * (robe_r(th0, z0) + 0.006), math.sin(th0) * (robe_r(th0, z0) + 0.006) * 0.92, z0)))
+    ring = []
+    for k in range(20):
+        a = 2 * math.pi * k / 20
+        jag = 1 + 0.12 * noise.noise(Vector((math.cos(a) * 3, math.sin(a) * 3, th0)))
+        th, z = th0 + w * jag * math.cos(a), z0 + h * jag * math.sin(a)
+        rr = robe_r(th, z) + 0.006
+        ring.append(bm_p.verts.new(Vector((math.cos(th) * rr, math.sin(th) * rr * 0.92, z))))
+        if k % 2 == 0:
+            rr2 = rr + 0.003
+            n = Vector((math.cos(th), math.sin(th) * 0.92, 0)).normalized()
+            stitch_x(bm_s, Vector((math.cos(th) * rr2, math.sin(th) * rr2 * 0.92, z)), n, Vector((0, 0, 1)), 0.016)
+    for k in range(20):
+        bm_p.faces.new((c, ring[k], ring[(k + 1) % 20]))
+new_object("Robe_Pieces", ROOT, bm_p, [M_PIECE], 0.08)
+M_FILR = material("Fil_Robe", srgb("#2A2230"), None, 0.7)
+new_object("Robe_Coutures", ROOT, bm_s, [M_FILR], 0.04)
+
 # ============================================================== dentelle (une pièce) et boutons regroupés
 dents = [o for o in O if o.name.startswith("Dentelle_")]
 if dents:

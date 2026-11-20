@@ -81,9 +81,15 @@ def gather(theta, z):
     return 1 + 0.16 * low * math.sin(11 * theta + 0.6) + 0.05 * top * math.sin(9 * theta)
 
 
+BULGE_TH, BULGE_Z = -math.pi / 2 - 0.6, 0.33   # rembourrage tassé en bas à gauche
+
+
 def body_point(theta, z, extra=0.0):
-    r = body_radius(z) * gather(theta, z) + extra
-    return Vector((math.cos(theta) * r, math.sin(theta) * r * SQ, z))
+    d = math.atan2(math.sin(theta - BULGE_TH), math.cos(theta - BULGE_TH))
+    bulge = 0.014 * math.exp(-(d * d) / 0.18 - (z - BULGE_Z) ** 2 / 0.006)
+    r = body_radius(z) * gather(theta, z) + extra + bulge
+    lean = 0.014 * (0.76 - z)                       # le sac s'affaisse un peu sur le côté
+    return Vector((math.cos(theta) * r + lean, math.sin(theta) * r * SQ, z))
 
 
 def body_normal(theta, z):
@@ -161,6 +167,23 @@ for k in range(N):
 for k in range(N):
     bm.faces.new((center, rim[k], rim[(k + 1) % N]))
 new_object("Piece_Rapiecee", ROOT, bm, [M_MENTHE], 0.07)
+bm = bmesh.new()                       # une deuxième pièce, rose, dans le dos, cousue de travers
+BACK_TH, BACK_Z = math.pi / 2 + 0.35, 0.52
+center = bm.verts.new(body_point(BACK_TH, BACK_Z, 0.006))
+rim = []
+for k in range(N):
+    a = 2 * math.pi * k / N + 0.3
+    sq = 1 + 0.15 * noise.noise(Vector((math.cos(a) * 3, math.sin(a) * 3, 8.0)))
+    rim.append(bm.verts.new(body_point(BACK_TH + 0.24 * sq * math.cos(a), BACK_Z + 0.05 * sq * math.sin(a), 0.006)))
+for k in range(N):
+    bm.faces.new((center, rim[(k + 1) % N], rim[k]))
+new_object("Piece_Dos", ROOT, bm, [M_COL], 0.07)
+bm = bmesh.new()
+for k in range(12):
+    a = 2 * math.pi * k / 12 + 0.3
+    th, z = BACK_TH + 0.2 * math.cos(a), BACK_Z + 0.042 * math.sin(a)
+    thin_box(bm, body_point(th, z, 0.0085), Vector((-math.sin(a), 0, math.cos(a))), body_normal(th, z), 0.012, 0.003, 0.003)
+new_object("Coutures_Dos", ROOT, bm, [M_FIL], 0.05)
 
 # --- déchirure sur le flanc gauche, avec du rembourrage qui sort
 TEAR_TH, TEAR_Z = FRONT - 0.95, 0.40
@@ -240,8 +263,8 @@ for k in range(13):
 new_object("Couture_Crane", tete, bm, [M_FIL], 0.04)
 
 loops = []
-for k in range(7):                   # boucles de laine sur le dessus et l'arrière
-    a0 = rng.uniform(-0.9, 0.9)
+for k in range(12):                  # boucles de laine sur le dessus et l'arrière
+    a0 = rng.uniform(-1.1, 1.1)
     base = tc + Vector((math.sin(a0) * 0.09, 0.03 + rng.uniform(-0.02, 0.07), 0.125))
     pts = []
     for s in range(14):
@@ -295,16 +318,26 @@ for S, sign in (("G", 1), ("D", -1)):
     bpy.context.scene.collection.objects.link(obj); obj.parent = ep; obj.matrix_parent_inverse = Matrix()
     finish(obj, bm, [M_FIL], 0.05)
 
-    # haut du bras : boudin rembourré, un peu cabossé (le long de -Z local)
+    # haut du bras : boudin rembourré, un peu cabossé (le long de -Z local), couture creusée derrière
+    def seam_angle(obj):
+        d = obj.matrix_world.to_3x3().inverted() @ Vector((0, 1, 0))
+        return math.atan2(d.y, d.x)
+
+    def groove(a, a0):
+        da = math.atan2(math.sin(a - a0), math.cos(a - a0))
+        return 0.0035 * math.exp(-(da / 0.10) ** 2)
+    a_up = seam_angle(ep)
     bm = bmesh.new()
-    tube(bm, 0.015, -0.255, lambda t, a: 0.047 - 0.006 * t + 0.004 * math.sin(math.pi * t) + 0.002 * math.sin(3 * a),
-         24, 18, 0.004, 22, 40 + sign)
+    tube(bm, 0.015, -0.255, lambda t, a: 0.047 - 0.006 * t + 0.004 * math.sin(math.pi * t) + 0.002 * math.sin(3 * a)
+         - groove(a, a_up), 32, 18, 0.004, 22, 40 + sign)
     finish(O["BrasHaut_" + S], bm, [M_CORPS], 0.09)
 
     # avant-bras + manchette évasée (« cornet ») au poignet, ourlet ondulé
+    a_fore = seam_angle(coude)
+
     def fore_r(t, a):
         if t < 0.78:
-            return 0.043 - 0.005 * t + 0.003 * math.sin(math.pi * t / 0.78)
+            return 0.043 - 0.005 * t + 0.003 * math.sin(math.pi * t / 0.78) - groove(a, a_fore)
         k = (t - 0.78) / 0.22
         return 0.040 + 0.022 * k * k + 0.006 * k * math.sin(9 * a)
     bm = bmesh.new()
@@ -316,14 +349,21 @@ for S, sign in (("G", 1), ("D", -1)):
     paume = O["Paume_" + S]
     c, h = local_bbox(paume)
     bm = bmesh.new()
-    ellipsoid(bm, c, (h.x * 0.95, h.y * 1.05, h.z * 0.92), 0.004, 30, 60 + sign, 28, 18)
+    ellipsoid(bm, c, (h.x * 1.0, h.y * 1.25, h.z * 0.95), 0.004, 30, 60 + sign, 28, 18)
     finish(paume, bm, [M_MAINS], 0.06)
-    for f in ("Index", "Majeur", "Annulaire", "Pouce"):
-        for seg in (1, 2):
+    for f in ("Index", "Majeur", "Annulaire", "Pouce"):      # doigts de moufle : saucisses de feutre dodues
+        j1, j2 = O[f"Doigt_{f}_1_{S}"], O[f"Doigt_{f}_2_{S}"]
+        L1 = (j2.matrix_world.translation - j1.matrix_world.translation).length
+        for seg, L, r in ((1, L1, 0.0175), (2, L1 * 0.95, 0.0165)):
             ob = O[f"Doigt_{f}_{seg}_{S}_Mesh"]
-            c, h = local_bbox(ob)
+
+            def fr(t, a, r=r, seg=seg):
+                k = r * (1 - 0.1 * t) * (1 + 0.07 * math.sin(2 * a))
+                if seg == 2 and t > 0.7:                    # bout bien rond
+                    k *= math.sqrt(max(0.08, 1 - ((t - 0.7) / 0.3) ** 2))
+                return k
             bm = bmesh.new()
-            ellipsoid(bm, c, (h.x * 1.1, h.y * 1.1, h.z * 0.95), 0.002, 60, hash(ob.name) % 97, 16, 12)
+            tube(bm, 0.007, -L - 0.003, fr, 14, 12, 0.0015, 60, hash(ob.name) % 97)
             finish(ob, bm, [M_MAINS], 0.05)
 
 # ============================================================== étiquette « No.3 » : recollée sur le sac
