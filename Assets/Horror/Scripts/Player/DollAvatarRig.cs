@@ -30,6 +30,12 @@ namespace Horror.Player
         [Tooltip("À partir de quel écart (degrés) le corps se retourne vers le regard.")]
         public float bodyTurnThreshold = 35f;
         public float bodyTurnSpeed = 4f;
+        [Tooltip("Le corps penche quand on incline la tête (0 = jamais, 1 = autant que la tête).")]
+        [Range(0f, 1f)] public float bodyLeanFactor = 0.7f;
+        [Tooltip("Inclinaison maximale du corps (degrés).")]
+        public float maxBodyLean = 28f;
+        [Tooltip("Facultatif : la glissade (LeanSlide) fait aussi pencher le corps vers l'avant/arrière.")]
+        public Horror.Locomotion.LeanSlide leanSlide;
         [Tooltip("Cacher sa propre tête (joueur local). Faux pour les autres joueurs.")]
         public bool hideOwnHead = true;
         [Tooltip("Rotation ajoutée aux mains pour les aligner sur les manettes (G puis D).")]
@@ -42,6 +48,7 @@ namespace Horror.Player
         private Vector3[] _upperScale = new Vector3[2], _foreScale = new Vector3[2];
         private Vector3[] _elbowLocal = new Vector3[2], _handLocal = new Vector3[2];
         private float _bodyYaw;
+        private Vector2 _lean;
 
         private void Start()
         {
@@ -80,8 +87,18 @@ namespace Horror.Player
             float diff = Mathf.DeltaAngle(_bodyYaw, headYaw);
             if (Mathf.Abs(diff) > bodyTurnThreshold * 0.3f)
                 _bodyYaw += diff * (1f - Mathf.Exp(-bodyTurnSpeed * Time.deltaTime)) * (Mathf.Abs(diff) > bodyTurnThreshold ? 2f : 0.5f);
-            Quaternion bodyRot = Quaternion.Euler(0f, _bodyYaw, 0f);
-            transform.SetPositionAndRotation(head.position - Vector3.up * eyeHeight - bodyRot * Vector3.forward * headBack, bodyRot);
+            Quaternion yawRot = Quaternion.Euler(0f, _bodyYaw, 0f);
+
+            // Le corps penche avec la tête (pivot : la tête, donc les pieds partent de l'autre côté)
+            Vector3 bodyRight = yawRot * Vector3.right;
+            float roll = Mathf.Asin(Mathf.Clamp(Vector3.Dot(head.up, bodyRight), -1f, 1f)) * Mathf.Rad2Deg;
+            float side = Mathf.Clamp(roll * bodyLeanFactor, -maxBodyLean, maxBodyLean);
+            float forward = leanSlide != null ? leanSlide.Lean.y * 14f : 0f;
+            if (leanSlide != null && leanSlide.IsSliding) side += leanSlide.Lean.x * 6f;   // on se "couche" un peu dans la glisse
+            _lean = Vector2.Lerp(_lean, new Vector2(side, forward), 1f - Mathf.Exp(-8f * Time.deltaTime));
+            Quaternion bodyRot = yawRot * Quaternion.Euler(_lean.y, 0f, -_lean.x);
+
+            transform.SetPositionAndRotation(head.position - bodyRot * Vector3.up * eyeHeight - bodyRot * Vector3.forward * headBack, bodyRot);
 
             // 2) Les bras
             SolveArm(0, leftHandTarget, Quaternion.Euler(leftHandRotation), 1f);

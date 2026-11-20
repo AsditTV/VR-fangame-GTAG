@@ -60,6 +60,9 @@ namespace Horror.EditorTools
             rig.head = player.head;
             rig.leftHandTarget = player.leftHandVisual;
             rig.rightHandTarget = player.rightHandVisual;
+            LeanSlide slide = player.GetComponent<LeanSlide>();
+            if (slide == null) slide = Undo.AddComponent<LeanSlide>(player.gameObject);   // pencher la tête = glisser
+            rig.leanSlide = slide;
 
             // Les boules de test deviennent des cibles invisibles (elles gardent leurs fonctions)
             foreach (Transform t in new[] { player.leftHandVisual, player.rightHandVisual })

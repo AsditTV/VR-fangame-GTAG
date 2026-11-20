@@ -149,6 +149,7 @@ namespace Horror.EditorTools
             locomotion.rightController = rightController;
             locomotion.leftHandVisual = leftVisual;
             locomotion.rightHandVisual = rightVisual;
+            player.AddComponent<LeanSlide>();   // pencher la tête / le corps = glisser au sol
 
             Selection.activeGameObject = player;
         }

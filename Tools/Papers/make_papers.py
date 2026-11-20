@@ -43,6 +43,116 @@ def font(name, size):
     return ImageFont.truetype(os.path.join(F, files[name]), size)
 
 
+# ---------------------------------------------------------------- crayon tremblant (fait main)
+class HandDraw:
+    """Remplace ImageDraw : mêmes fonctions, mais rien n'est parfait. Les cercles sont des boucles
+    irrégulières qui ne se referment pas tout à fait, les traits ondulent, les coins dépassent.
+    Le texte (text, textlength) passe tel quel."""
+
+    def __init__(self, img, mode=None, wobble=1.0):
+        self.d = ImageDraw.Draw(img, mode)
+        self.k = wobble
+
+    def text(self, *a, **kw):
+        return self.d.text(*a, **kw)
+
+    def textlength(self, *a, **kw):
+        return self.d.textlength(*a, **kw)
+
+    # -- outils
+    def _noise(self, n, amp, smooth=6):
+        """Bruit doux (marche aléatoire lissée) de n valeurs."""
+        if n <= 1:
+            return np.zeros(max(n, 1))
+        raw = rng.normal(0, 1, n + smooth * 2)
+        ker = np.ones(smooth) / smooth
+        out = np.convolve(raw, ker, mode="same")[smooth:smooth + n]
+        return out / (np.abs(out).max() + 1e-6) * amp
+
+    def _wobbly_path(self, pts, amp):
+        """Découpe un chemin en petits pas et le fait onduler perpendiculairement."""
+        out = []
+        for (x0, y0), (x1, y1) in zip(pts[:-1], pts[1:]):
+            L = math.hypot(x1 - x0, y1 - y0)
+            n = max(2, int(L / 7))
+            nx, ny = (-(y1 - y0) / (L + 1e-6), (x1 - x0) / (L + 1e-6))
+            off = self._noise(n, amp * min(1.0, 0.3 + L / 300))
+            for i in range(n):
+                t = i / n
+                out.append((x0 + (x1 - x0) * t + nx * off[i], y0 + (y1 - y0) * t + ny * off[i]))
+        out.append(pts[-1])
+        return out
+
+    def _stroke(self, pts, fill, width):
+        if fill is None or width <= 0:
+            return
+        w = max(1, int(width))
+        self.d.line(pts, fill=fill, width=w, joint="curve")
+        if w >= 3:   # deuxième passage léger, décalé : effet crayon / plume
+            off = [(x + rng.uniform(-0.8, 0.8), y + rng.uniform(-0.8, 0.8)) for x, y in pts]
+            self.d.line(off, fill=fill, width=max(1, w // 2), joint="curve")
+
+    def _ellipse_pts(self, box, overshoot=True):
+        x0, y0, x1, y1 = box
+        cx, cy, rx, ry = (x0 + x1) / 2, (y0 + y1) / 2, abs(x1 - x0) / 2, abs(y1 - y0) / 2
+        n = max(24, int((rx + ry) / 3))
+        start = rng.uniform(0, math.tau)
+        span = math.tau + (rng.uniform(0.15, 0.45) if overshoot else 0)
+        harm = [(rng.uniform(0.02, 0.06) * self.k, rng.integers(2, 4), rng.uniform(0, math.tau)) for _ in range(2)]
+        pts = []
+        for i in range(n + 1):
+            a = start + span * i / n
+            r = 1 + sum(h * math.sin(f * a + ph) for h, f, ph in harm)
+            drift = 1 + 0.03 * self.k * (i / n)          # la boucle ne se referme pas pile
+            pts.append((cx + math.cos(a) * rx * r * drift, cy + math.sin(a) * ry * r * drift))
+        return pts
+
+    # -- même interface qu'ImageDraw
+    def line(self, xy, fill=None, width=1, joint=None):
+        pts = [tuple(p) for p in xy] if not isinstance(xy[0], (int, float)) else [(xy[i], xy[i + 1]) for i in range(0, len(xy), 2)]
+        self._stroke(self._wobbly_path(pts, 1.6 * self.k), fill, width)
+
+    def ellipse(self, box, fill=None, outline=None, width=1):
+        if fill is not None:
+            self.d.polygon(self._ellipse_pts(box, overshoot=False), fill=fill)
+        if outline is not None:
+            self._stroke(self._ellipse_pts(box), outline, width)
+
+    def arc(self, box, start, end, fill=None, width=1):
+        x0, y0, x1, y1 = box
+        cx, cy, rx, ry = (x0 + x1) / 2, (y0 + y1) / 2, abs(x1 - x0) / 2, abs(y1 - y0) / 2
+        n = 24
+        a0, a1 = math.radians(start + rng.uniform(-6, 6)), math.radians(end + rng.uniform(-6, 6))
+        pts = [(cx + math.cos(a0 + (a1 - a0) * i / n) * rx, cy + math.sin(a0 + (a1 - a0) * i / n) * ry) for i in range(n + 1)]
+        self._stroke(self._wobbly_path(pts, 1.2 * self.k), fill, width)
+
+    def _corners(self, box, jit):
+        x0, y0, x1, y1 = box
+        return [(x0 + rng.uniform(-jit, jit), y0 + rng.uniform(-jit, jit)), (x1 + rng.uniform(-jit, jit), y0 + rng.uniform(-jit, jit)),
+                (x1 + rng.uniform(-jit, jit), y1 + rng.uniform(-jit, jit)), (x0 + rng.uniform(-jit, jit), y1 + rng.uniform(-jit, jit))]
+
+    def rectangle(self, box, fill=None, outline=None, width=1):
+        jit = 2.5 * self.k
+        c = self._corners(box, jit)
+        if fill is not None:
+            self.d.polygon(self._wobbly_path(c + [c[0]], 1.0 * self.k), fill=fill)
+        if outline is not None:
+            for a, b in zip(c, c[1:] + c[:1]):   # chaque côté tracé séparément, qui dépasse un peu
+                dx, dy = b[0] - a[0], b[1] - a[1]
+                ov = rng.uniform(0.0, 0.03)
+                self._stroke(self._wobbly_path([(a[0] - dx * ov, a[1] - dy * ov), (b[0] + dx * ov, b[1] + dy * ov)], 1.3 * self.k), outline, width)
+
+    def rounded_rectangle(self, box, radius=0, fill=None, outline=None, width=1):
+        self.rectangle(box, fill=fill, outline=outline, width=width)
+
+    def polygon(self, xy, fill=None, outline=None, width=1):
+        pts = [(x + rng.uniform(-1.5, 1.5) * self.k, y + rng.uniform(-1.5, 1.5) * self.k) for x, y in xy]
+        if fill is not None:
+            self.d.polygon(self._wobbly_path(pts + [pts[0]], 1.0 * self.k), fill=fill)
+        if outline is not None:
+            self._stroke(self._wobbly_path(pts + [pts[0]], 1.3 * self.k), outline, width)
+
+
 # ---------------------------------------------------------------- papier
 def paper(color=(236, 228, 208), size=(W, H), age=0.5, creases=4, stains=3, lined=None, grid=False, margin_line=False):
     """Papier vieilli : grain, taches, plis, bords assombris, lignes de cahier en option."""
@@ -55,7 +165,7 @@ def paper(color=(236, 228, 208), size=(W, H), age=0.5, creases=4, stains=3, line
     edge = np.minimum(np.minimum(xx, w - xx), np.minimum(yy, h - yy)) / (min(w, h) * 0.18)
     base *= (1 - age * 0.22 * np.clip(1 - edge, 0, 1) ** 2)[..., None]
     img = Image.fromarray((np.clip(base, 0, 1) * 255).astype(np.uint8))
-    d = ImageDraw.Draw(img, "RGBA")
+    d = HandDraw(img, "RGBA")
     if lined:
         for y in range(lined[0], h - 60, lined[1]):
             d.line([(40, y), (w - 40, y)], fill=(120, 150, 200, 110), width=2)
@@ -68,14 +178,14 @@ def paper(color=(236, 228, 208), size=(W, H), age=0.5, creases=4, stains=3, line
             d.line([(0, y), (w, y)], fill=(130, 160, 190, 70), width=1)
     # taches (café, eau)
     st = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(st)
+    sd = HandDraw(st)
     for _ in range(stains):
         x, y, r = rng.uniform(0, w), rng.uniform(0, h), rng.uniform(40, 180)
         sd.ellipse([x - r, y - r, x + r, y + r], fill=(120, 90, 50, int(rng.uniform(14, 34))))
         if rng.random() < 0.4:   # anneau de tasse
             sd.ellipse([x - r * 0.6, y - r * 0.6, x + r * 0.6, y + r * 0.6], outline=(110, 80, 45, 50), width=6)
     img.paste(Image.alpha_composite(img.convert("RGBA"), st.filter(ImageFilter.GaussianBlur(10))).convert("RGB"))
-    d = ImageDraw.Draw(img, "RGBA")
+    d = HandDraw(img, "RGBA")
     for _ in range(creases):   # plis
         if rng.random() < 0.5:
             x = rng.uniform(w * 0.2, w * 0.8)
@@ -106,7 +216,7 @@ def wrap(text, fnt, max_w, draw):
 
 def write(img, text, fnt, x, y, max_w, color=(40, 34, 44), spacing=1.25, jitter=0.0, align="left"):
     """Écrit un texte (avec une légère irrégularité pour l'écriture à la main). Renvoie le y final."""
-    d = ImageDraw.Draw(img, "RGBA")
+    d = HandDraw(img, "RGBA")
     size = fnt.size
     for line in wrap(text, fnt, max_w, d):
         dx = rng.uniform(-jitter, jitter) * size * 0.3
@@ -122,7 +232,7 @@ def stamp(img, text, xy, color=(170, 40, 50), size=56, angle=-12):
     """Tampon encreur rouge, un peu effacé."""
     fnt = font("type", size)
     tmp = Image.new("RGBA", (900, 200), (0, 0, 0, 0))
-    d = ImageDraw.Draw(tmp)
+    d = HandDraw(tmp)
     tw = d.textlength(text, font=fnt)
     d.rectangle([10, 10, tw + 50, size + 50], outline=color + (220,), width=6)
     d.text((30, 25), text, fill=color + (220,), font=fnt)
@@ -134,14 +244,14 @@ def stamp(img, text, xy, color=(170, 40, 50), size=56, angle=-12):
 
 
 def ink_blot(img, x, y, r, color=(20, 16, 24)):
-    d = ImageDraw.Draw(img, "RGBA")
+    d = HandDraw(img, "RGBA")
     for _ in range(12):
         ox, oy, rr = rng.normal(0, r * 0.4), rng.normal(0, r * 0.4), rng.uniform(r * 0.3, r * 0.8)
         d.ellipse([x + ox - rr, y + oy - rr, x + ox + rr, y + oy + rr], fill=color + (230,))
 
 
 def staple(img, x, y):
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     d.line([(x, y), (x + 70, y + 8)], fill=(150, 150, 155), width=6)
     d.line([(x, y + 3), (x + 70, y + 11)], fill=(90, 90, 95), width=2)
 
@@ -162,7 +272,7 @@ def halftone_photo(w, h, kind="pool"):
             d.rectangle([w * 0.2 + k * w * 0.075, h * 0.55, w * 0.24 + k * w * 0.075, h * 0.7], fill=40)
     img = img.filter(ImageFilter.GaussianBlur(2))
     out = Image.new("L", (w, h), 235)
-    od = ImageDraw.Draw(out)
+    od = ImageDraw.Draw(out)  # trame d'imprimerie : reste nette
     a = np.asarray(img)
     for y in range(0, h, 7):
         for x in range(0, w, 7):
@@ -185,7 +295,7 @@ def doc(did, title, zone, order, secret=False):
 @doc("p01_brochure", "Brochure, 1974", "Lobby", 1)
 def p01():
     img = paper((246, 232, 236), age=0.35, creases=2, stains=1)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img, wobble=1.4)
     d.rectangle([0, 0, W, 330], fill=(232, 186, 200))
     write(img, "Céleste's Gardens", font("news_bold", 92), 60, 60, W - 120, color=(255, 250, 245), align="center")
     write(img, "the hotel where children laugh!", font("hand_bold", 64), 60, 190, W - 120, color=(120, 70, 100), align="center")
@@ -207,7 +317,7 @@ def p01():
 @doc("p02_news1977", "Newspaper, August 16, 1977", "Lobby", 2)
 def p02():
     img = paper((228, 222, 200), age=0.6, creases=3, stains=2)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     write(img, "THE LAKESIDE COURIER", font("news_bold", 70), 50, 40, W - 100, color=(30, 28, 30), align="center")
     d.line([(50, 140), (W - 50, 140)], fill=(30, 28, 30), width=4)
     write(img, "Tuesday, August 16, 1977", font("news", 30), 50, 152, W - 100, color=(60, 55, 55), align="center")
@@ -232,7 +342,7 @@ def p02():
 @doc("p03_rules", "Rules of the Marivaux Institute, 1978", "School wing", 3)
 def p03():
     img = paper((238, 234, 222), age=0.4, creases=1, stains=1)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     write(img, "MARIVAUX INSTITUTE", font("news_bold", 60), 60, 60, W - 120, color=(90, 70, 100), align="center")
     write(img, "for Calm Children", font("old", 42), 60, 135, W - 120, color=(110, 90, 120), align="center")
     d.line([(160, 205), (W - 160, 205)], fill=(150, 130, 160), width=3)
@@ -278,7 +388,7 @@ def p05():
 @doc("p06_entertainer", "Note in a dressing room", "Closed park", 6)
 def p06():
     img = paper((233, 226, 214), size=(W, H), age=0.6, creases=5, stains=3)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     d.ellipse([W - 260, 60, W - 80, 240], outline=(200, 140, 160), width=8)   # logo des Doux
     write(img, "Softies", font("hand_bold", 52), W - 250, 120, 160, color=(200, 140, 160), align="center")
     text = ("Madam's orders: never take the Softies' heads off in front of the children.\n"
@@ -334,7 +444,7 @@ def p09():
 @doc("p10_inspection", "Inspection report, October 1985", "Manor", 10)
 def p10():
     img = paper((236, 236, 230), age=0.3, creases=2, stains=1)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     write(img, "ACADEMY INSPECTORATE", font("type", 52), 60, 70, W - 120, color=(30, 30, 40), align="center")
     write(img, "Inspection report - Ref. 85/1142", font("type", 34), 60, 140, W - 120, color=(60, 60, 70), align="center")
     d.line([(60, 200), (W - 60, 200)], fill=(40, 40, 50), width=3)
@@ -350,7 +460,7 @@ def p10():
 @doc("p11_watchman", "Night watchman's logbook", "Manor", 11)
 def p11():
     img = paper((226, 222, 204), age=0.6, creases=3, stains=3)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     cols = [60, 260, W - 60]
     for y in range(160, H - 80, 72):
         d.line([(60, y), (W - 60, y)], fill=(90, 80, 70), width=2)
@@ -376,7 +486,7 @@ def p11():
 @doc("p12_news1985", "Newspaper, November 20, 1985", "Manor", 12)
 def p12():
     img = paper((226, 222, 204), age=0.55, creases=3, stains=2)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     write(img, "THE LAKESIDE COURIER", font("news_bold", 70), 50, 40, W - 100, color=(30, 28, 30), align="center")
     d.line([(50, 140), (W - 50, 140)], fill=(30, 28, 30), width=4)
     write(img, "Wednesday, November 20, 1985", font("news", 30), 50, 152, W - 100, color=(60, 55, 55), align="center")
@@ -400,7 +510,7 @@ def p13():
 @doc("s1_mila", "Mila's last drawing", "Secret", 14, secret=True)
 def s1():
     img = paper((248, 246, 238), age=0.25, creases=1, stains=0)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img, wobble=2.0)
     write(img, "MOMMY", font("child", 120), 0, 90, W, color=(220, 90, 120), align="center")
     cx, cy = W // 2, 760
     for k in range(3):   # coloriage au crayon : traits qui débordent
@@ -425,7 +535,7 @@ def s1():
 @doc("s2_cassette", "Note in the music box", "Secret", 15, secret=True)
 def s2():
     img = paper((240, 236, 226), size=(W, 760), age=0.3, creases=1, stains=1)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     d.rectangle([90, 60, W - 90, 300], fill=(60, 56, 64))
     d.rectangle([130, 90, W - 130, 200], fill=(236, 226, 206))
     d.text((150, 105), "Mila - birthday 1976", fill=(200, 80, 110), font=font("hand_bold", 64))
@@ -439,7 +549,7 @@ def s2():
 @doc("s3_payroll", "Staff payroll, 1985", "Secret", 16, secret=True)
 def s3():
     img = paper((236, 234, 224), age=0.4, creases=2, stains=1)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img)
     write(img, "MARIVAUX INSTITUTE - STAFF PAYROLL - OCT. 1985", font("type", 38), 60, 70, W - 120, color=(30, 30, 40), align="center")
     staff = [("Céleste Marivaux", "Headmistress"), ("Armand Leroy", "Night watchman"), ("Gérard Morel", "Lifeguard"),
              ("Josiane Petit", "Laundry"), ("Paul Garnier", "Mechanic"), ("Sylvie Roux", "Park entertainer"),
@@ -457,7 +567,7 @@ def s3():
 @doc("s4_portrait", "The 24th face", "Secret", 17, secret=True)
 def s4():
     img = paper((236, 228, 210), age=0.5, creases=3, stains=2)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img, wobble=1.4)
     cx, cy = W // 2, 700
     d.ellipse([cx - 280, cy - 420, cx + 280, cy + 420], outline=(40, 34, 40), width=5)
     d.ellipse([cx - 320, cy - 520, cx + 320, cy - 300], fill=(80, 70, 85))       # chignon
@@ -482,7 +592,7 @@ def s4_back():
     write(img, "I saw too much. I could see their eyes watching me through the paper.\n\n"
                "Tonight I erased mine. Since then, I hear everything.",
           font("old", 60), 100, 720, W - 200, color=(50, 30, 50), spacing=1.32, jitter=0.4)  # sous les trous des yeux
-    d = ImageDraw.Draw(img, "RGBA")
+    d = HandDraw(img, "RGBA")
     for ex in (W // 2 - 130, W // 2 + 130):   # les trous des yeux se voient aussi au verso (miroir)
         X = W - ex
         d.ellipse([X - 50, 550 - 36, X + 50, 550 + 36], fill=(12, 10, 14, 255))
@@ -501,7 +611,7 @@ def drawings():
     out = {}
     # 1) "La dame qui écoute" : grande silhouette sans yeux avec des cornets
     img = paper((250, 248, 240), size=(768, 1024), age=0.3, creases=1, stains=1)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img, wobble=2.0)
     crayon_line(d, [(384, 180), (384, 760)], (60, 60, 70), 10)
     d.ellipse([300, 90, 470, 300], outline=(60, 60, 70), width=8)
     crayon_line(d, [(300, 160), (220, 110)], (180, 140, 90), 10)
@@ -517,7 +627,7 @@ def drawings():
     out["drawing_lady"] = img
     # 2) "Mes 23 amis" : rangées de visages ronds, un sans bouche
     img = paper((250, 248, 240), size=(1024, 768), age=0.3, creases=1, stains=1)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img, wobble=2.0)
     cols = [(230, 150, 170), (150, 190, 230), (160, 210, 170), (240, 200, 120)]
     k = 0
     for r in range(3):
@@ -535,7 +645,7 @@ def drawings():
     out["drawing_friends"] = img
     # 3) "La piscine noire"
     img = paper((250, 248, 240), size=(1024, 768), age=0.35, creases=2, stains=1)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img, wobble=2.0)
     d.rectangle([120, 300, 900, 620], outline=(120, 190, 200), width=10)
     for _ in range(220):
         y = rng.uniform(310, 610)
@@ -546,7 +656,7 @@ def drawings():
     out["drawing_pool"] = img
     # 4) "Ma famille" barré
     img = paper((250, 248, 240), size=(768, 1024), age=0.3, creases=2, stains=1)
-    d = ImageDraw.Draw(img)
+    d = HandDraw(img, wobble=2.0)
     for i, x in enumerate((200, 384, 568)):
         h0 = 300 if i != 1 else 420
         d.ellipse([x - 50, h0 - 100, x + 50, h0], outline=(70, 70, 90), width=7)
