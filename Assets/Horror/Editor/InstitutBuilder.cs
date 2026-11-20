@@ -88,6 +88,7 @@ namespace Horror.EditorTools
             SetupGeometry(map);
             SetupMovingProps(map);
             SetupSofties(map, data);
+            SetupDormChildren();
             SetupNight(data);
             RoomData playroom = SetupRooms(data);
             CosmeticItem[] items = SafeZoneShopBuilder.EnsureItems();
@@ -255,6 +256,51 @@ namespace Horror.EditorTools
                 w.area = theatre;
                 w.shuffleLoop = Load<AudioClip>(Audio + "World/softie_shuffle.wav");
                 w.settleSound = Load<AudioClip>(Audio + "World/softie_settle.wav");
+            }
+        }
+
+        // ------------------------------------------------------------------ dortoir : les autres enfants
+
+        /// <summary>
+        /// Six poupées comme le joueur, assises sur des lits du dortoir aux 23 lits, bras ballants.
+        /// Leur tête se tourne vers toi quand tu ne regardes pas (SoftieWatcher sans marche) :
+        /// en te retournant, tu les retrouves figées dans une autre position. Le lit sans masque
+        /// (le tien, lit n° 5) reste vide. Positions : Tools/Map/build_institut.py (dortoir).
+        /// </summary>
+        private static void SetupDormChildren()
+        {
+            var proto = Load<GameObject>("Assets/Horror/Art/Character/LeDessine.glb");
+            if (proto == null) return;
+            var root = new GameObject("Les enfants du dortoir");
+            // (côté, rang) : côté -1 = rangée x = -6,3 (12 lits), côté 1 = rangée x = +6,3 (11 lits) ; jamais le lit vide
+            int[,] beds = { { -1, 1 }, { -1, 3 }, { -1, 8 }, { 1, 2 }, { 1, 6 }, { 1, 9 } };
+            for (int i = 0; i < beds.GetLength(0); i++)
+            {
+                int side = beds[i, 0], k = beds[i, 1];
+                float x = side * 6.3f, z = 13.6f + k * 1.35f;
+                // assise sur le bord du matelas (dessus à 0,5 m), tournée vers l'allée
+                Vector3 seat = P(new Vector3(x - side * 0.45f, 0.5f, z));
+                Quaternion face = Quaternion.LookRotation(Flat(Dir(new Vector3(-side, 0f, 0f))), Vector3.up)
+                                  * Quaternion.Euler(0f, (i % 2 == 0 ? 12f : -9f), 0f);
+                var doll = (GameObject)PrefabUtility.InstantiatePrefab(proto);
+                doll.name = "Enfant du lit " + (side < 0 ? "G" : "D") + k;
+                doll.transform.SetParent(root.transform, false);
+                doll.transform.SetPositionAndRotation(seat - Vector3.up * 0.19f, face);   // le bas du sac posé sur le lit
+
+                // bras qui pendent, mains vers les genoux
+                foreach (string s in new[] { "G", "D" })
+                {
+                    Transform ep = FindChild(doll.transform, "Epaule_" + s);
+                    Transform co = FindChild(doll.transform, "Coude_" + s);
+                    if (ep != null) ep.rotation = face * Quaternion.Euler(-28f, 0f, s == "G" ? 8f : -8f);
+                    if (co != null) co.localRotation = Quaternion.Euler(-35f, 0f, 0f);
+                }
+                Transform head = FindChild(doll.transform, "Tete");
+                if (head != null) head.localRotation = Quaternion.Euler(0f, 0f, (i % 3 - 1) * 14f);   // tête penchée
+                SoftieWatcher w = doll.AddComponent<SoftieWatcher>();
+                w.head = head;
+                w.range = 9f;
+                w.headTurnSpeed = 90f;
             }
         }
 
