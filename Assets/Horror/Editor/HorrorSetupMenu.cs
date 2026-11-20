@@ -34,6 +34,14 @@ namespace Horror.EditorTools
                 return;
             }
 
+            // Ne pas écraser sans prévenir : tu as peut-être réglé Sensitivity etc. sur le prefab.
+            if (File.Exists(PrefabPath) && !EditorUtility.DisplayDialog(
+                    "Avatar déjà créé",
+                    "Le prefab existe déjà :\n" + PrefabPath +
+                    "\n\nLe recréer remettra ses réglages (Sensitivity, Noise Gate...) à zéro.",
+                    "Remplacer", "Annuler"))
+                return;
+
             EnsureFolder(PrefabDir);
 
             var root = new GameObject("FaceAvatar");
@@ -74,6 +82,20 @@ namespace Horror.EditorTools
                 prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
                 if (prefab == null) return;
             }
+
+            if (File.Exists(ScenePath))
+            {
+                if (EditorUtility.DisplayDialog("Scène déjà créée",
+                        "La scène existe déjà :\n" + ScenePath + "\n\nJe ne l'écrase pas.",
+                        "L'ouvrir", "Annuler")
+                    && EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                    EditorSceneManager.OpenScene(ScenePath);
+                return;
+            }
+
+            // Propose d'enregistrer la scène ouverte avant de la fermer (sinon le travail non sauvé est perdu).
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
 
             EnsureFolder(SceneDir);
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);

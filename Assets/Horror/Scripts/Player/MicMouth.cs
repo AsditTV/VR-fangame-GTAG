@@ -21,6 +21,9 @@ namespace Horror.Player
         public bool isLocal = true;
 
         [Header("Réglages micro")]
+        [Tooltip("Vide = micro par défaut de Windows (conseillé). Sinon, un morceau du nom du micro, " +
+                 "ex. \"Oculus\" pour le micro du Quest via Link.")]
+        public string deviceNameContains = "";
         [Tooltip("Plus haut = la bouche s'ouvre avec une voix plus faible.")]
         public float sensitivity = 40f;
         [Tooltip("Bruit de fond ignoré (souffle, ventilateur).")]
@@ -40,6 +43,9 @@ namespace Horror.Player
         /// <summary>0 = fermée, 1 = grande ouverte. À synchroniser en réseau plus tard.</summary>
         public float Openness { get; private set; }
 
+        /// <summary>Volume brut du micro (RMS). Servira au monstre aveugle pour "entendre" la voix.</summary>
+        public float RawLevel => _rawLevel;
+
         const int SampleWindow = 256;
         AudioClip _clip;
         string _device;
@@ -48,6 +54,9 @@ namespace Horror.Player
         float _rawLevel;
         float _remoteTarget;
         bool _micReady;
+        bool _micStarted;      // vrai une fois Microphone.Start appelé avec succès
+        float _nextMicRetry;
+        bool _warnedNoMic;   // sur Quest autonome, on réessaie après l'autorisation du micro
 
         void Start()
         {
@@ -64,17 +73,41 @@ namespace Horror.Player
 
         void StartMic()
         {
+            _nextMicRetry = Time.time + 1f; // prochain essai dans 1 s si ça échoue
 #if UNITY_ANDROID && !UNITY_EDITOR
             if (!Permission.HasUserAuthorizedPermission(Permission.Microphone))
+            {
+                // La fenêtre d'autorisation s'affiche ; Update() réessaiera une fois acceptée.
                 Permission.RequestUserPermission(Permission.Microphone);
+                return;
+            }
 #endif
             if (Microphone.devices.Length == 0)
             {
-                Debug.LogWarning("MicMouth : aucun micro détecté.");
+                if (!_warnedNoMic) Debug.LogWarning("MicMouth : aucun micro détecté.");
+                _warnedNoMic = true; // un seul avertissement, pas un par seconde
                 return;
             }
-            _device = Microphone.devices[0];
+
+            // null = micro PAR DÉFAUT du système (avant : le 1er de la liste, pas forcément le bon).
+            _device = null;
+            if (!string.IsNullOrEmpty(deviceNameContains))
+            {
+                foreach (string name in Microphone.devices)
+                {
+                    if (name.IndexOf(deviceNameContains, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _device = name;
+                        break;
+                    }
+                }
+                if (_device == null)
+                    Debug.LogWarning($"MicMouth : aucun micro ne contient \"{deviceNameContains}\", " +
+                                     "j'utilise le micro par défaut.");
+            }
+
             _clip = Microphone.Start(_device, true, 1, 44100);
+            _micStarted = _clip != null;
         }
 
         void Update()
@@ -82,6 +115,9 @@ namespace Horror.Player
             float target;
             if (isLocal)
             {
+                if (!_micStarted && Time.time >= _nextMicRetry)
+                    StartMic();
+
                 if (!_micReady)
                 {
                     // On attend que le micro ait vraiment démarré.
@@ -102,9 +138,11 @@ namespace Horror.Player
 
         float ReadMicLevel()
         {
+            // Le clip du micro est une boucle d'1 seconde : quand la tête d'écriture vient de
+            // repartir au début, on lit la fin du clip (avant : renvoyait 0 → petit "clignement" de bouche).
             int pos = Microphone.GetPosition(_device) - SampleWindow;
-            if (pos < 0) return 0f;
-            _clip.GetData(_buffer, pos);
+            if (pos < 0) pos += _clip.samples;
+            _clip.GetData(_buffer, pos); // GetData reboucle tout seul en fin de clip
             float sum = 0f;
             for (int i = 0; i < SampleWindow; i++) sum += _buffer[i] * _buffer[i];
             _rawLevel = Mathf.Sqrt(sum / SampleWindow);
@@ -123,13 +161,13 @@ namespace Horror.Player
 
         void OnDestroy()
         {
-            if (_device != null && Microphone.IsRecording(_device)) Microphone.End(_device);
+            if (_micStarted && Microphone.IsRecording(_device)) Microphone.End(_device);
         }
 
         void OnGUI()
         {
             if (!showDebug || !isLocal) return;
-            GUI.Label(new Rect(10, 10, 400, 24), $"Micro : {(_device ?? "aucun")}");
+            GUI.Label(new Rect(10, 10, 400, 24), $"Micro : {(_micStarted ? (_device ?? "par défaut du système") : "aucun")}");
             GUI.Label(new Rect(10, 34, 400, 24), $"Niveau brut : {_rawLevel:F4}   Ouverture : {Openness:F2}");
             GUI.Box(new Rect(10, 60, 300 * Openness + 2, 14), GUIContent.none);
         }

@@ -29,3 +29,12 @@ POUR LE MULTIJOUEUR (plus tard)
 
 Note : le visage est un sprite sans éclairage. Quand on fera les zones sombres, on lui donnera
 un matériau éclairé pour qu'il ne brille pas dans le noir.
+
+MISE À JOUR (corrections)
+- Le micro utilisé est maintenant le micro PAR DÉFAUT de Windows (avant : le premier de la liste,
+  qui n'était pas forcément le bon). Pour forcer un micro précis, remplis "Device Name Contains"
+  sur Mic Mouth (ex. "Oculus" pour le micro du Quest via Link).
+- La bouche ne "clignote" plus une fois par seconde (lecture du micro corrigée).
+- Les menus 1 et 2 ne remplacent plus le prefab / la scène sans demander, et proposent
+  d'enregistrer la scène ouverte avant d'en créer une nouvelle.
+- Nouveau menu : Horror > 3 - Créer la salle de test VR (locomotion aux bras).
