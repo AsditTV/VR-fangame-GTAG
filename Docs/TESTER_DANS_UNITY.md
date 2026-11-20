@@ -109,3 +109,15 @@ la Laverie inondée.
 4. Fais un bruit énorme dans la Laverie avec L'Écoute pas loin dans le couloir : elle n'entend rien
    et ne passe pas la porte 23 (territoire du Drap).
 5. Lis les panneaux, les 23 chemises, la machine n°23.
+
+## Screamers, Drap plus effrayant, Laverie habillée, étalonnage (menu 8)
+1. **Jumpscare** (L'Écoute, Doux, Drap) : coupure au noir, le visage fonce sur toi, tremble par
+   saccades sous des flashs rouges (jamais blancs), puis noir et Salle de jeux. Joueurs sensibles :
+   sur « Joueur » > Jumpscare, décoche `strobe`.
+2. **Le Drap** : en surgissant, son visage devient une bouche béante (trous noirs) et il se penche sur
+   toi. Reste perché ~7 s sur une machine : sa tête sort de l'eau à côté de toi et te fixe, puis replonge.
+3. **Laverie** : machines et sèche-linge pastel (Blender), table et linge plié, draps pendus, carrelage
+   dessiné. Les collisions sont des boîtes (l'escalade reste fiable).
+4. **Étalonnage** (toute la map) : ombres lilas, lumières pêche, vignette, grain, halo des lampes. Réglable
+   dans Assets/Horror/Art/Map/Genere/Institut_Etalonnage.asset (s'il fait trop sombre au casque :
+   Color Adjustments > Post Exposure).

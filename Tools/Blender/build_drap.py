@@ -144,6 +144,37 @@ for sx in (1, -1):                                                    # traîné
 bmesh.ops.translate(bm, vec=-Vector(tete.location), verts=bm.verts)
 obj("Visage", tete, bm, [M_MARQUEUR], 0.05)
 
+# ------------------------------------------------ la calotte de tissu de la tête (copiée avec le visage pour le jumpscare)
+bm = bmesh.new()
+verts = ellipsoid(bm, Vector((0, 0, 2.03)), (0.222, 0.192, 0.262), 0.004, 12, 9, 32, 20)
+for v in verts:
+    v.co.x += max(0.0, v.co.z - 1.85) * 0.25          # même penchement que le drap
+bmesh.ops.translate(bm, vec=-Vector(tete.location), verts=bm.verts)
+obj("Tete_Tissu", tete, bm, [M_DRAP], 0.07)
+
+# ------------------------------------------------ le visage de CRI (caché ; montré quand il surgit et pour le jumpscare)
+M_TROU = material("Trou_Noir", srgb("#0B0A0F"), None, 1.0)
+bm = bmesh.new()
+
+
+def hole(cx, cz, rx, rz, jag, seed):
+    """Un trou noir sur le tissu (bord déchiré), posé sur l'avant de la tête."""
+    c = bm.verts.new(on_face(cx, cz) + Vector((0, -0.004, 0)))
+    ring = []
+    for k in range(24):
+        a = 2 * math.pi * k / 24
+        j = 1 + jag * noise.noise(Vector((math.cos(a) * 3, math.sin(a) * 3, seed)))
+        ring.append(bm.verts.new(on_face(cx + math.cos(a) * rx * j, cz + math.sin(a) * rz * j) + Vector((0, -0.004, 0))))
+    for k in range(24):
+        bm.faces.new((c, ring[(k + 1) % 24], ring[k]))
+
+
+hole(HC.x - 0.075, HC.z + 0.06, 0.032, 0.045, 0.25, 1)     # yeux : deux trous qui coulent vers le bas
+hole(HC.x + 0.075, HC.z + 0.06, 0.03, 0.05, 0.25, 2)
+hole(HC.x, HC.z - 0.10, 0.075, 0.105, 0.35, 3)              # la bouche béante, trop grande
+bmesh.ops.translate(bm, vec=-Vector(tete.location), verts=bm.verts)
+obj("Visage_Cri", tete, bm, [M_TROU], 0.05)
+
 # ------------------------------------------------ pinces à linge pastel, accrochées au drap
 bm_r, bm_m = bmesh.new(), bmesh.new()
 for i, (p, n) in enumerate(((Vector((0.1, 0, 2.29)), Vector((0, 0, 1))), (Vector((0.30, -0.05, 1.6)), Vector((0.7, -0.3, 0.6))),

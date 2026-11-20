@@ -33,6 +33,10 @@ namespace Horror.Monsters
         public float riseTime = 0.35f;
         public float catchRadius = 1.2f;
         public float standTime = 1.4f;
+        [Tooltip("Il se penche sur toi en surgissant (degrés).")]
+        public float leanAngle = 22f;
+        [Tooltip("Perché trop longtemps : sa tête émerge sous toi pour te fixer (secondes avant).")]
+        public float stareAfter = 7f;
         public AudioClip sloshLoop;
         public AudioClip riseSound;
 
@@ -44,10 +48,16 @@ namespace Horror.Monsters
         private bool _hasTarget;
         private AudioSource _loop;
         private readonly RaycastHit[] _hits = new RaycastHit[8];
+        private Renderer[] _calmFace = new Renderer[0], _screamFace = new Renderer[0];
+        private float _perchedFor;
 
         private void Start()
         {
             _scale = transform.lossyScale.y;
+            Transform calm = FindDeep(transform, "Visage"), scream = FindDeep(transform, "Visage_Cri");
+            if (calm != null) _calmFace = calm.GetComponentsInChildren<Renderer>(true);
+            if (scream != null) _screamFace = scream.GetComponentsInChildren<Renderer>(true);
+            ShowScream(false);
             transform.position = new Vector3(transform.position.x, floorY - sinkDepth * _scale, transform.position.z);
             if (sloshLoop != null)
             {
@@ -83,6 +93,18 @@ namespace Horror.Monsters
                 if (p != null && p.inputEnabled && zone.Contains(p.HeadPosition) && StandsOnFloor(p)) Feel(p.HeadPosition);
 
             if (etat == Etat.Surgit) return;
+
+            // perché sur une machine depuis trop longtemps : il vient sous toi et sort la tête pour te fixer
+            ArmLocomotion perched = null;
+            foreach (ArmLocomotion p in ArmLocomotion.All)
+                if (p != null && p.inputEnabled && zone.Contains(p.HeadPosition) && !StandsOnFloor(p)) perched = p;
+            _perchedFor = perched != null ? _perchedFor + Time.deltaTime : 0f;
+            if (perched != null && !_hasTarget && _perchedFor > stareAfter && _cooldown <= 0f)
+            {
+                _perchedFor = 0f;
+                StartCoroutine(Stare(perched));
+                return;
+            }
             Vector3 pos = transform.position;
             float speed = glideSpeed;
             if (!_hasTarget)
@@ -129,10 +151,23 @@ namespace Horror.Monsters
             etat = Etat.Surgit;
             _hasTarget = false;
             if (riseSound != null) AudioSource.PlayClipAtPoint(riseSound, _target, 1f);
+            ShowScream(true);
             Vector3 from = transform.position, to = new Vector3(from.x, floorY - 0.15f * _scale, from.z);
+            // il se tourne vers le joueur le plus proche et se penche sur lui en grandissant
+            ArmLocomotion victim = Nearest(to);
+            Quaternion r0 = transform.rotation, r1 = r0;
+            if (victim != null)
+            {
+                Vector3 look = victim.HeadPosition - to; look.y = 0f;
+                if (look.sqrMagnitude > 0.01f) r1 = Quaternion.LookRotation(look.normalized) * Quaternion.Euler(leanAngle, 0f, 0f);
+            }
+            Vector3 s0 = transform.localScale;
             for (float t = 0f; t < riseTime; t += Time.deltaTime)
             {
-                transform.position = Vector3.Lerp(from, to, Mathf.SmoothStep(0f, 1f, t / riseTime));
+                float k = Mathf.SmoothStep(0f, 1f, t / riseTime);
+                transform.position = Vector3.Lerp(from, to, k);
+                transform.rotation = Quaternion.Slerp(r0, r1, k);
+                transform.localScale = s0 * (1f + 0.12f * k);
                 yield return null;
             }
             transform.position = to;
@@ -155,8 +190,65 @@ namespace Horror.Monsters
                 transform.position = Vector3.Lerp(to, from, t / 0.9f);
                 yield return null;
             }
+            transform.localScale = s0;
+            transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized + Vector3.forward * 1e-4f);
+            ShowScream(false);
             _cooldown = Mathf.Max(_cooldown, 1.5f);
             etat = _hasTarget ? Etat.Glisse : Etat.Dort;
+        }
+
+        /// <summary>Il glisse sous le joueur perché, sort la tête de l'eau, le fixe, puis replonge (sans attraper).</summary>
+        private IEnumerator Stare(ArmLocomotion p)
+        {
+            etat = Etat.Surgit;
+            Vector3 under = new Vector3(p.HeadPosition.x, transform.position.y, p.HeadPosition.z);
+            under += (transform.position - under).normalized * 1.2f * _scale;    // à côté, pas pile dessous
+            while ((new Vector3(transform.position.x, 0, transform.position.z) - new Vector3(under.x, 0, under.z)).magnitude > 0.15f)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, under, glideSpeed * 0.6f * Time.deltaTime);
+                yield return null;
+            }
+            Vector3 low = transform.position, peek = new Vector3(low.x, floorY - (2.3f - 0.75f) * _scale, low.z);   // seulement la tête dépasse
+            for (float t = 0f; t < 1.6f; t += Time.deltaTime)
+            {
+                transform.position = Vector3.Lerp(low, peek, Mathf.SmoothStep(0f, 1f, t / 1.6f));
+                Vector3 look = p.HeadPosition - transform.position; look.y = 0f;
+                if (look.sqrMagnitude > 0.01f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(look.normalized), 4f * Time.deltaTime);
+                yield return null;
+            }
+            yield return new WaitForSeconds(2.5f);                                 // il te regarde
+            for (float t = 0f; t < 1.2f; t += Time.deltaTime)
+            {
+                transform.position = Vector3.Lerp(peek, low, t / 1.2f);
+                yield return null;
+            }
+            _cooldown = 3f;
+            etat = Etat.Dort;
+        }
+
+        private void ShowScream(bool on)
+        {
+            foreach (Renderer r in _screamFace) if (r != null) r.enabled = on;
+            foreach (Renderer r in _calmFace) if (r != null) r.enabled = !on;
+        }
+
+        private ArmLocomotion Nearest(Vector3 p)
+        {
+            ArmLocomotion best = null; float bd = float.MaxValue;
+            foreach (ArmLocomotion a in ArmLocomotion.All)
+            {
+                if (a == null) continue;
+                float d = (a.HeadPosition - p).sqrMagnitude;
+                if (d < bd) { bd = d; best = a; }
+            }
+            return best;
+        }
+
+        private static Transform FindDeep(Transform root, string name)
+        {
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                if (t.name == name) return t;
+            return null;
         }
     }
 }

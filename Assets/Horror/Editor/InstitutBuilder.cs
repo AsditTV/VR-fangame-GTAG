@@ -106,6 +106,7 @@ namespace Horror.EditorTools
             SetupBlackout();
             SetupMonster(data, graph);
             SetupPlayer(data, items);
+            SetupLook();
 
             EnsureFolder("Assets/Horror/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -342,6 +343,34 @@ namespace Horror.EditorTools
             Material ink = MakeMat("Encre_Sol", new Color(0.012f, 0.008f, 0.016f));
             Material water = MakeMat("Laverie_Eau", new Color(0.55f, 0.63f, 0.66f));
             if (water.HasProperty("_Smoothness")) water.SetFloat("_Smoothness", 0.93f);
+            const string Props = "Assets/Horror/Art/Map/Laverie/";
+            Texture2D tileTex = Load<Texture2D>(Props + "laverie_carrelage.png"), wallTex = Load<Texture2D>(Props + "laverie_mur.png");
+            if (tileTex != null) { tile.color = Color.white; tile.mainTexture = tileTex; tile.mainTextureScale = new Vector2(14f, 16f); }
+            if (wallTex != null) { wall.color = Color.white; wall.mainTexture = wallTex; wall.mainTextureScale = new Vector2(12f, 5f); }
+            Color[] enamel = { new Color(0.72f, 0.86f, 0.79f), new Color(0.92f, 0.76f, 0.80f), new Color(0.95f, 0.91f, 0.82f),
+                               new Color(0.80f, 0.75f, 0.90f) };
+            // habille une boîte de collision avec un objet Blender (la boîte garde sa collision, on cache son cube)
+            GameObject Dress(GameObject box, string prop, Vector3 faceDir, int tint = -1)
+            {
+                var proto = Load<GameObject>(Props + prop + ".glb");
+                if (proto == null) return null;
+                Bounds b = box.GetComponent<Renderer>().bounds;
+                box.GetComponent<Renderer>().enabled = false;
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(proto);
+                go.transform.SetParent(root.transform, false);
+                go.transform.position = new Vector3(b.center.x, b.min.y, b.center.z);
+                go.transform.rotation = Quaternion.LookRotation(Flat(Dir(faceDir)), Vector3.up);
+                go.transform.localScale = Vector3.one * s_w;
+                if (tint >= 0)
+                    foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true))
+                    {
+                        Material[] mats = r.sharedMaterials;
+                        for (int i = 0; i < mats.Length; i++)
+                            if (mats[i] != null && mats[i].name.StartsWith("Email")) mats[i] = Tinted(mats[i], "Laverie_Email_" + tint, enamel[tint % enamel.Length]);
+                        r.sharedMaterials = mats;
+                    }
+                return go;
+            }
             Color[] pastel = { new Color(0.88f, 0.70f, 0.75f), new Color(0.70f, 0.84f, 0.77f), new Color(0.78f, 0.71f, 0.86f),
                                new Color(0.91f, 0.84f, 0.63f), new Color(0.70f, 0.77f, 0.88f) };
 
@@ -415,18 +444,31 @@ namespace Horror.EditorTools
                     float x = 36.0f + k * 1.25f + (row % 2) * 0.35f;
                     if (x > 45.5f) continue;
                     n++;
-                    Box("Laverie_Machine_" + n + "_metal", metal, x - 0.42f, x + 0.42f, 0f, 0.95f, z - 0.4f, z + 0.4f);
+                    GameObject mach = Box("Laverie_Machine_" + n + "_metal", metal, x - 0.42f, x + 0.42f, 0f, 0.95f, z - 0.4f, z + 0.4f);
                     float face = (row < 2) ? 1f : -1f;
-                    Bar("Laverie_Hublot_" + n, glass, new Vector3(x, 0.5f, z + face * 0.39f), new Vector3(x, 0.5f, z + face * 0.43f), 0.24f, solid: false);
+                    if (Dress(mach, "Machine", new Vector3(0f, 0f, face), n % 4) == null)
+                        Bar("Laverie_Hublot_" + n, glass, new Vector3(x, 0.5f, z + face * 0.39f), new Vector3(x, 0.5f, z + face * 0.43f), 0.24f, solid: false);
                     if ((k + row) % 3 == 1)
-                        Box("Laverie_SecheLinge_" + n + "_metal", metal, x - 0.4f, x + 0.4f, 0.95f, 1.85f, z - 0.38f, z + 0.38f);
+                        Dress(Box("Laverie_SecheLinge_" + n + "_metal", metal, x - 0.4f, x + 0.4f, 0.95f, 1.85f, z - 0.38f, z + 0.38f),
+                              "SecheLinge", new Vector3(0f, 0f, face), (n + 2) % 4);
                 }
             }
             // la table à plier, au milieu (pieds dans l'eau)
-            Box("Laverie_Table_bois", wood, 37.4f, 43.6f, 0.82f, 0.9f, -0.55f, 0.55f);
+            GameObject tableTop = Box("Laverie_Table_bois", wood, 37.4f, 43.6f, 0.82f, 0.9f, -0.55f, 0.55f);
+            var tableLegs = new List<GameObject>();
             foreach (float tx in new[] { 37.6f, 40.5f, 43.4f })
                 foreach (float tz in new[] { -0.45f, 0.45f })
-                    Box("Laverie_Pied_metal", pipe, tx - 0.04f, tx + 0.04f, 0f, 0.82f, tz - 0.04f, tz + 0.04f);
+                    tableLegs.Add(Box("Laverie_Pied_metal", pipe, tx - 0.04f, tx + 0.04f, 0f, 0.82f, tz - 0.04f, tz + 0.04f));
+            var tableProto = Load<GameObject>(Props + "Table.glb");
+            if (tableProto != null)
+            {
+                foreach (GameObject g in tableLegs) g.GetComponent<Renderer>().enabled = false;
+                tableTop.GetComponent<Renderer>().enabled = false;
+                var tableGo = (GameObject)PrefabUtility.InstantiatePrefab(tableProto);
+                tableGo.transform.SetParent(root.transform, false);
+                tableGo.transform.position = P(new Vector3(40.5f, 0f, 0f));
+                tableGo.transform.localScale = Vector3.one * s_w;
+            }
 
             // 5) prises en hauteur : tuyaux le long des murs, fils à linge en travers (on s'y suspend)
             foreach (float z in new[] { Z0 + 0.25f, Z1 - 0.25f })
@@ -441,7 +483,9 @@ namespace Horror.EditorTools
                 for (float z = Z0 + 1.5f; z < Z1 - 1.5f; z += 2.6f)
                 {
                     if (++sheetCount % 3 == 0) continue;
-                    Box("Laverie_Drap_pendu", sheet, x - 0.01f, x + 0.01f, 1.55f, 2.72f, z - 0.55f, z + 0.55f, solid: false);   // on passe à travers
+                    GameObject sh = Box("Laverie_Drap_pendu", sheet, x - 0.01f, x + 0.01f, 1.55f, 2.72f, z - 0.55f, z + 0.55f);   // collision juste le temps de se placer
+                    Dress(sh, "DrapPendu", Vector3.forward);
+                    Object.DestroyImmediate(sh.GetComponent<Collider>());   // on passe à travers les draps
                 }
             }
 
@@ -518,6 +562,20 @@ namespace Horror.EditorTools
             }
         }
 
+        /// <summary>Copie teinte d'une matière glTF (enregistrée à côté des autres matières de l'Institut).</summary>
+        private static Material Tinted(Material source, string name, Color c)
+        {
+            EnsureFolder("Assets/Horror/Art/Materials");
+            string path = "Assets/Horror/Art/Materials/" + name + ".mat";
+            var mat = Load<Material>(path);
+            if (mat != null) return mat;
+            mat = new Material(source) { name = name };
+            if (mat.HasProperty("baseColorFactor")) mat.SetColor("baseColorFactor", c);
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
+            AssetDatabase.CreateAsset(mat, path);
+            return mat;
+        }
+
         /// <summary>Retire d'un maillage de la maquette les triangles dont le centre est dans la boîte (et de sa collision).</summary>
         private static void CutOutBox(MeshFilter mf, Bounds box)
         {
@@ -547,6 +605,69 @@ namespace Horror.EditorTools
             mf.sharedMesh = dst;
             MeshCollider col = mf.GetComponent<MeshCollider>();
             if (col != null) col.sharedMesh = dst;
+        }
+
+        // ------------------------------------------------------------------ l'étalonnage (la DA à l'écran)
+
+        /// <summary>
+        /// Étalonnage global (URP Volume) : pastel délavé qui tourne au malaise. Ombres lilas, hautes lumières
+        /// pêche, couleurs un peu éteintes, vignette prune, grain de papier, halo rosé autour des lampes.
+        /// Profil enregistré dans Art/Map/Genere/Institut_Etalonnage.asset (réglable à la main ensuite).
+        /// </summary>
+        private static void SetupLook()
+        {
+            EnsureFolder("Assets/Horror/Art/Map/Genere");
+            string path = "Assets/Horror/Art/Map/Genere/Institut_Etalonnage.asset";
+            if (Load<UnityEngine.Rendering.VolumeProfile>(path) != null) AssetDatabase.DeleteAsset(path);   // produit par ce menu
+            var profile = ScriptableObject.CreateInstance<UnityEngine.Rendering.VolumeProfile>();
+            AssetDatabase.CreateAsset(profile, path);
+
+            T Add<T>() where T : UnityEngine.Rendering.VolumeComponent
+            {
+                T c = profile.Add<T>(true);
+                c.name = typeof(T).Name;
+                AssetDatabase.AddObjectToAsset(c, profile);
+                return c;
+            }
+            var tone = Add<UnityEngine.Rendering.Universal.Tonemapping>();
+            tone.mode.Override(UnityEngine.Rendering.Universal.TonemappingMode.Neutral);
+            var color = Add<UnityEngine.Rendering.Universal.ColorAdjustments>();
+            color.saturation.Override(-18f);
+            color.contrast.Override(14f);
+            color.postExposure.Override(0.45f);   // assez clair pour lire le décor dans le noir
+            color.colorFilter.Override(new Color(0.98f, 0.94f, 1f));
+            var split = Add<UnityEngine.Rendering.Universal.SplitToning>();
+            split.shadows.Override(new Color(0.45f, 0.38f, 0.62f));      // ombres lilas
+            split.highlights.Override(new Color(1f, 0.82f, 0.72f));      // lumières pêche
+            split.balance.Override(-15f);
+            var vig = Add<UnityEngine.Rendering.Universal.Vignette>();
+            vig.color.Override(new Color(0.12f, 0.04f, 0.14f));
+            vig.intensity.Override(0.3f);
+            vig.smoothness.Override(0.55f);
+            var grain = Add<UnityEngine.Rendering.Universal.FilmGrain>();
+            grain.type.Override(UnityEngine.Rendering.Universal.FilmGrainLookup.Thin2);
+            grain.intensity.Override(0.28f);
+            grain.response.Override(0.75f);
+            var bloom = Add<UnityEngine.Rendering.Universal.Bloom>();
+            bloom.threshold.Override(0.85f);
+            bloom.intensity.Override(0.55f);
+            bloom.scatter.Override(0.6f);
+            bloom.tint.Override(new Color(1f, 0.8f, 0.86f));
+            var ca = Add<UnityEngine.Rendering.Universal.ChromaticAberration>();
+            ca.intensity.Override(0.06f);
+            EditorUtility.SetDirty(profile);
+            AssetDatabase.SaveAssets();
+
+            var go = new GameObject("Étalonnage (DA pastel inquiétante)");
+            var vol = go.AddComponent<UnityEngine.Rendering.Volume>();
+            vol.isGlobal = true;
+            vol.sharedProfile = profile;
+            foreach (Camera cam in Object.FindObjectsByType<Camera>(FindObjectsInactive.Include))
+            {
+                var data = cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>()
+                           ?? cam.gameObject.AddComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+                data.renderPostProcessing = true;
+            }
         }
 
         // ------------------------------------------------------------------ traces et coupures

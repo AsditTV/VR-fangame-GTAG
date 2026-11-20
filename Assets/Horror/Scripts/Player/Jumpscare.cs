@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using Horror.Locomotion;
 using Horror.Monsters;
 using UnityEngine;
@@ -15,7 +15,7 @@ namespace Horror.Player
     /// À mettre sur l'objet "Joueur" (avec ArmLocomotion). Le monstre l'appelle tout seul.
     ///
     /// Confort VR : le visage reste fixe par rapport à la tête (pas de mouvement de caméra forcé),
-    /// seul le visage tremble. Pas de flash blanc.
+    /// seul le visage bouge. Flashs rouges seulement (jamais blancs), désactivables (strobe).
     /// </summary>
     [RequireComponent(typeof(ArmLocomotion))]
     public class Jumpscare : MonoBehaviour
@@ -57,6 +57,14 @@ namespace Horror.Player
             if (!IsPlaying) StartCoroutine(Sequence(faceSource, scale));
         }
 
+        [Header("Screamer")]
+        [Tooltip("Flashs rouges pendant le screamer (jamais blancs). Décocher pour les joueurs sensibles.")]
+        public bool strobe = true;
+        [Tooltip("Distance de départ du visage avant qu'il fonce sur toi (m).")]
+        public float lungeFrom = 1.6f;
+        [Tooltip("Durée de la ruée du visage (s) : très court = plus violent.")]
+        public float lungeTime = 0.14f;
+
         private IEnumerator Sequence(Transform faceSource, float scale)
         {
             IsPlaying = true;
@@ -64,35 +72,71 @@ namespace Horror.Player
             Transform head = _locomotion.head;
             EnsureFader(head);
 
-            // 1) Le visage surgit
+            // 0) coupure sèche au noir (une fraction de seconde de silence)
+            SetFade(1f, Color.black);
+            yield return new WaitForSeconds(0.12f);
+
+            // 1) le visage apparaît au loin, éclairé par en dessous (sinon il serait invisible dans le noir)
             GameObject face = null;
             if (faceSource != null)
             {
                 face = Instantiate(faceSource.gameObject, head);
                 foreach (var c in face.GetComponentsInChildren<MonoBehaviour>()) Destroy(c);
                 foreach (var c in face.GetComponentsInChildren<Collider>()) Destroy(c);
-                face.transform.localPosition = new Vector3(0f, -0.08f, 0.38f);
-                face.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // tourné vers toi
-                face.transform.localScale = Vector3.one * scale;
+                face.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);      // tourné vers toi
+                var lightGo = new GameObject("Lumière du screamer");
+                lightGo.transform.SetParent(face.transform, false);
+                lightGo.transform.localPosition = new Vector3(0f, -0.35f, -0.35f);
+                Light l = lightGo.AddComponent<Light>();
+                l.type = LightType.Point; l.color = new Color(1f, 0.82f, 0.75f); l.intensity = 6f; l.range = 2.5f;
             }
+            SetFade(0f, Color.black);
             if (sting != null) _audio.PlayOneShot(sting, volume);
-            Haptics(1f, faceTime);
+            Haptics(1f, lungeTime + faceTime + 0.2f);
 
-            float t = 0f;
-            while (t < faceTime)
+            // 2) la ruée : il fonce sur toi (accélère jusqu'au bout)
+            for (float t = 0f; t < lungeTime; t += Time.deltaTime)
             {
-                t += Time.deltaTime;
+                float k = t / lungeTime;
+                k = k * k * k;
                 if (face != null)
                 {
-                    // tremblement + elle se rapproche un peu
-                    face.transform.localPosition = new Vector3(Random.Range(-0.012f, 0.012f), -0.08f + Random.Range(-0.01f, 0.01f),
-                                                               Mathf.Lerp(0.38f, 0.26f, t / faceTime));
+                    face.transform.localPosition = new Vector3(0f, 0.01f, Mathf.Lerp(lungeFrom, 0.32f, k));
+                    face.transform.localScale = Vector3.one * scale * Mathf.Lerp(0.6f, 1.15f, k);
                 }
                 yield return null;
             }
 
-            // 2) Noir
-            yield return Fade(0f, 1f, fadeOutTime);
+            // 3) le screamer : saccades, torsions, palpitations, flashs rouges
+            float tt = 0f, nextSnap = 0f, nextFlash = 0f;
+            bool flashOn = false;
+            Quaternion snap = Quaternion.identity;
+            while (tt < faceTime)
+            {
+                tt += Time.deltaTime;
+                if (face != null)
+                {
+                    if (tt >= nextSnap)
+                    {
+                        nextSnap = tt + Random.Range(0.03f, 0.07f);
+                        snap = Quaternion.Euler(Random.Range(-9f, 9f), Random.Range(-7f, 7f), Random.Range(-14f, 14f));
+                    }
+                    face.transform.localRotation = Quaternion.Euler(0f, 180f, 0f) * snap;
+                    face.transform.localPosition = new Vector3(Random.Range(-0.018f, 0.018f), 0.01f + Random.Range(-0.015f, 0.015f),
+                                                               Mathf.Lerp(0.32f, 0.25f, tt / faceTime));
+                    face.transform.localScale = Vector3.one * scale * (1.12f + 0.08f * Mathf.Sin(tt * 55f));
+                }
+                if (strobe && tt >= nextFlash)
+                {
+                    nextFlash = tt + 0.09f;
+                    flashOn = !flashOn;
+                    SetFade(flashOn ? 0.45f : 0f, new Color(0.55f, 0f, 0.02f));
+                }
+                yield return null;
+            }
+
+            // 4) coupure au noir d'un coup, puis retour à la Salle de jeux
+            SetFade(1f, Color.black);
             if (face != null) Destroy(face);
             _locomotion.TeleportTo(_locomotion.SpawnPosition);
             yield return new WaitForSeconds(blackTime);
@@ -115,10 +159,12 @@ namespace Horror.Player
             SetFade(to);
         }
 
-        private void SetFade(float alpha)
+        private void SetFade(float alpha) => SetFade(alpha, Color.black);
+
+        private void SetFade(float alpha, Color tint)
         {
             if (_faderMat == null) return;
-            _faderMat.color = new Color(0f, 0f, 0f, alpha);
+            _faderMat.color = new Color(tint.r, tint.g, tint.b, alpha);
             _fader.enabled = alpha > 0.001f;
         }
 
