@@ -1,0 +1,441 @@
+{
+ "spawn": [
+  0,
+  0,
+  -2
+ ],
+ "lumieres": [
+  {
+   "pos": [
+    -4.2,
+    1.5,
+    2.6
+   ],
+   "color": "#7fe0a8",
+   "intensity": 0.8,
+   "distance": 3
+  },
+  {
+   "pos": [
+    -0.6363961030678927,
+    5.5,
+    0.6363961030678928
+   ],
+   "color": "#ffd9a0",
+   "intensity": 0.8,
+   "distance": 10
+  },
+  {
+   "pos": [
+    10.3,
+    1.35,
+    1.1400000000000001
+   ],
+   "color": "#f2a7b9",
+   "intensity": 0.5,
+   "distance": 2.2
+  },
+  {
+   "pos": [
+    17.5,
+    1.35,
+    1.1400000000000001
+   ],
+   "color": "#f2a7b9",
+   "intensity": 0.5,
+   "distance": 2.2
+  },
+  {
+   "pos": [
+    24.7,
+    1.35,
+    1.1400000000000001
+   ],
+   "color": "#f2a7b9",
+   "intensity": 0.5,
+   "distance": 2.2
+  },
+  {
+   "pos": [
+    -5.8999999999999995,
+    0.9,
+    15.629999999999999
+   ],
+   "color": "#f4b6c8",
+   "intensity": 0.7,
+   "distance": 3.2
+  },
+  {
+   "pos": [
+    -6.3,
+    2.2,
+    20.35
+   ],
+   "color": "#c9d8ff",
+   "intensity": 0.9,
+   "distance": 3.5
+  },
+  {
+   "pos": [
+    -5.8999999999999995,
+    0.9,
+    23.73
+   ],
+   "color": "#f4b6c8",
+   "intensity": 0.7,
+   "distance": 3.2
+  },
+  {
+   "pos": [
+    5.8999999999999995,
+    0.9,
+    15.629999999999999
+   ],
+   "color": "#f4b6c8",
+   "intensity": 0.7,
+   "distance": 3.2
+  },
+  {
+   "pos": [
+    5.8999999999999995,
+    0.9,
+    23.73
+   ],
+   "color": "#f4b6c8",
+   "intensity": 0.7,
+   "distance": 3.2
+  },
+  {
+   "pos": [
+    -18.0,
+    1.3,
+    0.5
+   ],
+   "color": "#ffd49a",
+   "intensity": 1.2,
+   "distance": 5
+  },
+  {
+   "pos": [
+    -19.2,
+    1.5,
+    0.0
+   ],
+   "color": "#e6c47a",
+   "intensity": 0.5,
+   "distance": 3
+  },
+  {
+   "pos": [
+    -19.5,
+    -1.6,
+    -13.5
+   ],
+   "color": "#ff9a50",
+   "intensity": 0.9,
+   "distance": 4
+  },
+  {
+   "pos": [
+    -19.5,
+    -1.6,
+    -18.5
+   ],
+   "color": "#ff9a50",
+   "intensity": 0.9,
+   "distance": 4
+  },
+  {
+   "pos": [
+    2.0,
+    2.6,
+    -17.0
+   ],
+   "color": "#9fc4d8",
+   "intensity": 0.8,
+   "distance": 14
+  },
+  {
+   "pos": [
+    -5.2,
+    -2.6,
+    -10.8
+   ],
+   "color": "#ffd08a",
+   "intensity": 0.35,
+   "distance": 2
+  },
+  {
+   "pos": [
+    11.2,
+    1.5,
+    -8.6
+   ],
+   "color": "#8fe3b0",
+   "intensity": 0.5,
+   "distance": 3
+  }
+ ],
+ "zones": [
+  {
+   "nom": "Hall",
+   "pos": [
+    0,
+    3.5,
+    0
+   ]
+  },
+  {
+   "nom": "Couloir des chambres",
+   "pos": [
+    19,
+    2.5,
+    0
+   ]
+  },
+  {
+   "nom": "Dortoir aux 23 lits",
+   "pos": [
+    0,
+    3,
+    21
+   ]
+  },
+  {
+   "nom": "Le Standard",
+   "pos": [
+    -16,
+    3,
+    0
+   ]
+  },
+  {
+   "nom": "Salle des machines (sous-sol)",
+   "pos": [
+    -16,
+    0.5,
+    -16
+   ]
+  },
+  {
+   "nom": "Piscine d'encre (sous-sol)",
+   "pos": [
+    2,
+    1.5,
+    -17
+   ]
+  }
+ ],
+ "lore": [
+  {
+   "titre": "Le portrait aux yeux grattés",
+   "texte": "Céleste Marivaux, peinte en pastel. Quelqu'un a gratté ses yeux au couteau.",
+   "pos": [
+    -4.0,
+    4.3,
+    5.8
+   ],
+   "cam": [
+    -2.5,
+    2.2,
+    1.5
+   ]
+  },
+  {
+   "titre": "« Ici, on se tait. »",
+   "texte": "L'ancien panneau joyeux de l'hôtel, recouvert par celui de l'institut, cloué de travers.",
+   "pos": [
+    4.0,
+    3.2,
+    5.8
+   ],
+   "cam": [
+    2.5,
+    2.0,
+    1.5
+   ]
+  },
+  {
+   "titre": "Le Minitel de l'accueil",
+   "texte": "L'ordinateur des réglages : salles privées, micro, couleur. Son écran vert est la seule lumière du hall.",
+   "pos": [
+    -4.2,
+    1.4,
+    3.0
+   ],
+   "cam": [
+    -3.2,
+    1.9,
+    1.2
+   ]
+  },
+  {
+   "titre": "Les numéros à la craie",
+   "texte": "Le veilleur comptait les portes. Plus on avance, plus les chiffres tremblent.",
+   "pos": [
+    20.0,
+    0.05,
+    0.8
+   ],
+   "cam": [
+    17.0,
+    2.2,
+    -0.6
+   ]
+  },
+  {
+   "titre": "La porte 23",
+   "texte": "Au bout du couloir, une porte entrouverte. Il n'y avait que 22 chambres à l'hôtel.",
+   "pos": [
+    30.8,
+    1.2,
+    0.0
+   ],
+   "cam": [
+    27.5,
+    1.7,
+    0.0
+   ]
+  },
+  {
+   "titre": "Le lit sans masque",
+   "texte": "23 lits, un masque en papier sur chaque oreiller. Celui-ci n'en a pas : c'est le tien.",
+   "pos": [
+    -6.3,
+    0.6,
+    20.35
+   ],
+   "cam": [
+    -3.8,
+    2.2,
+    18.85
+   ]
+  },
+  {
+   "titre": "« Je ne crierai plus. »",
+   "texte": "La même phrase recopiée en punition, ligne après ligne. La dernière s'arrête au milieu d'un mot.",
+   "pos": [
+    0.0,
+    2.1,
+    29.8
+   ],
+   "cam": [
+    0.0,
+    2.0,
+    24.5
+   ]
+  },
+  {
+   "titre": "La toise",
+   "texte": "Les tailles des enfants. Toutes les mesures s'arrêtent en novembre 1985.",
+   "pos": [
+    -7.8,
+    1.2,
+    15.0
+   ],
+   "cam": [
+    -5.0,
+    1.6,
+    15.5
+   ]
+  },
+  {
+   "titre": "Le Standard",
+   "texte": "Un micro par pièce de l'institut, tous reliés ici. C'est comme ça qu'elle entend tout.",
+   "pos": [
+    -19.5,
+    1.5,
+    0.0
+   ],
+   "cam": [
+    -15.5,
+    2.0,
+    1.5
+   ]
+  },
+  {
+   "titre": "Le casque sur la chaise",
+   "texte": "Son casque d'écoute est encore posé là. Il grésille.",
+   "pos": [
+    -16.95,
+    0.6,
+    0.0
+   ],
+   "cam": [
+    -15.8,
+    1.6,
+    -1.4
+   ]
+  },
+  {
+   "titre": "La pompe n°2",
+   "texte": "« Remplissage spécial, 12/11/1985 ». La veille de la Nuit Longue. Les tuyaux noirs partent vers la piscine.",
+   "pos": [
+    -12.0,
+    -2.3,
+    -18.7
+   ],
+   "cam": [
+    -13.5,
+    -1.4,
+    -15.5
+   ]
+  },
+  {
+   "titre": "La piscine d'encre",
+   "texte": "Le bassin a été rempli d'encre la nuit du 13 novembre 1985. On ne voit pas le fond.",
+   "pos": [
+    2.0,
+    -3.4,
+    -17.0
+   ],
+   "cam": [
+    -2.0,
+    0.5,
+    -10.5
+   ]
+  },
+  {
+   "titre": "La bouée de Mila",
+   "texte": "Une petite bouée-canard dégonflée, au bord du bassin.",
+   "pos": [
+    -5.2,
+    -2.9,
+    -11.2
+   ],
+   "cam": [
+    -4.0,
+    -1.8,
+    -9.6
+   ]
+  },
+  {
+   "titre": "L'enceinte renversée",
+   "texte": "Celle de la fête de 1977. La musique était si forte que personne n'a entendu Mila.",
+   "pos": [
+    5.5,
+    -1.2,
+    -9.3
+   ],
+   "cam": [
+    4.0,
+    -1.0,
+    -12.5
+   ]
+  },
+  {
+   "titre": "L'échelle dans l'encre",
+   "texte": "Au grand bain, une échelle descend dans l'encre... et continue. Vers l'Envers ?",
+   "pos": [
+    7.6,
+    -3.6,
+    -21.3
+   ],
+   "cam": [
+    5.0,
+    -1.5,
+    -19.0
+   ]
+  }
+ ]
+}
