@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR;
 
@@ -84,6 +85,9 @@ namespace Horror.Locomotion
         /// </summary>
         public event Action<Vector3, float, bool> HandImpact;
 
+        /// <summary>Tous les joueurs présents (les monstres s'en servent pour savoir qui ils touchent).</summary>
+        public static readonly List<ArmLocomotion> All = new List<ArmLocomotion>();
+
         /// <summary>Vrai si au moins une main est appuyée sur une surface.</summary>
         public bool IsTouchingSurface => _left.touching || _right.touching;
 
@@ -156,6 +160,15 @@ namespace Horror.Locomotion
                     Time.fixedDeltaTime = 1f / refreshRate;
             }
         }
+
+        private void OnEnable() => All.Add(this);
+        private void OnDisable() => All.Remove(this);
+
+        /// <summary>Position de la tête du joueur (là où le monstre doit l'attraper).</summary>
+        public Vector3 HeadPosition => head != null ? head.position : transform.position;
+
+        /// <summary>Point de départ du joueur (pour le renvoyer au début quand il se fait attraper).</summary>
+        public Vector3 SpawnPosition => _spawnPosition;
 
         private void FixedUpdate()
         {

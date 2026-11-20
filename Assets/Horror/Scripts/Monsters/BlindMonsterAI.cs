@@ -1,0 +1,305 @@
+using Horror.Locomotion;
+using Horror.Noise;
+using UnityEngine;
+using UnityEngine.AI;
+using UnityEngine.Events;
+
+namespace Horror.Monsters
+{
+    /// <summary>
+    /// L'Écoute : un monstre AVEUGLE qui chasse au son.
+    ///
+    /// Elle ne voit rien. Elle réagit aux bruits émis via NoiseSystem (pas, voix, objets, portes).
+    ///  - ERRANCE   : elle marche lentement d'un point de ronde à l'autre, ses clés tintent.
+    ///  - ÉCOUTE    : un bruit faible ? Elle s'arrête net et tourne la tête vers lui.
+    ///  - ENQUÊTE   : elle va voir là où elle a entendu quelque chose, puis fouille sur place.
+    ///  - CHASSE    : bruit fort ou bruits répétés : elle FONCE vers le dernier bruit entendu.
+    /// Elle attrape un joueur seulement si elle le touche : rester immobile et silencieux peut
+    /// la faire passer juste à côté de toi.
+    ///
+    /// Déplacement : utilise un NavMeshAgent s'il y a un NavMesh (vraie map), sinon avance tout
+    /// droit en glissant le long des murs (pratique pour la salle de test).
+    /// Multijoueur (étape 6) : ce script ne tournera que chez l'hôte.
+    /// </summary>
+    public class BlindMonsterAI : MonoBehaviour
+    {
+        public enum State { Errance, Ecoute, Enquete, Chasse }
+
+        [Header("Références")]
+        [Tooltip("La tête du modèle (noeud \"Tete\" de LEcoute). Elle se tourne vers les bruits.")]
+        public Transform head;
+        [Tooltip("Points de ronde. Vide = elle erre autour de son point de départ.")]
+        public Transform[] patrolPoints;
+        [Tooltip("Son des clés en boucle (son volume suit la vitesse). Facultatif.")]
+        public AudioSource keysLoop;
+        [Tooltip("Cri joué quand elle passe en chasse. Facultatif.")]
+        public AudioSource screamSource;
+
+        [Header("Ouïe")]
+        [Tooltip("Multiplie la portée de tous les bruits pour elle (1 = normal, 1.5 = ouïe très fine).")]
+        public float hearingMultiplier = 1.2f;
+        [Tooltip("Audibilité (0..1) au-dessus de laquelle elle passe directement en chasse.")]
+        [Range(0f, 1f)] public float chaseThreshold = 0.55f;
+        [Tooltip("Chaque bruit entendu remplit sa 'colère'. Au-dessus de 1 : chasse.")]
+        public float alertGainPerNoise = 0.35f;
+        [Tooltip("Vitesse à laquelle sa colère redescend (par seconde).")]
+        public float alertDecay = 0.12f;
+
+        [Header("Vitesses (m/s)")]
+        public float patrolSpeed = 1.1f;
+        public float investigateSpeed = 2.6f;
+        public float chaseSpeed = 6.2f;
+        [Tooltip("Temps pendant lequel elle reste figée à écouter avant de bouger.")]
+        public float listenFreeze = 0.9f;
+        [Tooltip("Temps passé à fouiller l'endroit d'un bruit avant d'abandonner.")]
+        public float searchTime = 4f;
+
+        [Header("Attraper")]
+        [Tooltip("Distance (m) entre ses mains tendues et la tête d'un joueur pour l'attraper.")]
+        public float catchDistance = 1.3f;
+        [Tooltip("Appelé quand elle attrape quelqu'un (jumpscare, son, écran noir...).")]
+        public UnityEvent<GameObject> onCatch = new UnityEvent<GameObject>();
+        [Tooltip("Renvoie le joueur attrapé à son point de départ (comportement par défaut).")]
+        public bool respawnCaughtPlayer = true;
+
+        [Header("Debug (lecture seule)")]
+        public State state = State.Errance;
+        [Range(0f, 2f)] public float alert;
+
+        private NavMeshAgent _agent;
+        private Vector3 _target;
+        private Vector3 _home;
+        private float _stateTimer;
+        private float _lastNoiseTime = -100f;
+        private Vector3 _lastNoisePos;
+        private int _patrolIndex;
+        private Quaternion _headBase;
+        private Vector3 _lookTarget;
+        private float _currentSpeed;
+        private float _catchCooldown;
+
+        private void Awake()
+        {
+            _agent = GetComponent<NavMeshAgent>();
+            _home = transform.position;
+            _target = _home;
+            if (head != null) _headBase = head.localRotation;
+        }
+
+        private void OnEnable() => NoiseSystem.Heard += OnNoise;
+        private void OnDisable() => NoiseSystem.Heard -= OnNoise;
+
+        // ------------------------------------------------------------------ oreilles
+
+        private void OnNoise(NoiseEvent e)
+        {
+            Vector3 ears = head != null ? head.position : transform.position + Vector3.up * 2f;
+            var boosted = e;
+            boosted.radius *= hearingMultiplier;
+            float heard = NoiseSystem.Audibility(boosted, ears);
+            if (heard <= 0f) return;
+
+            _lastNoisePos = e.position;
+            _lastNoiseTime = Time.time;
+            _lookTarget = e.position;
+            alert = Mathf.Min(2f, alert + alertGainPerNoise * (0.5f + heard));
+
+            if (heard >= chaseThreshold || alert >= 1f)
+            {
+                if (state != State.Chasse && screamSource != null) screamSource.Play();
+                SetState(State.Chasse);
+                _target = e.position;
+            }
+            else if (state == State.Errance)
+            {
+                SetState(State.Ecoute);   // elle se fige et tend l'oreille
+            }
+            else if (state == State.Enquete || state == State.Ecoute)
+            {
+                _target = e.position;     // nouveau bruit : elle corrige sa route
+                if (state == State.Enquete) _stateTimer = 0f;
+            }
+            else if (state == State.Chasse)
+            {
+                _target = e.position;
+            }
+        }
+
+        // ------------------------------------------------------------------ cerveau
+
+        private void Update()
+        {
+            _stateTimer += Time.deltaTime;
+            alert = Mathf.Max(0f, alert - alertDecay * Time.deltaTime);
+            _catchCooldown -= Time.deltaTime;
+
+            switch (state)
+            {
+                case State.Errance:
+                    MoveTowards(CurrentPatrolPoint(), patrolSpeed);
+                    if (Arrived(CurrentPatrolPoint(), 0.6f)) NextPatrolPoint();
+                    break;
+
+                case State.Ecoute:
+                    MoveTowards(transform.position, 0f); // figée
+                    if (_stateTimer >= listenFreeze)
+                    {
+                        _target = _lastNoisePos;
+                        SetState(State.Enquete);
+                    }
+                    break;
+
+                case State.Enquete:
+                    if (!Arrived(_target, 0.8f))
+                    {
+                        MoveTowards(_target, investigateSpeed);
+                        _stateTimer = 0f;
+                    }
+                    else
+                    {
+                        MoveTowards(transform.position, 0f);
+                        // Elle fouille : la tête balaie de gauche à droite
+                        _lookTarget = transform.position + Quaternion.Euler(0f, Mathf.Sin(Time.time * 1.7f) * 70f, 0f) * transform.forward * 3f;
+                        if (_stateTimer >= searchTime) SetState(State.Errance);
+                    }
+                    break;
+
+                case State.Chasse:
+                    MoveTowards(_target, chaseSpeed);
+                    // Plus rien entendu depuis un moment et arrivée au dernier bruit : elle redevient enquêtrice
+                    if (Arrived(_target, 1f) && Time.time - _lastNoiseTime > 1.5f)
+                    {
+                        alert = 0.6f;
+                        SetState(State.Enquete);
+                        _stateTimer = 0f;
+                    }
+                    break;
+            }
+
+            TryCatchPlayers();
+            UpdateKeysSound();
+        }
+
+        private void LateUpdate()
+        {
+            if (head == null) return;
+            // Tourne la tête vers le dernier bruit (seulement autour de l'axe vertical, max 80°)
+            Vector3 dir = _lookTarget - head.position;
+            dir.y = 0f;
+            float yaw = 0f;
+            if ((dir.sqrMagnitude > 0.01f && Time.time - _lastNoiseTime < 4f) || state == State.Enquete)
+                yaw = Mathf.Clamp(Vector3.SignedAngle(transform.forward, dir, Vector3.up), -80f, 80f);
+            Quaternion targetRot = _headBase * Quaternion.Euler(0f, yaw, 0f);
+            float snap = Time.time - _lastNoiseTime < 0.2f ? 30f : 4f; // se tourne d'un coup vers un bruit
+            head.localRotation = Quaternion.Slerp(head.localRotation, targetRot, 1f - Mathf.Exp(-snap * Time.deltaTime));
+        }
+
+        // ------------------------------------------------------------------ déplacement
+
+        private void MoveTowards(Vector3 target, float speed)
+        {
+            _currentSpeed = Mathf.Lerp(_currentSpeed, speed, 1f - Mathf.Exp(-6f * Time.deltaTime));
+
+            if (_agent != null && _agent.isOnNavMesh)
+            {
+                _agent.speed = _currentSpeed;
+                _agent.acceleration = 30f;
+                _agent.angularSpeed = 540f;
+                if (speed <= 0f) _agent.isStopped = true;
+                else
+                {
+                    _agent.isStopped = false;
+                    _agent.SetDestination(target);
+                }
+                return;
+            }
+
+            // Sans NavMesh : tout droit, en glissant le long des murs
+            Vector3 to = target - transform.position;
+            to.y = 0f;
+            if (to.sqrMagnitude < 0.01f || _currentSpeed < 0.01f) return;
+            Vector3 dir = to.normalized;
+            float step = Mathf.Min(_currentSpeed * Time.deltaTime, to.magnitude);
+            Vector3 origin = transform.position + Vector3.up * 0.5f;
+            if (Physics.SphereCast(origin, 0.35f, dir, out RaycastHit hit, step + 0.1f, NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore)
+                && hit.transform != transform && !hit.transform.IsChildOf(transform))
+            {
+                dir = Vector3.ProjectOnPlane(dir, hit.normal);
+                dir.y = 0f;
+                if (dir.sqrMagnitude < 0.01f) return;
+                dir.Normalize();
+            }
+            transform.position += dir * step;
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir, Vector3.up), 1f - Mathf.Exp(-8f * Time.deltaTime));
+        }
+
+        private bool Arrived(Vector3 point, float tolerance)
+        {
+            Vector3 d = point - transform.position;
+            d.y = 0f;
+            return d.magnitude <= tolerance;
+        }
+
+        private Vector3 CurrentPatrolPoint()
+        {
+            if (patrolPoints != null && patrolPoints.Length > 0 && patrolPoints[_patrolIndex] != null)
+                return patrolPoints[_patrolIndex].position;
+            return _target;
+        }
+
+        private void NextPatrolPoint()
+        {
+            if (patrolPoints != null && patrolPoints.Length > 0)
+            {
+                _patrolIndex = (_patrolIndex + 1) % patrolPoints.Length;
+                return;
+            }
+            // Pas de points de ronde : un point au hasard autour de la maison
+            Vector2 r = Random.insideUnitCircle * 5f;
+            _target = _home + new Vector3(r.x, 0f, r.y);
+        }
+
+        private void SetState(State next)
+        {
+            state = next;
+            _stateTimer = 0f;
+            if (next == State.Errance) NextPatrolPoint();
+        }
+
+        // ------------------------------------------------------------------ attraper
+
+        private void TryCatchPlayers()
+        {
+            if (_catchCooldown > 0f) return;
+            Vector3 reach = transform.position + transform.forward * 0.6f + Vector3.up * 1.3f;
+
+            foreach (ArmLocomotion player in ArmLocomotion.All)
+            {
+                if (player == null) continue;
+                if (Vector3.Distance(reach, player.HeadPosition) > catchDistance) continue;
+
+                _catchCooldown = 3f;
+                onCatch.Invoke(player.gameObject);
+                if (respawnCaughtPlayer) player.TeleportTo(player.SpawnPosition);
+                alert = 0f;
+                SetState(State.Errance);
+                break;
+            }
+        }
+
+        private void UpdateKeysSound()
+        {
+            if (keysLoop == null) return;
+            float t = Mathf.Clamp01(_currentSpeed / chaseSpeed);
+            keysLoop.volume = Mathf.Lerp(0.05f, 1f, t);
+            keysLoop.pitch = Mathf.Lerp(0.9f, 1.25f, t);
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            Gizmos.color = state == State.Chasse ? Color.red : state == State.Enquete ? Color.yellow : Color.cyan;
+            Gizmos.DrawWireSphere(_target, 0.4f);
+            Gizmos.DrawLine(transform.position, _target);
+        }
+    }
+}
