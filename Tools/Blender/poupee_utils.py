@@ -282,3 +282,27 @@ def local_bbox(obj):
     return (lo + hi) / 2, (hi - lo) / 2
 
 
+
+
+def strip_scene_name(path):
+    """Retire le nom de la scène glTF ("Scene") après l'export Blender.
+
+    glTFast identifie la racine du modèle par « scenes/<nom de scène> ». Les anciens modèles
+    (trimesh) n'avaient pas de nom : sans ce nettoyage, la racine change d'identifiant et les
+    scènes Unity perdent le lien vers le modèle (« Missing Prefab »).
+    """
+    import json
+    import struct
+    data = open(path, "rb").read()
+    jlen = struct.unpack_from("<I", data, 12)[0]
+    gltf = json.loads(data[20:20 + jlen])
+    for sc in gltf.get("scenes", []):
+        sc.pop("name", None)
+    js = json.dumps(gltf, separators=(",", ":")).encode("utf-8")
+    js += b" " * ((4 - len(js) % 4) % 4)
+    rest = data[20 + jlen:]
+    total = 12 + 8 + len(js) + len(rest)
+    with open(path, "wb") as f:
+        f.write(struct.pack("<III", 0x46546C67, 2, total))
+        f.write(struct.pack("<II", len(js), 0x4E4F534A) + js)
+        f.write(rest)

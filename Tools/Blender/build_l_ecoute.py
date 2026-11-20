@@ -312,4 +312,5 @@ for ob in O:
 tris = sum(len(o.data.polygons) for o in O if o.type == "MESH")
 bpy.ops.export_scene.gltf(filepath=OUT, export_format="GLB", export_yup=True, export_apply=False,
                           export_cameras=False, export_lights=False, export_extras=False)
+pu.strip_scene_name(OUT)   # garde le même identifiant de racine que l'ancien modèle
 print(f"EXPORT -> {OUT} : {len([o for o in O if o.type == 'MESH'])} maillages, {tris} faces")
