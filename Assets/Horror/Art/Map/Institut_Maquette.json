@@ -1,19 +1,20 @@
 {
  "spawn": [
-  11,
+  14,
   0,
-  5.2
+  6.5
  ],
  "spawn_yaw": 1.5708,
+ "echelle_monde": 1.4,
  "lumieres": [
   {
    "pos": [
-    -4.2,
-    1.5,
-    2.6
+    -4.4,
+    1.6,
+    2.4
    ],
-   "color": "#7fe0a8",
-   "intensity": 0.8,
+   "color": "#e8c890",
+   "intensity": 0.5,
    "distance": 3
   },
   {
@@ -248,13 +249,33 @@
   },
   {
    "pos": [
-    11.0,
-    2.8,
-    5.5
+    14.0,
+    3.2,
+    6.5
    ],
    "color": "#ffd9b0",
-   "intensity": 2.6,
-   "distance": 9
+   "intensity": 2.8,
+   "distance": 12
+  },
+  {
+   "pos": [
+    18.6,
+    2.6,
+    9.6
+   ],
+   "color": "#ffe0c0",
+   "intensity": 1.0,
+   "distance": 6
+  },
+  {
+   "pos": [
+    8.3,
+    1.2,
+    10.25
+   ],
+   "color": "#7fe0a8",
+   "intensity": 0.8,
+   "distance": 3
   },
   {
    "pos": [
@@ -411,9 +432,9 @@
   {
    "nom": "Salle de jeux (zone sûre)",
    "pos": [
-    11,
-    2.6,
-    6.2
+    14,
+    2.9,
+    7
    ]
   },
   {
@@ -460,20 +481,6 @@
     2.5,
     2.0,
     1.5
-   ]
-  },
-  {
-   "titre": "Le Minitel de l'accueil",
-   "texte": "L'ordinateur des réglages : salles privées, micro, couleur. Son écran vert est la seule lumière du hall.",
-   "pos": [
-    -4.2,
-    1.4,
-    3.0
-   ],
-   "cam": [
-    -3.2,
-    1.9,
-    1.2
    ]
   },
   {
@@ -690,14 +697,28 @@
    "titre": "La Salle de jeux (zone sûre)",
    "texte": "La seule pièce sans micro : elle ne t'entend pas ici et n'y entre jamais. On y apparaît, on y revient après s'être fait attraper. La boutique de cosmétiques est contre le mur.",
    "pos": [
-    11.0,
+    14.0,
     1.0,
-    9.0
+    11.0
    ],
    "cam": [
-    10.2,
-    1.9,
-    4.6
+    14.0,
+    2.2,
+    4.0
+   ]
+  },
+  {
+   "titre": "Le Minitel",
+   "texte": "L'ordinateur des réglages : salle privée, push-to-talk / micro ouvert / muet, couleur. Il est dans la Salle de jeux : elle ne peut pas y entrer.",
+   "pos": [
+    7.75,
+    1.0,
+    10.25
+   ],
+   "cam": [
+    10.0,
+    1.7,
+    9.0
    ]
   },
   {
@@ -718,14 +739,14 @@
    "titre": "La boîte de crayons",
    "texte": "Toutes les 7 heures, on appuie sur le bouton rose : +100 crayons gratuits. Au-dessus, un compte à rebours dit quand revenir.",
    "pos": [
-    14.4,
+    20.4,
     0.8,
-    7.9
+    9.6
    ],
    "cam": [
-    11.6,
+    17.0,
     1.6,
-    7.4
+    8.6
    ]
   },
   {
@@ -1682,14 +1703,14 @@
     2.5
    ],
    "max": [
-    15,
-    3.4,
-    10
+    21,
+    3.8,
+    12
    ],
    "centre": [
-    11.0,
+    14.0,
     0.0,
-    6.25
+    7.25
    ]
   },
   {
@@ -1799,9 +1820,9 @@
     -15.5
    ],
    [
-    11.0,
+    14.0,
     0.0,
-    6.25
+    7.25
    ],
    [
     22.25,

@@ -33,7 +33,7 @@ namespace Horror.Monsters
 
         [Header("Marcheur")]
         public float walkSpeed = 2.4f;
-        public float catchDistance = 1.0f;
+        public float catchDistance = 1.2f;
         [Tooltip("Taille de la copie de la tête pendant le jumpscare (sa tête est énorme).")]
         public float jumpscareFaceScale = 0.55f;
         public AudioClip shuffleLoop;     // frottement de costume pendant qu'il bouge
@@ -118,7 +118,8 @@ namespace Horror.Monsters
             }
             else if (_shuffle != null) _shuffle.volume = 0f;
 
-            if (reachable && Vector3.Distance(head.position, target.HeadPosition) < catchDistance + 0.4f && _cooldown <= 0f)
+            // Distance au sol (le Doux est bien plus grand que nous : on ne compare pas les têtes)
+            if (reachable && dist < catchDistance && heightAbove > -0.5f && _cooldown <= 0f)
                 Catch(target);
         }
 

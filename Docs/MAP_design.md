@@ -187,3 +187,13 @@ qui flotte ressemble à un bug.
 balcon du théâtre (3,4 m) + corniches + loges, passerelles du cintre (6,8 m), mezzanine du hall (4 m),
 armoires du dortoir (2,7 m), plongeoir de la piscine, passerelle haute des machines.
 Elle vient en dessous, écoute, puis abandonne si tu ne fais plus de bruit.
+
+## Mise à jour : spawn plus grand, Minitel dans la zone sûre, monde agrandi
+- **Salle de jeux (spawn) : 14 × 9,5 m** (avant 8 × 7,5) avec la boutique, la boîte de crayons ET
+  le **Minitel** (déplacé depuis le hall) : on règle salle privée / micro / couleur là où elle ne peut pas entrer.
+- **Tout le monde est agrandi ×1,4** (`WORLD_SCALE` dans `build_institut.py`) : les pièces étaient
+  petites pour des poupées d'1 m. Unity lit `worldScale` dans le JSON et place tout en conséquence.
+  Conséquence voulue : les meubles sont aussi plus grands (on est des jouets dans un grand bâtiment),
+  et les refuges en hauteur sont plus hauts (balcon à 4,8 m).
+  Les couloirs étroits « voulus » (galerie des portes, douches) grandissent aussi : si tu les veux plus
+  oppressants, dis-le, on les resserrera à la main.

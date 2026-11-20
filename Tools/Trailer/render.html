@@ -1,0 +1,157 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>render</title>
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+const W = 1080, H = 1920;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const camera = new THREE.PerspectiveCamera(35, W / H, 0.01, 200);
+let scene, doll, map, maskNode, maskBase, maskMat, maskIdle, mouthMat, mouthIdle, mouth, mouthBaseY;
+const base = {};               // rotations de repos des os
+const frames = { cry: [], talk: [], mouth: [] };
+const texLoader = new THREE.TextureLoader();
+function tex(f) { const t = texLoader.load(f); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; return t; }
+
+function lights(kind) {
+  const g = new THREE.Group();
+  if (kind === "dark") {             // presque noir : une seule lumière froide qui tombe d'en haut
+    g.add(new THREE.AmbientLight(0x1a1d2a, 0.25));
+    const key = new THREE.SpotLight(0xb8c8ff, 9, 6, 0.42, 0.85, 1.4);
+    key.position.set(-0.5, 2.4, 0.9); key.target.position.set(0, 0.95, 0);
+    key.castShadow = true; g.add(key, key.target);
+    const rim = new THREE.PointLight(0x6a4a8a, 1.2, 3); rim.position.set(0.7, 1.2, -0.8); g.add(rim);
+  } else if (kind === "warm") {      // une lampe basse et chaude : le corps éclairé, la tête dans le noir
+    g.add(new THREE.AmbientLight(0x2a2024, 0.18));
+    const key = new THREE.SpotLight(0xffd2a0, 14, 5, 0.34, 0.6, 1.6);
+    key.position.set(0.25, 0.15, 1.6); key.target.position.set(0, 0.4, 0);
+    key.castShadow = true; g.add(key, key.target);
+    const floorLight = new THREE.PointLight(0xffc89a, 1.2, 1.6, 1.8);   // une flaque de lumière au sol, devant elle
+    floorLight.position.set(0.05, 0.3, 0.42); g.add(floorLight);
+  }
+  return g;
+}
+
+async function loadDoll() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+  const gltf = await new GLTFLoader().loadAsync("LeDessine.glb");
+  doll = gltf.scene;
+  doll.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  for (const n of ["Epaule_D", "Coude_D", "Main_D", "Epaule_G", "Coude_G", "Tete", "Corps", "LeDessine"]) {
+    const o = doll.getObjectByName(n); if (o) base[n] = { q: o.quaternion.clone(), p: o.position.clone() };
+  }
+  const mm = doll.getObjectByName("Masque_Papier"); if (mm) { maskMat = mm.material; maskIdle = maskMat.map; }
+  const bm = doll.getObjectByName("Bouche_Dessin"); if (bm) { mouthMat = bm.material; mouthIdle = mouthMat.map; }
+  mouth = doll.getObjectByName("Bouche"); if (mouth) mouthBaseY = mouth.position.y;
+  maskNode = doll.getObjectByName("Masque");
+  for (let i = 0; i < 3; i++) { frames.cry.push(tex(`face_cri_${i}.png`)); frames.talk.push(tex(`face_parle_${i}.png`)); frames.mouth.push(tex(`mouth_parle_${i}.png`)); }
+  scene.add(doll);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshStandardMaterial({ color: 0x5a464c, roughness: 0.9 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+  await new Promise((r) => setTimeout(r, 600));   // textures du visage
+}
+
+async function loadMap() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x030204);
+  const gltf = await new GLTFLoader().loadAsync("Institut_Maquette.glb");
+  map = gltf.scene;
+  map.traverse((o) => {
+    if (o.isMesh) { o.receiveShadow = true; o.castShadow = false; }
+    if (o.name && o.name.startsWith("Plafonds")) o.visible = true;
+  });
+  scene.add(map);
+  map.updateMatrixWorld(true);
+}
+
+function groupOf(prefix) {          // tous les morceaux dont le nom contient prefix
+  const list = [];
+  map.traverse((o) => { if (o.isMesh && o.name.includes(prefix)) list.push(o); });
+  return list;
+}
+const moved = new Map();
+function offsetParts(prefix, d, yawDeg) {    // déplace / tourne un groupe de morceaux (sommets en coordonnées monde)
+  const parts = groupOf(prefix);
+  if (!parts.length) return;
+  for (const p of parts) {                       // on repart toujours de la position d'origine
+    if (!moved.has(p)) moved.set(p, { pos: p.position.clone(), q: p.quaternion.clone(), parent: p.parent });
+    const b = moved.get(p); p.position.copy(b.pos); p.quaternion.copy(b.q); p.updateMatrixWorld(true);
+  }
+  const box = new THREE.Box3(); parts.forEach((p) => box.expandByObject(p));
+  const c = box.getCenter(new THREE.Vector3());
+  for (const p of parts) {
+    if (!moved.has(p)) moved.set(p, { pos: p.position.clone(), q: p.quaternion.clone(), parent: p.parent });
+    const b = moved.get(p);
+    p.position.copy(b.pos); p.quaternion.copy(b.q);
+    if (yawDeg) {   // rotation autour de la verticale passant par le centre du groupe (en repère parent)
+      const inv = new THREE.Matrix4().copy(p.parent.matrixWorld).invert();
+      const cl = c.clone().applyMatrix4(inv);
+      const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(yawDeg));
+      p.position.sub(cl).applyQuaternion(q).add(cl);
+      p.quaternion.premultiply(q);
+    }
+    if (d) { const s = p.parent.getWorldScale(new THREE.Vector3()); p.position.add(new THREE.Vector3(d[0] / s.x, d[1] / s.y, d[2] / s.z)); }
+  }
+}
+
+let lightGroup = null;
+window.ready = false;
+window.setup = async (which) => { if (which === "map") await loadMap(); else await loadDoll(); window.ready = true; return true; };
+
+// Rend une image : renvoie un PNG en base64
+window.shot = (p) => {
+  if (lightGroup) scene.remove(lightGroup);
+  if (p.lights === "theatre") {
+    lightGroup = new THREE.Group();
+    lightGroup.add(new THREE.AmbientLight(0x221a26, 0.5));
+    const sp = new THREE.SpotLight(0xcfd8ff, 60, 30, 0.5, 0.7, 1.5);
+    sp.position.set(...p.spot); sp.target.position.set(...p.spotTarget); lightGroup.add(sp, sp.target);
+    const foot = new THREE.PointLight(0xffa860, 6, 9, 1.6); foot.position.set(...p.foot); lightGroup.add(foot);
+    if (p.extra) for (const e of p.extra) { const l = new THREE.PointLight(e.c, e.i, e.d, 1.6); l.position.set(...e.p); lightGroup.add(l); }
+  } else lightGroup = lights(p.lights || "dark");
+  scene.add(lightGroup);
+  if (p.fog) scene.fog = new THREE.FogExp2(0x000000, p.fog); else scene.fog = null;
+
+  if (doll) {
+    for (const [n, b] of Object.entries(base)) { const o = doll.getObjectByName(n); o.quaternion.copy(b.q); o.position.copy(b.p); }
+    for (const [n, r] of Object.entries(p.rot || {})) {
+      const o = doll.getObjectByName(n); if (!o) continue;
+      o.quaternion.copy(base[n].q).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...r.map(THREE.MathUtils.degToRad), "XYZ")));
+    }
+    if (p.shake) { const t = doll.getObjectByName("Tete"); t.position.x += p.shake[0]; t.position.y += p.shake[1]; }
+    if (maskMat) {
+      maskMat.map = p.face === "idle" || !p.face ? maskIdle : frames[p.face.replace(/\d/, "")][+p.face.slice(-1)];
+      maskMat.needsUpdate = true;
+    }
+    if (mouthMat) { mouthMat.map = p.mouth > 0.2 ? frames.mouth[(p.mouthFrame || 0) % 3] : mouthIdle; mouthMat.needsUpdate = true; }
+    if (mouth) { mouth.scale.y = 0.35 + 1.2 * (p.mouth || 0); mouth.position.y = mouthBaseY - 0.012 * (p.mouth || 0); }
+    doll.updateMatrixWorld(true);
+    if (p.mask && maskNode) {        // le masque se détache et tombe
+      if (!maskBase) { scene.attach(maskNode); maskBase = { p: maskNode.position.clone(), q: maskNode.quaternion.clone() }; }
+      maskNode.position.copy(maskBase.p).add(new THREE.Vector3(...p.mask.p));
+      maskNode.quaternion.copy(maskBase.q).premultiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...p.mask.r.map(THREE.MathUtils.degToRad), "XYZ")));
+    }
+  }
+  if (map && p.parts) for (const [prefix, v] of Object.entries(p.parts)) offsetParts(prefix, v.d, v.yaw);
+
+  camera.fov = p.fov || 35;
+  camera.position.set(...p.cam);
+  camera.lookAt(new THREE.Vector3(...p.target));
+  camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  return renderer.domElement.toDataURL("image/png");
+};
+</script>
+</body></html>

@@ -78,3 +78,9 @@ Détails, prix et calculs : `Docs/ECONOMIE.md`.
    il a avancé. Laisse-le te toucher pour voir le jumpscare.
 6. **Refuges** : monte au balcon du théâtre (caisses à gauche, ou colonnes) et fais du bruit : elle
    vient en dessous mais ne t'attrape pas, puis elle repart.
+
+## Spawn agrandi + Minitel (menu 8, supprime l'ancienne scène Institut)
+1. Tu apparais au centre de la Salle de jeux : boutique au fond, boîte de crayons à droite,
+   **Minitel sur le petit bureau à gauche** (touches ◄ ► OK BACK).
+2. Les pièces sont plus grandes (×1,4). Vérifie que les portes du Protocole Verrou couvrent bien
+   les ouvertures et que le monstre passe partout.

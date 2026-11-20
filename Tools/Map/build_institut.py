@@ -35,6 +35,10 @@ OUT_JSON = os.path.join(ROOT, "Assets/Horror/Art/Map/Institut_Maquette.json")
 FACE_DIR = os.path.join(ROOT, "Assets/Horror/Art/Face")
 
 WALL = 0.15   # épaisseur d'un mur (chaque pièce a ses propres murs, côté intérieur)
+# Tout le monde est agrandi à l'export (pièces plus grandes pour des poupées d'1 m, comme les fan games
+# de locomotion aux bras). Les coordonnées du code et des JSON restent en « mètres maquette » :
+# Unity multiplie par cette valeur (worldScale). Un seul chiffre à changer.
+WORLD_SCALE = 1.4
 
 
 # ---------------------------------------------------------------- matières
@@ -321,7 +325,8 @@ class Builder:
     # -------------------------------------------------------- export
     def scene(self):
         sc = trimesh.Scene()
-        sc.graph.update(frame_from=sc.graph.base_frame, frame_to="Institut", matrix=np.eye(4))
+        sc.graph.update(frame_from=sc.graph.base_frame, frame_to="Institut",
+                        matrix=np.diag([WORLD_SCALE, WORLD_SCALE, WORLD_SCALE, 1.0]))
         zones = sorted({z for z, _ in self.parts} | {z for z, _, _ in self.unique})
         for z in zones:
             sc.graph.update(frame_from="Institut", frame_to=z, matrix=np.eye(4))
@@ -374,12 +379,9 @@ def build():
     # comptoir d'accueil + Minitel + sonnette
     B.box(Z, "bois_peint_rose", -6.0, -3.0, 0, 1.1, 2.6, 3.4)
     B.box(Z, "bois_sombre", -6.1, -2.9, 1.1, 1.16, 2.5, 3.5)
-    B.boxc(Z, "minitel", (-4.2, 1.36, 3.0), (0.42, 0.4, 0.38))
-    B.quad(Z, "Ecran_Minitel", _flat((40, 120, 80)), (-4.2, 1.4, 2.805), 0.3, 0.22, (0, 0, -1),
-           emissive=(0.2, 0.7, 0.4))
-    B.boxc(Z, "minitel", (-4.2, 1.18, 2.75), (0.46, 0.04, 0.22))     # clavier
-    B.sphere(Z, "laiton", (-3.5, 1.2, 3.0), 0.07, scale=(1, 0.6, 1))
-    light((-4.2, 1.5, 2.6), "#7fe0a8", 0.8, 3)
+    B.sphere(Z, "laiton", (-3.5, 1.2, 3.0), 0.07, scale=(1, 0.6, 1))                  # sonnette (le Minitel est dans la Salle de jeux)
+    B.box(Z, "papier", -4.6, -4.2, 1.16, 1.165, 2.8, 3.1)                                 # registre ouvert
+    light((-4.4, 1.6, 2.4), "#e8c890", 0.5, 3)
     # portrait aux yeux grattés + panneau cloué
     B.quad(Z, "Portrait", mt.portrait_scratched(), (-4.0, 4.3, 5.82), 2.0, 2.6, (0, 0, -1))
     B.quad(Z, "Panneau_On_Se_Tait", mt.happy_sign_covered(), (4.0, 3.2, 5.82), 2.4, 0.9, (0, 0, -1))
@@ -402,8 +404,7 @@ def build():
          (-4.0, 4.3, 5.8), (-2.5, 2.2, 1.5))
     mark("« Ici, on se tait. »", "L'ancien panneau joyeux de l'hôtel, recouvert par celui de l'institut, cloué de travers.",
          (4.0, 3.2, 5.8), (2.5, 2.0, 1.5))
-    mark("Le Minitel de l'accueil", "L'ordinateur des réglages : salles privées, micro, couleur. Son écran vert est la seule lumière du hall.",
-         (-4.2, 1.4, 3.0), (-3.2, 1.9, 1.2))
+
 
     # ============================ COULOIR DES CHAMBRES ============================
     Z = "Couloir"
@@ -745,65 +746,77 @@ def build():
 
     # ============================ SALLE DE JEUX (zone sûre + boutique) ============================
     Z = "SalleDeJeux"
-    B.room(Z, 7, 15, 2.5, 10, 0, 3.4, "mur_creme", "parquet", openings=[("O", 3.2, 4.8, 2.6)])
-    labels.append({"nom": "Salle de jeux (zone sûre)", "pos": [11, 2.6, 6.2]})
-    B.cyl(Z, "tissu_menthe", [11, 0, 5.2], [11, 0.02, 5.2], 2.2, 32)                 # grand tapis rond
-    B.cyl(Z, "tissu_rose", [11, 0.02, 5.2], [11, 0.03, 5.2], 0.8, 24)                # point de réapparition
+    # Agrandie (14 x 9,5 m) : c'est le spawn, avec la boutique, la boîte de crayons ET le Minitel des réglages.
+    B.room(Z, 7, 21, 2.5, 12, 0, 3.8, "mur_creme", "parquet", openings=[("O", 3.2, 4.8, 2.6)])
+    labels.append({"nom": "Salle de jeux (zone sûre)", "pos": [14, 2.9, 7]})
+    B.cyl(Z, "tissu_menthe", [14, 0, 6.5], [14, 0.02, 6.5], 2.6, 36)                 # grand tapis rond
+    B.cyl(Z, "tissu_rose", [14, 0.02, 6.5], [14, 0.03, 6.5], 0.9, 24)                # point de réapparition
     B.quad(Z, "Panneau_Playroom", mt.sign(["PLAYROOM"], bg=(247, 235, 221), fg=(190, 120, 120), font_size=56),
-           (11, 2.7, 2.67), 2.2, 0.8, (0, 0, 1))
+           (14, 2.9, 2.67), 2.4, 0.87, (0, 0, 1))
     B.quad(Z, "Panneau_Shop", mt.sign(["SHOP"], bg=(232, 244, 238), fg=(90, 140, 120), font_size=60, w=384),
-           (11, 2.55, 9.83), 1.6, 0.8, (0, 0, -1))
+           (13.8, 2.7, 11.83), 1.6, 0.8, (0, 0, -1))
     B.quad(Z, "Panneau_Pieces", mt.sign(["CRAYONS: 100"], bg=(60, 50, 70), fg=(240, 210, 130), font_size=52, w=448, border=(120, 100, 70)),
-           (14.83, 1.7, 6.0), 1.4, 0.6, (-1, 0, 0))
+           (20.83, 1.7, 7.0), 1.4, 0.6, (-1, 0, 0))
     for i, (cid, name, price, slot) in enumerate(cos.CATALOG):   # présentoirs avec les vrais cosmétiques
-        x = 8.6 + i * 1.2
-        B.cyl(Z, "bois_peint_bleu", [x, 0, 9.0], [x, 0.9, 9.0], 0.32, 18)
-        B.cyl(Z, "peinture_blanche", [x, 0.9, 9.0], [x, 0.95, 9.0], 0.36, 18)
+        x = 10.6 + i * 1.6
+        B.cyl(Z, "bois_peint_bleu", [x, 0, 11.0], [x, 0.9, 11.0], 0.32, 18)
+        B.cyl(Z, "peinture_blanche", [x, 0.9, 11.0], [x, 0.95, 11.0], 0.36, 18)
         y_top = 0.95
         lift = 0.0
         if slot == "Cou":     # l'écharpe est présentée sur un petit support, comme un cou
             lift = 0.46
-            B.cyl(Z, "bois_sombre", [x, y_top, 9.0], [x, y_top + lift, 9.0], 0.05, 10)
+            B.cyl(Z, "bois_sombre", [x, y_top, 11.0], [x, y_top + lift, 11.0], 0.05, 10)
         elif slot == "Poitrine":
             lift = 0.02
         for k, part in enumerate(cos.BUILDERS[cid]()):
             part = part.copy()
             part.apply_scale(2.2)
-            part.apply_translation([x, y_top + lift, 9.0])
+            part.apply_translation([x, y_top + lift, 11.0])
             B.unique.append((Z, "Cosmetique_%s_%d" % (cid, k), part))
         B.quad(Z, "Prix_%s" % cid, mt.sign([name, "%d crayons" % price], bg=(247, 240, 228), fg=(90, 70, 80), font_size=34, w=384),
-               (x, 0.6, 8.66), 0.5, 0.25, (0, 0, -1))
-        B.boxc(Z, "lum_rose", (x, 0.45, 8.67), (0.12, 0.12, 0.04))                  # bouton "acheter"
+               (x, 0.6, 10.66), 0.5, 0.25, (0, 0, -1))
+        B.boxc(Z, "lum_rose", (x, 0.45, 10.67), (0.12, 0.12, 0.04))                 # bouton "acheter"
     for k, (x, z, c) in enumerate(((8.2, 3.4, "tissu_rose"), (8.6, 3.3, "tissu_menthe"), (8.4, 3.75, "bois_peint_bleu"),
                                     (13.6, 3.6, "bois_peint_rose"), (13.9, 3.3, "tissu_creme"))):   # cubes de jouets
         B.boxc(Z, c, (x, 0.15 + (0.3 if k == 2 else 0), z), (0.3, 0.3, 0.3))
     # Boîte de crayons géante (récompense : 100 crayons toutes les 7 h), contre le mur est
-    B.boxc(Z, "jaune_bouee", (14.45, 0.4, 7.9), (0.7, 0.8, 1.0),
+    B.boxc(Z, "jaune_bouee", (20.45, 0.4, 9.6), (0.7, 0.8, 1.0),
            rot=trimesh.transformations.rotation_matrix(math.radians(4), [0, 1, 0]))       # carton un peu de travers
-    B.boxc(Z, "bois_peint_rose", (14.1, 0.7, 7.9), (0.04, 0.1, 0.9))                 # bande rose sur la face
+    B.boxc(Z, "bois_peint_rose", (20.1, 0.7, 9.6), (0.04, 0.1, 0.9))                 # bande rose sur la face
     for k, (dz, h, tilt, c) in enumerate(((-0.36, 0.42, -9, "lum_rose"), (-0.18, 0.55, 4, "tissu_menthe"),
                                           (0.0, 0.36, -3, "bois_peint_bleu"), (0.17, 0.6, 7, "jaune_bouee"),
                                           (0.34, 0.47, -6, "bois_peint_rose"))):          # crayons qui dépassent
-        z = 7.9 + dz
-        top = (14.45 + 0.02 * k, 0.8 + h, z + tilt * 0.004)
-        B.cyl(Z, c, [14.45, 0.7, z], list(top), 0.055, 7)                               # 7 pans : crayon de cire
+        z = 9.6 + dz
+        top = (20.45 + 0.02 * k, 0.8 + h, z + tilt * 0.004)
+        B.cyl(Z, c, [20.45, 0.7, z], list(top), 0.055, 7)                               # 7 pans : crayon de cire
         B.cyl(Z, c, list(top), [top[0], top[1] + 0.09, top[2]], 0.02, 7)                 # pointe usée
     B.quad(Z, "Panneau_Crayons", mt.sign(["FREE CRAYONS", "+100 / 7H"], bg=(250, 238, 200), fg=(150, 100, 60), font_size=36, w=384),
-           (14.08, 0.42, 7.9), 0.6, 0.3, (-1, 0, 0))
-    B.boxc(Z, "lum_rose", (14.08, 0.15, 7.9), (0.04, 0.12, 0.12))                    # bouton "récolter"
+           (20.08, 0.42, 9.6), 0.6, 0.3, (-1, 0, 0))
+    B.boxc(Z, "lum_rose", (20.08, 0.15, 9.6), (0.04, 0.12, 0.12))                    # bouton "récolter"
     B.box(Z, "bois_sombre", 7.3, 7.9, 0, 0.6, 7.6, 8.4)                                  # tabouret + boîte à musique
     B.boxc(Z, "laiton", (7.6, 0.7, 8.0), (0.3, 0.2, 0.2))
-    light((11, 2.8, 5.5), "#ffd9b0", 2.6, 9)          # la seule lumière chaude et franche du jeu
+    light((14, 3.2, 6.5), "#ffd9b0", 2.8, 12)         # la seule lumière chaude et franche du jeu
+    light((18.6, 2.6, 9.6), "#ffe0c0", 1.0, 6)
+    # Le Minitel des réglages (salle privée, micro, couleur) : ICI, là où elle ne peut pas entrer
+    B.box(Z, "bois_peint_rose", 7.15, 8.35, 0, 0.75, 9.5, 11.0)                          # petit bureau
+    B.box(Z, "bois_sombre", 7.12, 8.4, 0.75, 0.8, 9.45, 11.05)
+    B.boxc(Z, "minitel", (7.75, 1.0, 10.25), (0.38, 0.4, 0.42))
+    B.quad(Z, "Ecran_Minitel", _flat((40, 120, 80)), (7.945, 1.04, 10.25), 0.3, 0.22, (1, 0, 0),
+           emissive=(0.2, 0.7, 0.4))
+    B.boxc(Z, "minitel", (8.12, 0.82, 10.25), (0.22, 0.04, 0.46))                     # clavier
+    light((8.3, 1.2, 10.25), "#7fe0a8", 0.8, 3)
     light((7.8, 1.0, 8.0), "#ffe2b8", 0.8, 3)
     mark("La Salle de jeux (zone sûre)",
          "La seule pièce sans micro : elle ne t'entend pas ici et n'y entre jamais. On y apparaît, on y revient après s'être fait attraper. La boutique de cosmétiques est contre le mur.",
-         (11, 1.0, 9.0), (10.2, 1.9, 4.6))
+         (14, 1.0, 11.0), (14.0, 2.2, 4.0))
+    mark("Le Minitel", "L'ordinateur des réglages : salle privée, push-to-talk / micro ouvert / muet, couleur. Il est dans la Salle de jeux : elle ne peut pas y entrer.",
+         (7.75, 1.0, 10.25), (10.0, 1.7, 9.0))
     mark("Le micro débranché",
          "Au Standard, l'étiquette « Playroom » est barrée : DISCONNECTED. C'est pour ça que la Salle de jeux est sûre.",
          (-19.5, 2.3, 2.1), (-16.5, 2.2, 3.0))
     mark("La boîte de crayons",
          "Toutes les 7 heures, on appuie sur le bouton rose : +100 crayons gratuits. Au-dessus, un compte à rebours dit quand revenir.",
-         (14.4, 0.8, 7.9), (11.6, 1.6, 7.4))
+         (20.4, 0.8, 9.6), (17.0, 1.6, 8.6))
 
     # ============================ THÉÂTRE DES DOUX ============================
     # Le théâtre du parc. Derrière le rideau entrouvert, les Doux (les animateurs coincés dans leurs
@@ -1273,7 +1286,7 @@ def build():
                 edges.append([i, door_index[k]])
     rooms = [{"zone": r["zone"], "nom": r["nom"], "min": r["min"], "max": r["max"], "centre": r["centre"]} for r in B.rooms]
 
-    data = {"spawn": [11, 0, 5.2], "spawn_yaw": 1.5708, "lumieres": lights, "zones": labels, "lore": lore, "papiers": papers,
+    data = {"spawn": [14, 0, 6.5], "spawn_yaw": 1.5708, "echelle_monde": WORLD_SCALE, "lumieres": lights, "zones": labels, "lore": lore, "papiers": papers,
             "portes": doors, "pieces": rooms, "nav": {"points": nodes, "liens": edges}, "portes_enfants": kid_doors}
     return B.scene(), data
 
@@ -1282,7 +1295,7 @@ def write_unity_json(data):
     """Même contenu, au format que JsonUtility (Unity) sait lire : des objets {x,y,z} au lieu de listes."""
     v3 = lambda p: {"x": p[0], "y": p[1], "z": p[2]}
     out = {
-        "spawn": v3(data["spawn"]), "spawnYaw": math.degrees(data["spawn_yaw"]),
+        "spawn": v3(data["spawn"]), "spawnYaw": math.degrees(data["spawn_yaw"]), "worldScale": data["echelle_monde"],
         "lights": [{"pos": v3(l["pos"]), "color": l["color"], "intensity": l["intensity"], "distance": l["distance"]} for l in data["lumieres"]],
         "doors": [{"x": d["x"], "z": d["z"], "axis": d["axe"], "width": d["largeur"], "bottom": d["bas"], "top": d["haut"]} for d in data["portes"]],
         "rooms": [{"zone": r["zone"], "name": r["nom"], "min": v3(r["min"]), "max": v3(r["max"]), "center": v3(r["centre"])} for r in data["pieces"]],

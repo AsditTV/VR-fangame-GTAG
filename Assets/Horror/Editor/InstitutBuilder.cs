@@ -48,12 +48,14 @@ namespace Horror.EditorTools
             public LightData[] lights; public DoorData[] doors; public RoomData[] rooms;
             public Vector3[] navPoints; public Vector2Int[] navLinks; public PaperData[] papers;
             public ChildDoorData[] childDoors;
+            public float worldScale;   // la maquette est agrandie (pièces plus grandes) : coordonnées x worldScale
         }
 #pragma warning restore 0649
 
         // Correspondance d'axes maquette (glTF) -> Unity, mesurée sur le modèle importé
-        private static float s_sx = 1f, s_sz = 1f;
-        private static Vector3 P(Vector3 v) => new Vector3(v.x * s_sx, v.y, v.z * s_sz);
+        private static float s_sx = 1f, s_sz = 1f, s_w = 1f;
+        /// <summary>Position maquette -> Unity (axes + agrandissement du monde).</summary>
+        private static Vector3 P(Vector3 v) => new Vector3(v.x * s_sx, v.y, v.z * s_sz) * s_w;
         private static Vector3 Dir(Vector3 v) => new Vector3(v.x * s_sx, v.y, v.z * s_sz);
 
         [MenuItem("Horror/8 - Construire l'Institut jouable (map complète)")]
@@ -76,6 +78,7 @@ namespace Horror.EditorTools
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
             MapData data = JsonUtility.FromJson<MapData>(File.ReadAllText(DataPath));
+            s_w = data.worldScale > 0f ? data.worldScale : 1f;
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             GameObject map = (GameObject)PrefabUtility.InstantiatePrefab(model);
@@ -318,7 +321,7 @@ namespace Horror.EditorTools
                 light.type = LightType.Point;
                 light.color = ColorUtility.TryParseHtmlString(l.color, out Color c) ? c : Color.white;
                 light.intensity = l.intensity * 3.2f;
-                light.range = l.distance * 1.6f;
+                light.range = l.distance * 1.6f * s_w;
                 light.shadows = LightShadows.None;   // performances en VR
                 go.AddComponent<LightFlicker>();      // grésille quand L'Écoute passe tout près
             }
@@ -401,7 +404,7 @@ namespace Horror.EditorTools
             for (int i = 0; i < items.Length; i++)
             {
                 // Mêmes emplacements que les présentoirs de la maquette
-                Vector3 pedestal = P(new Vector3(8.6f + i * 1.2f, 0f, 9.0f));
+                Vector3 pedestal = P(new Vector3(10.6f + i * 1.6f, 0f, 11.0f));
                 Vector3 inward = Flat(roomCenter - pedestal);
                 var stand = new GameObject("Présentoir " + items[i].displayName);
                 stand.transform.SetParent(root.transform, false);
@@ -409,15 +412,15 @@ namespace Horror.EditorTools
 
                 GameObject label = SafeZoneShopBuilder.Label(stand.transform, items[i].displayName.ToUpper() + "\n" + GameNames.Amount(items[i].price),
                                                              Vector3.zero, 0.02f, new Color(0.95f, 0.92f, 0.86f));
-                label.transform.position = pedestal + Vector3.up * 1.55f;
+                label.transform.position = pedestal + Vector3.up * 1.55f * s_w;
                 label.transform.rotation = Quaternion.LookRotation(-inward);   // lisible depuis la pièce
 
                 var btn = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 btn.name = "Bouton acheter (invisible, le visuel est dans la maquette)";
                 btn.transform.SetParent(stand.transform, false);
-                btn.transform.position = P(new Vector3(8.6f + i * 1.2f, 0.45f, 8.67f));
+                btn.transform.position = P(new Vector3(10.6f + i * 1.6f, 0.45f, 10.67f));
                 btn.transform.rotation = Quaternion.LookRotation(inward);
-                btn.transform.localScale = new Vector3(0.16f, 0.16f, 0.08f);
+                btn.transform.localScale = new Vector3(0.16f, 0.16f, 0.08f) * s_w;
                 btn.GetComponent<Renderer>().enabled = false;
                 PressButton press = btn.AddComponent<PressButton>();
                 press.clickSound = click;
@@ -431,7 +434,7 @@ namespace Horror.EditorTools
             }
 
             // Compteur de pièces (mur est de la maquette)
-            Vector3 coinsPos = P(new Vector3(14.8f, 1.7f, 6.0f));
+            Vector3 coinsPos = P(new Vector3(20.8f, 1.7f, 7.0f));
             GameObject coins = SafeZoneShopBuilder.Label(root.transform, GameNames.Currency + ": 100", Vector3.zero, 0.04f, new Color(0.95f, 0.85f, 0.5f));
             coins.transform.position = coinsPos;
             coins.transform.rotation = Quaternion.LookRotation(-Flat(roomCenter - coinsPos));
@@ -439,22 +442,24 @@ namespace Horror.EditorTools
 
             // Boîte de crayons de la maquette (mur est) : bouton invisible + compte à rebours au-dessus
             GameObject box = SafeZoneShopBuilder.BuildCrayonBox(root.transform, false);
-            Vector3 boxPos = P(new Vector3(14.45f, 0f, 7.9f));
+            Vector3 boxPos = P(new Vector3(20.45f, 0f, 9.6f));
             Vector3 boxIn = Flat(roomCenter - boxPos);
             box.transform.position = boxPos;
             box.transform.rotation = Quaternion.LookRotation(boxIn);   // +Z local = vers la pièce
             Transform boxBtn = box.transform.Find("Bouton récolter");
-            if (boxBtn != null) boxBtn.position = P(new Vector3(14.08f, 0.15f, 7.9f)) + boxIn * 0.03f;
+            if (boxBtn != null) { boxBtn.position = P(new Vector3(20.08f, 0.15f, 9.6f)) + boxIn * 0.03f; boxBtn.localScale *= s_w; }
+            Transform boxLabel = box.transform.Find("Texte : FREE " + GameNames.Currency);
+            if (boxLabel != null) boxLabel.position = boxPos + Vector3.up * 1.75f * s_w;
         }
 
-        /// <summary>Le Minitel de l'accueil (maquette : écran vert sur le comptoir du hall).</summary>
+        /// <summary>Le Minitel des réglages : dans la Salle de jeux (zone sûre), sur le petit bureau du mur ouest.</summary>
         private static void SetupMinitel()
         {
             var root = new GameObject("Minitel (réglages)");
-            Vector3 toPlayer = Dir(new Vector3(0f, 0f, -1f));   // l'écran regarde le joueur devant le comptoir
-            GameObject screen = SafeZoneShopBuilder.Label(root.transform, "", Vector3.zero, 0.0042f, new Color(0.45f, 1f, 0.6f));
+            Vector3 toPlayer = Dir(new Vector3(1f, 0f, 0f));    // l'écran regarde vers le centre de la Salle de jeux
+            GameObject screen = SafeZoneShopBuilder.Label(root.transform, "", Vector3.zero, 0.0042f * s_w, new Color(0.45f, 1f, 0.6f));
             screen.name = "Écran";
-            screen.transform.position = P(new Vector3(-4.2f, 1.4f, 2.795f));
+            screen.transform.position = P(new Vector3(7.965f, 1.04f, 10.25f));
             screen.transform.rotation = Quaternion.LookRotation(-toPlayer);
             TextMesh tm = screen.GetComponent<TextMesh>();
             tm.fontSize = 48;
@@ -470,9 +475,9 @@ namespace Horror.EditorTools
                 GameObject key = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 key.name = names[i];
                 key.transform.SetParent(root.transform, false);
-                key.transform.position = P(new Vector3(-4.38f + i * 0.12f, 1.225f, 2.7f));
+                key.transform.position = P(new Vector3(8.12f, 0.845f, 10.07f + i * 0.12f));
                 key.transform.rotation = Quaternion.LookRotation(toPlayer);
-                key.transform.localScale = new Vector3(0.08f, 0.04f, 0.08f);
+                key.transform.localScale = new Vector3(0.08f, 0.04f, 0.08f) * s_w;
                 key.GetComponent<Renderer>().sharedMaterial = keyMat;
                 keys[i] = key.AddComponent<PressButton>();
                 keys[i].clickSound = click;
@@ -512,7 +517,8 @@ namespace Horror.EditorTools
 
             foreach (DoorData d in data.doors)
             {
-                float height = d.top - d.bottom;
+                float height = (d.top - d.bottom) * s_w;
+                float width = d.width * s_w;
                 Vector3 pos = P(new Vector3(d.x, d.bottom, d.z));
                 // L'axe X local de la porte = le long du mur (sens de coulissement)
                 Vector3 along = d.axis == "z" ? Vector3.right : Vector3.forward;
@@ -526,7 +532,7 @@ namespace Horror.EditorTools
                 panel.name = "Panneau";
                 panel.transform.SetParent(door.transform, false);
                 panel.transform.localPosition = new Vector3(0f, height * 0.5f, 0f);
-                panel.transform.localScale = new Vector3(d.width + 0.06f, height, 0.08f);
+                panel.transform.localScale = new Vector3(width + 0.06f, height, 0.08f);
                 panel.GetComponent<Renderer>().sharedMaterial = doorMat;
 
                 var buttons = new List<PressButton>();
@@ -535,7 +541,7 @@ namespace Horror.EditorTools
                     GameObject b = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     b.name = side > 0 ? "Bouton (devant)" : "Bouton (derrière)";
                     b.transform.SetParent(door.transform, false);
-                    b.transform.localPosition = new Vector3(-(d.width * 0.5f + 0.3f), 1.1f, 0.2f * side);
+                    b.transform.localPosition = new Vector3(-(width * 0.5f + 0.3f), 1.1f, 0.2f * side);
                     b.transform.localScale = new Vector3(0.14f, 0.18f, 0.06f);
                     b.GetComponent<Renderer>().sharedMaterial = buttonMat;
                     PressButton pb = b.AddComponent<PressButton>();
@@ -545,7 +551,7 @@ namespace Horror.EditorTools
 
                 LockDoor lockDoor = door.AddComponent<LockDoor>();
                 lockDoor.panel = panel.transform;
-                lockDoor.width = d.width + 0.06f;
+                lockDoor.width = width + 0.06f;
                 lockDoor.buttons = buttons.ToArray();
                 lockDoor.slideSound = slide;
                 lockDoor.lockSound = lockClip;
