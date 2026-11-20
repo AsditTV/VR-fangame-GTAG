@@ -41,3 +41,7 @@ Thumbs.db
 # Secrets : clés Photon / PlayFab / etc. ne doivent jamais être commitées
 *.secret
 secrets.json
+
+# Python (scripts de Tools/)
+__pycache__/
+*.pyc
