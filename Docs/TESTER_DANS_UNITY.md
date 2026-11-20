@@ -84,3 +84,16 @@ Détails, prix et calculs : `Docs/ECONOMIE.md`.
    **Minitel sur le petit bureau à gauche** (touches ◄ ► OK BACK).
 2. Les pièces sont plus grandes (×1,4). Vérifie que les portes du Protocole Verrou couvrent bien
    les ouvertures et que le monstre passe partout.
+
+## Nouveautés : peur dans l'Institut (menu 8, scène reconstruite automatiquement)
+1. **Les enfants du dortoir** : 6 poupées assises sur les lits. Regarde-en une, détourne les yeux
+   quelques secondes, regarde à nouveau : sa tête s'est tournée vers toi.
+2. **Faire la poupée** : monte sur un lit du dortoir et tape doucement : L'Écoute t'entend beaucoup
+   moins (tes bruits portent 3 fois moins loin). Dans l'allée, elle t'entend normalement.
+3. **Coupures de courant** : toutes les 2,5 à 5 minutes, les lumières grésillent puis s'éteignent
+   6 à 11 s (la Salle de jeux reste éclairée). Pendant le noir, elle entend mieux. Pour tester tout
+   de suite : en Play, sélectionne « Coupures de courant » > clic droit sur le composant > Couper maintenant.
+4. **Traînées d'encre** : des flaques humides sur sa ronde (hall, couloirs, dortoir...).
+5. **Modèles** : nouveaux Dessiné (moufles), Écoute (griffes, épingles, vertèbres), Doux, cosmétiques.
+6. **Sans casque** : `Assets/Horror/Scripts/Tests/PlaytestBot.cs` (ajouté au Joueur en Play) bouge
+   tête et mains pour tester la logique (ramer, taper, appuyer sur un bouton, regarder).

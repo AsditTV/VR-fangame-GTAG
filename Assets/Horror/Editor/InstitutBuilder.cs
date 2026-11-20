@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using Horror.Audio;
 using Horror.Cosmetics;
@@ -101,6 +101,8 @@ namespace Horror.EditorTools
             SetupChildDoors(data);
             SetupJournal(playroom, docs);
             WaypointGraph graph = SetupNav(data);
+            SetupInkTrails(graph, playroom);
+            SetupBlackout();
             SetupMonster(data, graph);
             SetupPlayer(data, items);
 
@@ -302,6 +304,108 @@ namespace Horror.EditorTools
                 w.range = 9f;
                 w.headTurnSpeed = 90f;
             }
+
+            // Cachettes : sur chacun des 23 lits, assis parmi les poupées, tes bruits sont étouffés (« faire la poupée »)
+            var hides = new GameObject("Cachettes (lits du dortoir)");
+            for (int side = -1; side <= 1; side += 2)
+                for (int k = 0; k < 12; k++)
+                {
+                    if (side == 1 && k == 11) continue;   // 23 lits : 12 d'un côté, 11 de l'autre
+                    var z = new GameObject("Lit " + (side < 0 ? "G" : "D") + k);
+                    z.transform.SetParent(hides.transform, false);
+                    z.transform.position = P(new Vector3(side * 6.3f, 0.95f, 13.6f + k * 1.35f));
+                    Horror.Noise.HideZone hz = z.AddComponent<Horror.Noise.HideZone>();
+                    hz.size = new Vector3(1.84f, 0.9f, 0.84f) * s_w;
+                    hz.muffle = 0.35f;
+                }
+        }
+
+        // ------------------------------------------------------------------ traces et coupures
+
+        /// <summary>
+        /// Flaques et gouttes d'encre au sol le long du réseau de passage : on devine où passe L'Écoute
+        /// (sa robe trempée goutte). Jamais dans la Salle de jeux. Un seul maillage (léger en VR).
+        /// </summary>
+        private static void SetupInkTrails(WaypointGraph g, RoomData playroom)
+        {
+            if (g == null || g.points == null || g.links == null) return;
+            Bounds safe = default;
+            if (playroom != null)
+            {
+                Vector3 a = P(playroom.min), b = P(playroom.max);
+                safe = new Bounds((a + b) * 0.5f, new Vector3(Mathf.Abs(b.x - a.x) + 1f, 50f, Mathf.Abs(b.z - a.z) + 1f));
+            }
+            Physics.SyncTransforms();
+            var rnd = new System.Random(23);
+            var verts = new List<Vector3>();
+            var tris = new List<int>();
+            foreach (Vector2Int l in g.links)
+            {
+                if (l.x < 0 || l.y < 0 || l.x >= g.points.Length || l.y >= g.points.Length) continue;
+                Vector3 a = g.points[l.x], b = g.points[l.y];
+                float len = Vector3.Distance(a, b);
+                int n = Mathf.FloorToInt(len / (0.8f * s_w));
+                Vector3 dir = (b - a).normalized;
+                Vector3 side = Vector3.Cross(Vector3.up, dir).normalized;
+                for (int i = 1; i < n; i++)
+                {
+                    if (rnd.NextDouble() > 0.45) continue;
+                    Vector3 p = Vector3.Lerp(a, b, (float)i / n) + side * (float)(rnd.NextDouble() - 0.5) * 0.6f * s_w;
+                    if (playroom != null && safe.Contains(p)) continue;
+                    if (!Physics.Raycast(p + Vector3.up * 1.2f, Vector3.down, out RaycastHit hit, 3f, ~0, QueryTriggerInteraction.Ignore)) continue;
+                    if (hit.normal.y < 0.8f) continue;   // seulement sur le sol
+                    float r = (0.04f + (float)rnd.NextDouble() * 0.07f) * s_w;
+                    AddBlob(verts, tris, hit.point + Vector3.up * 0.006f, r, rnd);
+                    if (rnd.NextDouble() < 0.5)            // une petite goutte à côté
+                        AddBlob(verts, tris, hit.point + Vector3.up * 0.006f + (dir * 0.12f + side * 0.05f) * s_w, r * 0.3f, rnd);
+                }
+            }
+            if (verts.Count == 0) return;
+            var mesh = new Mesh { name = "Traces_Encre" };
+            if (verts.Count > 65000) mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            mesh.SetVertices(verts);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            EnsureFolder("Assets/Horror/Art/Map/Genere");
+            string path = "Assets/Horror/Art/Map/Genere/Traces_Encre.asset";
+            if (Load<Mesh>(path) != null) AssetDatabase.DeleteAsset(path);   // produit par ce menu : on le refait
+            AssetDatabase.CreateAsset(mesh, path);
+            var go = new GameObject("Traces d'encre (ronde de L'Écoute)");
+            go.isStatic = true;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            Material ink = MakeMat("Encre_Sol", new Color(0.012f, 0.008f, 0.016f));
+            ink.color = new Color(0.012f, 0.008f, 0.016f);                              // presque noire
+            if (ink.HasProperty("_Smoothness")) ink.SetFloat("_Smoothness", 0.6f);    // encore humide, sans briller comme un miroir
+            EditorUtility.SetDirty(ink);
+            go.AddComponent<MeshRenderer>().sharedMaterial = ink;
+        }
+
+        /// <summary>Une flaque irrégulière (éventail de triangles), à plat sur le sol.</summary>
+        private static void AddBlob(List<Vector3> verts, List<int> tris, Vector3 c, float r, System.Random rnd)
+        {
+            int start = verts.Count, rim = 20;
+            float stretch = 1f + (float)rnd.NextDouble() * 0.8f, ang0 = (float)rnd.NextDouble() * Mathf.PI;
+            verts.Add(c);
+            for (int k = 0; k < rim; k++)
+            {
+                float a = k * Mathf.PI * 2f / rim;
+                float rr = r * (0.8f + 0.25f * Mathf.Sin(a * 3f + ang0) + (float)rnd.NextDouble() * 0.15f);   // contour mou
+                Vector3 local = new Vector3(Mathf.Cos(a) * rr * stretch, 0f, Mathf.Sin(a) * rr);
+                verts.Add(c + Quaternion.Euler(0f, ang0 * Mathf.Rad2Deg, 0f) * local);
+            }
+            for (int k = 0; k < rim; k++)
+            {
+                tris.Add(start); tris.Add(start + 1 + (k + 1) % rim); tris.Add(start + 1 + k);
+            }
+        }
+
+        private static void SetupBlackout()
+        {
+            var go = new GameObject("Coupures de courant");
+            BlackoutDirector b = go.AddComponent<BlackoutDirector>();
+            b.powerDown = Load<AudioClip>(Audio + "World/power_down.wav");
+            b.powerUp = Load<AudioClip>(Audio + "World/power_up.wav");
         }
 
         // ------------------------------------------------------------------ Doux : modèles Blender

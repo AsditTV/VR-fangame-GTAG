@@ -64,6 +64,7 @@ namespace Horror.Noise
         /// <summary>Émet un bruit. Ignore les bruits trop faibles.</summary>
         public static void Emit(Vector3 position, float radius, NoiseType type, GameObject source = null)
         {
+            radius *= HideZone.MuffleAt(position);   // cachettes (lits du dortoir...) : bruit étouffé
             if (radius <= 0.05f) return;
             var e = new NoiseEvent(position, radius, type, source);
             Heard?.Invoke(e);
