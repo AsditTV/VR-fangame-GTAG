@@ -1,4 +1,4 @@
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
@@ -20,7 +20,7 @@ namespace Horror.EditorTools
             int occluders = 0, occludees = 0;
             foreach (GameObject root in scene.GetRootGameObjects())
             {
-                bool walls = root.name.StartsWith("Institut (maquette)");
+                bool walls = root.name.StartsWith("Institut (maquette)") || root.name.StartsWith("Infirmerie (murs)");
                 foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true))
                 {
                     var flags = GameObjectUtility.GetStaticEditorFlags(r.gameObject);

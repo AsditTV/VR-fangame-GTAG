@@ -30,7 +30,7 @@ namespace Horror.EditorTools
     ///  - le joueur (poupée, mains, glisse, jumpscare, pièces...).
     /// Il faut le package glTFast. Ne remplace jamais une scène existante.
     /// </summary>
-    public static class InstitutBuilder
+    public static partial class InstitutBuilder
     {
         private const string ScenePath = "Assets/Horror/Scenes/Institut.unity";
         private const string ModelPath = "Assets/Horror/Art/Map/Institut_Maquette.glb";
@@ -100,6 +100,7 @@ namespace Horror.EditorTools
             SetupPapers(data, docs);
             SetupThrowables(data);
             SetupMusicBoxes(data);
+            SetupHopital();
             SetupChildDoors(data);
             SetupJournal(playroom, docs);
             WaypointGraph graph = SetupNav(data);
@@ -786,6 +787,7 @@ namespace Horror.EditorTools
             Vector3 la = P(new Vector3(34.3f, 0f, -7f)), lb = P(new Vector3(47f, 5.5f, 7f));
             places.Add(new ExplorationGoals.Place { id = "Laverie", title = "THE LAUNDRY",
                 boxes = new[] { new Bounds((la + lb) * 0.5f, new Vector3(Mathf.Abs(lb.x - la.x), Mathf.Abs(lb.y - la.y), Mathf.Abs(lb.z - la.z))) } });
+            places.Add(new ExplorationGoals.Place { id = "Infirmerie", title = "THE INFIRMARY", boxes = new[] { HopitalBounds() } });
             goals.places = places.ToArray();
             goals.totalPapers = data.papers != null && data.papers.Length > 0 ? data.papers.Length : 17;
 
@@ -926,7 +928,7 @@ namespace Horror.EditorTools
         private static void MarkStaticDecor()
         {
             string[] roots = { "Décor (cadres, guirlandes, jouets)", "L'Envers (zone secrète)",
-                               "La loge (Doux sans tête, peaux de Doux)", "Laverie (porte 23)" };
+                               "La loge (Doux sans tête, peaux de Doux)", "Laverie (porte 23)", "Infirmerie (mobilier)" };
             int n = 0;
             foreach (string name in roots)
             {

@@ -203,3 +203,22 @@ Après chaque menu 8, lance **Horror > 9 - Préparer pour le Quest** (occlusion 
 derrière les murs ne sont plus dessinées). Les poupées de décor utilisent une version allégée (18 k triangles au
 lieu de 60 k), la Laverie est allégée, et le décor fixe est regroupé. Détails et chiffres : Docs/PERF_QUEST.md.
 Au casque : rien ne doit « apparaître » en tournant la tête au coin d'une porte (sinon, dis-le moi).
+
+## L'infirmerie du sous-sol et Le Docteur (menu 8, puis menu 9)
+**Accès** : dans la salle des machines (sous-sol), une cage grillagée « INFIRMARY v » : bouton rose -> le
+monte-charge grince et descend. Bouton « MACHINES ^ » pour remonter.
+**La zone** (~50 x 90 m) : hall du monte-charge, long couloir, salle d'attente (petites chaises tournées vers
+le mur), 3 cabinets, la salle des malades (12 lits à sangles, rideaux, deux enfants « en observation »), le bloc
+opératoire, les archives (dossiers des enfants : comment Céleste, Odette et les Doux sont devenus des monstres),
+la chambre froide (noir complet, poupées assises en rang) et l'isolement (griffonné). Des couloirs en boucle.
+**Le Docteur** (masque de corbeau, lanterne verte) :
+1. Il **voit** ce que sa lanterne éclaire (cône de 55°, 10 m, le faisceau vert est visible) ; tout près (2 m),
+   il te sent même de dos. Murs et rideaux coupent sa vue ; allongé immobile dans un lit, tu es invisible.
+2. Il est **sourd** aux petits bruits (tes pas, ta voix) : seuls les **fracas** l'attirent.
+3. Il **fredonne** une comptine en patrouillant. Quand il **se tait** et claque du bec : il t'a vu.
+4. Il ne court jamais (4 m/s en traque) ; caché 4 s, il te perd et fouille le dernier endroit.
+5. Screamer unique : croassement + bec, il fonce de face (yeux rouges, bec cousu).
+**Objets fragiles** (plateaux d'instruments, bocaux, pieds à perfusion, dans les salles ET dans les couloirs) :
+les frôler les fait tomber avec un fracas énorme (34 m). Le Docteur l'entend même à travers un mur. Ils se
+remettent en place 3 min plus tard, hors de vue. Test : clic droit sur un « Chute_* » > FragileNoisy > Faire tomber.
+Au casque : la zone est-elle assez éclairée pour s'orienter ? Le faisceau du Docteur se voit-il assez tôt ?

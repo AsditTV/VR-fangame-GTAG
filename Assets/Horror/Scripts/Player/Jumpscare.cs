@@ -173,7 +173,7 @@ namespace Horror.Player
             // centre réel du visage (pas le pivot : celui du Doux est au cou) et point « avant » du visage
             Transform facePart = null;
             if (clone != null)
-                foreach (string n in new[] { "Visage_Cri", "Portrait", "Masque", "Tete_Details", "Visage", "Tete_Creme" })
+                foreach (string n in new[] { "Visage_Cri", "Portrait", "Yeux", "Masque", "Tete_Details", "Visage", "Tete_Creme" })
                 {
                     foreach (Transform t in cloneHead.GetComponentsInChildren<Transform>(true))
                         if (t.name == n && t.GetComponentInChildren<Renderer>() != null) { facePart = t; break; }
