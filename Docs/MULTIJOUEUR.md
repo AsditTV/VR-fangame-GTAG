@@ -48,8 +48,19 @@ Principe : **l'IA des monstres ne tourne que chez l'hôte.** Les invités envoie
 - Interface réseau prête pour la sécurité vocale : `INetworkSession.RemotePlayers`, `PlayerName`, `PlayerUserId`
   (identifiant STABLE du compte, pour retenir les blocages) ; la voix réseau doit lire `VoiceModeration.ShouldHear(userId)`.
 
+## Installé le 21/11/2026 (sur ce PC uniquement)
+- **Fusion 2.1.4 Stable 2500** et **Voice 2.64 (Realtime 5)**, depuis doc.photonengine.com > Fusion 2 > SDK & Download.
+  Unity demande « Import Anyway » (paquets non signés : normal, ils viennent du site Photon) et propose de mettre à
+  jour les DLL de Fusion (API Updater) : répondre Yes. Unity 6000.6 n'est pas encore dans la liste officielle.
+- `Assets/Photon/` est **hors du dépôt** (`.gitignore`) : licence Photon et App ID. Sur un autre PC, réinstaller
+  les mêmes versions. Sans le SDK, l'adaptateur ne compile pas (`#if FUSION2`) et le jeu reste solo ; il faut
+  alors retirer les symboles FUSION* / PHOTON* des Scripting Define Symbols.
+- `PhotonFusionSession` (Assets/Horror/Scripts/Net/Photon/) : mode **Shared**, messages en données fiables
+  (pas d'objet réseau), « bonjour » avec pseudo + identifiant stable de l'appareil, master client = monstres.
+  Reste : avatars des autres joueurs (poses), Photon Voice (volume par joueur = `VoiceModeration.ShouldHear`).
+
 ## Prochaine étape
-1. Installer **Photon Fusion 2** puis **Photon Voice 2** dans Unity (paquets officiels Photon / Asset Store).
+1. ~~Installer Photon Fusion 2 puis Photon Voice 2~~ (fait).
 2. Coller les App ID dans `PhotonAppSettings` (toi, depuis le tableau de bord : jamais dans le code ni le chat).
 3. J'écris `PhotonFusionSession` et le branchement de Voice (volume de chaque voix = `ShouldHear`).
 4. Test à 2 casques (ou 1 casque + l'éditeur) : rejoindre, se voir, s'entendre, couper/bloquer.

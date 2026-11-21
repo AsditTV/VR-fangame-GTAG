@@ -49,3 +49,8 @@ __pycache__/
 
 # Fichiers temporaires des outils de build Android
 /.utmp/
+
+# SDK Photon (Fusion 2.1.4 + Voice 2.64) : installé à part, jamais sur le dépôt public
+# (licence Photon, et PhotonAppSettings contient les App ID). Voir Docs/MULTIJOUEUR.md.
+/[Aa]ssets/Photon/
+/[Aa]ssets/Photon.meta

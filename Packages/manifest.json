@@ -6,6 +6,12 @@
     "com.unity.ide.rider": "3.1.0",
     "com.unity.ide.visualstudio": "2.0.28",
     "com.unity.inputsystem": "1.20.1",
+    "com.unity.nuget.mono-cecil": "1.10.2",
+    "com.unity.pipeline": "1.0.1",
+    "com.unity.render-pipelines.universal": "17.6.0",
+    "com.unity.ugui": "2.6.0",
+    "com.unity.xr.management": "4.7.0",
+    "com.unity.xr.openxr": "1.18.0",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.ai": "1.0.0",
@@ -41,11 +47,6 @@
     "com.unity.modules.vehicles": "1.0.0",
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0",
-    "com.unity.pipeline": "1.0.1",
-    "com.unity.render-pipelines.universal": "17.6.0",
-    "com.unity.ugui": "2.6.0",
-    "com.unity.xr.management": "4.7.0",
-    "com.unity.xr.openxr": "1.18.0"
+    "com.unity.modules.xr": "1.0.0"
   }
 }
