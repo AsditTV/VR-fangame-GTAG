@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 using Horror.Locomotion;
 using Horror.Noise;
@@ -29,7 +29,7 @@ namespace Horror.Monsters
         public float sinkDepth = 1.95f;
 
         [Header("Réglages")]
-        public float glideSpeed = 3.0f;
+        public float glideSpeed = 4.0f;
         public float riseTime = 0.35f;
         public float catchRadius = 1.2f;
         public float standTime = 1.4f;

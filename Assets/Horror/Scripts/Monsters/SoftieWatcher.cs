@@ -32,7 +32,7 @@ namespace Horror.Monsters
         public float headTurnSpeed = 140f;
 
         [Header("Marcheur")]
-        public float walkSpeed = 2.4f;
+        public float walkSpeed = 3.6f;
         public float catchDistance = 1.2f;
         [Tooltip("Taille de la copie de la tête pendant le jumpscare (sa tête est énorme).")]
         public float jumpscareFaceScale = 0.55f;

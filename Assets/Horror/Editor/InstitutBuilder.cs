@@ -977,6 +977,11 @@ namespace Horror.EditorTools
                 js.deathWhispers = clips.ToArray();
                 js.whisperLines = subs.ToArray();
             }
+            // la voix : chuchoter ne s'entend pas, parler porte à quelques mètres, CRIER porte à 30 m (et fait accourir)
+            foreach (Horror.Noise.VoiceNoise v in Object.FindObjectsByType<Horror.Noise.VoiceNoise>(FindObjectsInactive.Include))
+            {
+                v.whisperThreshold = 0.18f; v.talkRadius = 7f; v.screamRadius = 30f;
+            }
             var go = new GameObject("Ratures (morts vues par les autres)");
             DeathMarks dm = go.AddComponent<DeathMarks>();
             dm.ink = MakeMat("Encre_Mort", new Color(0.05f, 0.03f, 0.07f));
@@ -1436,6 +1441,9 @@ namespace Horror.EditorTools
             ww.settleSound = Load<AudioClip>(Audio + "World/softie_settle.wav");
             ww.jumpscareSound = Load<AudioClip>(Audio + "Jumpscare/doux_cri.wav");
             ww.jumpscareFaceScale = 0.3f;   // sa grosse tête doit tenir dans le champ de vision
+            GaitAnimator wg = ww.gameObject.AddComponent<GaitAnimator>();   // il se dandine comme une peluche, puis trottine
+            wg.walkSpeed = ww.walkSpeed * 0.45f; wg.runSpeed = ww.walkSpeed; wg.stride = 0.7f;
+            wg.rollWalk = 10f; wg.rollRun = 14f; wg.bobWalk = 0.08f; wg.bobRun = 0.16f; wg.leanRun = 12f; wg.armSwing = 0f; wg.armReachRun = 0f;
             spots.Add(walkerFeet);
 
             // les anciens Doux de la maquette
@@ -2031,6 +2039,16 @@ namespace Horror.EditorTools
             return p;
         }
 
+        /// <summary>L'Écoute garde ses bras (MonsterAnimator) ; on ajoute le poids du corps : rebond et roulis.</summary>
+        private static void EcouteGait(GameObject monster)
+        {
+            BlindMonsterAI ai = monster.GetComponent<BlindMonsterAI>();
+            GaitAnimator g = monster.AddComponent<GaitAnimator>();
+            g.walkSpeed = ai != null ? ai.patrolSpeed : 1.1f; g.runSpeed = ai != null ? ai.chaseSpeed : 5.8f; g.stride = 1.2f;
+            g.bobWalk = 0.04f; g.bobRun = 0.13f; g.rollWalk = 2.5f; g.rollRun = 5f; g.leanWalk = 0f; g.leanRun = 8f;
+            g.armSwing = 0f; g.armReachRun = 0f;
+        }
+
         private static void SetupMonster(MapData data, WaypointGraph graph)
         {
             // Deux Écoutes : une en haut (dortoir, couloirs, Standard), une au sous-sol (machines, galerie,
@@ -2049,11 +2067,13 @@ namespace Horror.EditorTools
             GameObject monster = MonsterTestBuilder.CreateMonster(startUp, patrolUp.ToArray());
             monster.transform.rotation = Quaternion.LookRotation(Dir(Vector3.back));
             monster.AddComponent<MonsterAnimator>();
+            EcouteGait(monster);
             if (patrolDown.Count > 0)
             {
                 GameObject second = MonsterTestBuilder.CreateMonster(startDown, patrolDown.ToArray());
                 second.name += " (sous-sol)";
                 second.AddComponent<MonsterAnimator>();
+                EcouteGait(second);
             }
         }
 

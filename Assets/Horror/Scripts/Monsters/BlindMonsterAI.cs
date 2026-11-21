@@ -54,9 +54,9 @@ namespace Horror.Monsters
         public float patrolSpeed = 1.1f;
         public float investigateSpeed = 2.6f;
         [Tooltip("Vitesse de chasse. 6,2 était intenable pour un débutant ; ~4,9 : on galère, mais on peut s'en sortir.")]
-        public float chaseSpeed = 4.9f;
+        public float chaseSpeed = 5.8f;
         [Tooltip("La charge finale : tout près du dernier bruit (et bruit récent), elle fonce. De loin, on peut encore la semer.")]
-        public float chargeSpeed = 7.5f;
+        public float chargeSpeed = 8.5f;
         [Tooltip("Distance (m) au dernier bruit sous laquelle elle charge.")]
         public float chargeDistance = 7f;
         [Tooltip("En chasse, si elle n'entend plus rien depuis 1 s, elle ralentit (elle écoute en courant).")]

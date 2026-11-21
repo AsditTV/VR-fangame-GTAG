@@ -1,4 +1,4 @@
-using Horror.Player;
+﻿using Horror.Player;
 using UnityEngine;
 
 namespace Horror.Noise
@@ -20,7 +20,7 @@ namespace Horror.Noise
         [Tooltip("Portée (m) d'une voix normale.")]
         public float talkRadius = 7f;
         [Tooltip("Portée (m) d'un cri.")]
-        public float screamRadius = 25f;
+        public float screamRadius = 30f;
         [Tooltip("Intervalle entre deux bruits de voix (secondes).")]
         public float interval = 0.25f;
 

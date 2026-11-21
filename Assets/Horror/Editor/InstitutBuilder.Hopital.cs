@@ -91,6 +91,7 @@ namespace Horror.EditorTools
             FurnishHopital(props.transform);
             SetupHopitalLights(props.transform);
             SetupHopitalLore(props.transform);
+            DressHopital(props.transform);
             SetupLift(props.transform);
             SetupDoctor();
 
@@ -582,6 +583,9 @@ namespace Horror.EditorTools
             doc.transform.SetPositionAndRotation(new Vector3(24f, HFloor, -57f), Quaternion.Euler(0f, 200f, 0f));
             doc.transform.localScale = Vector3.one * 1.3f;
             DoctorAI ai = doc.AddComponent<DoctorAI>();
+            GaitAnimator gait = doc.AddComponent<GaitAnimator>();          // longues foulées, bras tendus quand il court
+            gait.walkSpeed = ai.patrolSpeed; gait.runSpeed = ai.huntSpeed; gait.stride = 1.7f;
+            gait.bobWalk = 0.06f; gait.bobRun = 0.16f; gait.rollWalk = 3f; gait.rollRun = 6f; gait.leanRun = 18f; gait.armReachRun = 78f;
             ai.head = FindChild(doc.transform, "Tete");
             ai.lantern = FindChild(doc.transform, "Lanterne");
             if (ai.head != null)

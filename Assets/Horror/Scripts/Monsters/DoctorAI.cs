@@ -40,8 +40,10 @@ namespace Horror.Monsters
         [Tooltip("Il est à l'affût des fracas : leur portée compte x1,6 pour lui (même à travers un mur).")]
         public float crashHearing = 1.6f;
 
-        [Header("Vitesses (m/s) : il ne court jamais")]
-        public float patrolSpeed = 1.0f, inspectSpeed = 2.2f, huntSpeed = 4.0f;
+        [Header("Vitesses (m/s)")]
+        public float patrolSpeed = 1.3f, inspectSpeed = 2.6f, huntSpeed = 5.6f;
+        [Tooltip("Un cri (voix de portée >= cette valeur) le fait accourir au lieu de marcher.")]
+        public float screamRadius = 16f;
         public float inspectTime = 6f, pauseAfterCatch = 4f;
         public float catchDistance = 1.4f;
 
@@ -72,7 +74,7 @@ namespace Horror.Monsters
         private ArmLocomotion _prey;
         private Quaternion _headBase, _twitch = Quaternion.identity;
         private float _slideSign = 1f, _slideUntil;
-        private bool _blocked;
+        private bool _blocked, _rush;
 
         private void OnEnable() { All.Add(this); NoiseSystem.Heard += OnNoise; }
         private void OnDisable() { All.Remove(this); NoiseSystem.Heard -= OnNoise; }
@@ -116,6 +118,7 @@ namespace Horror.Monsters
             if (NoiseSystem.Audibility(loud, ears) < 0.05f) return;
             _lastSeen = e.position;
             SetState(State.Inspecte);
+            _rush = e.type == NoiseType.Voix && e.radius >= screamRadius;   // tu as crié : il accourt
             RepathTo(e.position);
             PlayFx(beak, 0.7f);
         }
@@ -171,7 +174,7 @@ namespace Horror.Monsters
                     break;
 
                 case State.Inspecte:
-                    if (FollowPath(inspectSpeed))
+                    if (FollowPath(_rush ? huntSpeed : inspectSpeed))
                     {
                         Move(transform.position, 0f);
                         if (head != null)        // il balaie la pièce de sa lanterne
@@ -225,6 +228,7 @@ namespace Horror.Monsters
         private void SetState(State s)
         {
             if (state == s) return;
+            if (s != State.Inspecte) _rush = false;
             state = s; _stateTimer = 0f; _twitch = Quaternion.identity;
             StateChangedHook?.Invoke(s);
         }
@@ -268,6 +272,10 @@ namespace Horror.Monsters
             _target = goal;
             _path.Clear(); _pathIdx = 0;
             if (points.Length == 0) { _path.Add(goal); return; }
+            // ligne droite dégagée (même salle) : il y va tout droit, sans détour par ses points de passage
+            Vector3 from = transform.position + Vector3.up * 0.8f, to = goal + Vector3.up * 0.8f;
+            if (!Physics.SphereCast(from, 0.35f, (to - from).normalized, out _, (to - from).magnitude, NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore))
+            { _path.Add(goal); return; }
             int a = Nearest(transform.position), b = Nearest(goal);
             var prev = new int[points.Length];
             for (int i = 0; i < prev.Length; i++) prev[i] = -2;
