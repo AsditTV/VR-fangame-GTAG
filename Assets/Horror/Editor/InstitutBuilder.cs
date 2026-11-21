@@ -99,6 +99,7 @@ namespace Horror.EditorTools
             LoreDocument[] docs = LoreSetupBuilder.LoadDocuments();
             SetupPapers(data, docs);
             SetupThrowables(data);
+            SetupMusicBoxes(data);
             SetupChildDoors(data);
             SetupJournal(playroom, docs);
             WaypointGraph graph = SetupNav(data);
@@ -1032,6 +1033,44 @@ namespace Horror.EditorTools
                 Transform sh = FindChild(skin.transform, "Tete");
                 if (sh != null) sh.gameObject.SetActive(false);
             }
+            SetupHauntedMirror(root.transform, facingMirror);
+        }
+
+        /// <summary>Le miroir de la coiffeuse : il reflète la loge... avec une poupée de plus derrière toi.</summary>
+        private static void SetupHauntedMirror(Transform parent, Quaternion facingMirror)
+        {
+            var mirror = new GameObject("Miroir de la loge (hanté)");
+            mirror.transform.SetParent(parent, false);
+            // face au joueur qui regarde le miroir (le miroir regarde dans l'autre sens que lui)
+            mirror.transform.SetPositionAndRotation(P(new Vector3(27.05f, 2.35f, -26.52f)), facingMirror * Quaternion.Euler(0f, 180f, 0f));
+            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quad.name = "Glace";
+            Object.DestroyImmediate(quad.GetComponent<Collider>());
+            quad.transform.SetParent(mirror.transform, false);
+            quad.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);        // le quad Unity regarde vers -Z
+            quad.transform.localScale = new Vector3(0.62f, 0.93f, 1f);
+            Shader unlit = Shader.Find("Universal Render Pipeline/Unlit");
+            var mat = new Material(unlit != null ? unlit : Shader.Find("Unlit/Texture")) { name = "Institut_Miroir" };
+            mat.color = new Color(0.78f, 0.74f, 0.82f);                            // vieux tain un peu terne
+            EnsureFolder("Assets/Horror/Art/Materials");
+            string mp = "Assets/Horror/Art/Materials/Institut_Miroir.mat";
+            if (Load<Material>(mp) != null) AssetDatabase.DeleteAsset(mp);
+            AssetDatabase.CreateAsset(mat, mp);
+            quad.GetComponent<Renderer>().sharedMaterial = mat;
+            var proto = Load<GameObject>("Assets/Horror/Art/Character/LeDessine.glb");
+            GameObject ghost = proto != null ? (GameObject)PrefabUtility.InstantiatePrefab(proto) : null;
+            if (ghost != null)
+            {
+                ghost.name = "La poupée du reflet";
+                ghost.transform.SetParent(mirror.transform, false);
+                Transform head = FindChild(ghost.transform, "Tete");
+                if (head != null) head.localRotation = Quaternion.Euler(0f, 0f, 18f);   // tête penchée
+                foreach (Collider c in ghost.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+            }
+            HauntedMirror hm = mirror.AddComponent<HauntedMirror>();
+            hm.surface = quad.GetComponent<Renderer>();
+            hm.ghost = ghost != null ? ghost.transform : null;
+            hm.sting = Load<AudioClip>(Audio + "Ambience/child_giggle_far.wav");
         }
 
         private static Bounds MaqBox(float x0, float x1, float y0, float y1, float z0, float z1)
@@ -1859,6 +1898,41 @@ namespace Horror.EditorTools
                 ball.AddComponent<Horror.Noise.ImpactNoise>().maxRadius = 16f;
                 k++;
             }
+        }
+
+        /// <summary>Boîtes à musique leurres : une dans la Salle de jeux (à emporter : dans la zone sûre, elle
+        /// n'entend rien), une au dortoir, une au Standard.</summary>
+        private static void SetupMusicBoxes(MapData data)
+        {
+            var proto = Load<GameObject>("Assets/Horror/Art/Map/Decor/BoiteAMusique.glb");
+            if (proto == null) return;
+            var root = new GameObject("Boîtes à musique (leurres)");
+            Physics.SyncTransforms();
+            int n = 0;
+            foreach (RoomData r in data.rooms)
+            {
+                if (r.zone != "SalleDeJeux" && r.zone != "Ecole" && r.zone != "Standard") continue;
+                if (r.zone == "Ecole" && r.max.z - r.min.z < 12f) continue;       // le grand dortoir, pas le couloir
+                Vector3 spot = P(r.center) + new Vector3(-1.1f, 0f, 0.9f);
+                if (Physics.Raycast(spot + Vector3.up * 3f, Vector3.down, out RaycastHit hit, 6f, ~0, QueryTriggerInteraction.Ignore))
+                    spot = hit.point;
+                var box = (GameObject)PrefabUtility.InstantiatePrefab(proto);
+                box.name = "Boîte à musique (" + r.zone + ")";
+                box.transform.SetParent(root.transform, false);
+                box.transform.SetPositionAndRotation(spot + Vector3.up * 0.02f, Quaternion.Euler(0f, 25f + 40f * n, 0f));
+                box.transform.localScale = Vector3.one * 1.4f;
+                BoxCollider col = box.AddComponent<BoxCollider>();
+                col.center = new Vector3(0f, 0.045f, 0f); col.size = new Vector3(0.17f, 0.09f, 0.12f);
+                Rigidbody rb = box.AddComponent<Rigidbody>();
+                rb.mass = 0.4f;
+                box.AddComponent<Grabbable>().gripCurl = 0.55f;
+                MusicBoxLure lure = box.AddComponent<MusicBoxLure>();
+                lure.melody = Load<AudioClip>(Audio + "Ambience/music_box_far.wav");
+                lure.snap = Load<AudioClip>(Audio + "World/boite_ressort_casse.wav");
+                lure.dancer = FindChild(box.transform, "Danseuse");
+                n++;
+            }
+            Debug.Log($"[Horror] Boîtes à musique leurres : {n}.");
         }
 
         /// <summary>Petites portes d'enfants : on y frappe parfois de l'autre côté (et ça attire le monstre).</summary>

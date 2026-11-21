@@ -193,3 +193,32 @@ hand = [(-0.1, 0.0, 0.135), (-0.05, 0.0, 0.15), (0.05, 0.0, 0.15), (0.1, 0.0, 0.
 part(root, "Combine", curve_mesh([hand], 0.022, "combine"), [M_BAKE], 0.06)
 part(root, "Cordon", curve_mesh([[(0.1, 0.0, 0.12), (0.15, 0.04, 0.05), (0.12, 0.08, 0.01), (0.06, 0.06, 0.02)]], 0.004, "cordon"), [M_FILT], 0.05)
 export("Telephone")
+
+# ------------------------------------------------ boîte à musique (leurre) : couvercle ouvert, danseuse sans visage, manivelle
+root = start("BoiteAMusique")
+M_BOIS = material("Bois_Rose", srgb("#D9A9B8"), "feutre", 0.6, seed=88)
+M_INT = material("Velours", srgb("#7A4E6E"), "tissu", 0.95, seed=89)
+M_DANSE = material("Danseuse", srgb("#F3E7DA"), None, 0.5)
+M_MANIV = material("Laiton_Boite", srgb("#B89A6A"), None, 0.35)
+M_MANIV.node_tree.nodes["Principled BSDF"].inputs["Metallic"].default_value = 0.8
+bm = bmesh.new()
+bmesh.ops.create_cube(bm, size=1.0)
+for v in bm.verts:
+    v.co = Vector((v.co.x * 0.16, v.co.y * 0.11, (v.co.z + 0.5) * 0.075))
+    v.co.x += 0.006 * v.co.z / 0.075                              # un peu de travers : fait main
+bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.004, segments=2, affect="EDGES")
+part(root, "Coffret", bm, [M_BOIS], 0.05)
+bm = bmesh.new()
+thin_box(bm, Vector((0, -0.002, 0.0752)), Vector((1, 0, 0)), Vector((0, 0, 1)), 0.145, 0.095, 0.003)
+part(root, "Velours", bm, [M_INT], 0.05)
+bm = bmesh.new()                                                  # couvercle ouvert vers l'arrière (+Y Blender = arrière)
+thin_box(bm, Vector((0, 0.058, 0.13)), Vector((1, 0, 0)), Vector((0, -0.97, 0.26)).normalized(), 0.16, 0.11, 0.008)
+part(root, "Couvercle", bm, [M_BOIS], 0.05)
+bm = bmesh.new()
+disc(bm, Vector((0, -0.005, 0.08)), Vector((0, 0, 1)), 0.022, 0.004, 16)
+ellipsoid(bm, Vector((0, -0.005, 0.105)), (0.007, 0.006, 0.022), 0.0, 10, 1, 10, 8)        # le corps
+ellipsoid(bm, Vector((0, -0.005, 0.088)), (0.016, 0.016, 0.006), 0.001, 30, 2, 14, 6)      # le tutu
+ellipsoid(bm, Vector((0, -0.005, 0.132)), (0.0065, 0.0065, 0.0075), 0.0, 10, 1, 10, 8)     # la tête, sans visage
+part(root, "Danseuse", bm, [M_DANSE], 0.03)
+part(root, "Manivelle", curve_mesh([[(0.08, 0.0, 0.04), (0.1, 0.0, 0.04), (0.1, 0.0, 0.065), (0.115, 0.0, 0.065)]], 0.003, "maniv"), [M_MANIV], 0.05)
+export("BoiteAMusique")

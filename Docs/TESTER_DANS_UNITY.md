@@ -185,3 +185,15 @@ whisper), puis `python Tools/Trailer/make_pov.py <dossier> <sortie.mp4>`. Résul
    sans bruit, elle charge l'endroit vide). Réglages : chargeSpeed, chargeDistance.
 7. **Screamer** : son visage (le portrait aux yeux qui pleurent) est enfin visible : il est visé depuis le crâne
    (avant, câbles et cornets faussaient la visée et on voyait sa nuque) et éclairé de face.
+
+## Boîte à musique leurre et miroir de la loge (menu 8)
+1. **Boîte à musique** (Salle de jeux, grand dortoir, Standard) : prends-la, lance-la loin ou pose-la. Une fois
+   immobile, elle joue ~18 s (la danseuse sans visage tourne) : c'est un leurre, L'Écoute fonce dessus au lieu
+   de toi. Puis le ressort casse (« tchac ») et elle réapparaît à sa place ~2,5 min plus tard, si personne n'est
+   à côté. Dans la Salle de jeux elle ne sert à rien (zone sûre) : il faut l'emporter. Test rapide : clic droit
+   sur une boîte > MusicBoxLure > Jouer.
+2. **Le miroir de la loge** (au-dessus de la coiffeuse) : approche-toi, il reflète la loge... avec une poupée
+   juste derrière toi, qui n'existe que dans le reflet (retourne-toi : personne). Chaque fois que tu détournes
+   les yeux du miroir, elle se rapproche. Un petit rire d'enfant la première fois. Au casque : le reflet n'est
+   pas en stéréo (vieux miroir terne) : dis-moi si ça gêne. La caméra du reflet ne tourne que si tu es à moins
+   de 4,5 m (rien ne coûte au Quest le reste du temps).

@@ -1,4 +1,4 @@
-# Idées pour CALM FACES (horreur, cohérentes avec le lore)
+﻿# Idées pour CALM FACES (horreur, cohérentes avec le lore)
 
 Inspirées de mécaniques qu'on retrouve dans les fan games d'horreur en VR (locomotion aux bras),
 mais réécrites pour notre monde : poupées de tissu, papier dessiné, encre, l'Institut Marivaux,
@@ -18,13 +18,13 @@ les 23 enfants. Rien n'est copié (ni nom, ni personnage, ni asset).
    partie, il devient « taché » (poupée noircie d'encre) et ses bruits attirent le monstre pendant 30 s.
    Les autres peuvent le « laver » à la fontaine de la Salle de jeux. Mode de base des fan games
    (le chat), mais retourné : on ne chasse pas les autres, on les met en danger.
-2. **La boîte à musique leurre** : un objet qu'on remonte (grip + tourner) puis qu'on lance ; elle joue
+2. **La boîte à musique leurre** *(fait)* : un objet qu'on remonte (grip + tourner) puis qu'on lance ; elle joue
    20 s et L'Écoute y va. Coûte des crayons à la boutique (consommable), cohérent avec l'économie.
-3. **Le Standard qui appelle** : de temps en temps, un téléphone sonne dans une pièce au hasard. Décrocher
+3. **Le Standard qui appelle** *(fait)* : de temps en temps, un téléphone sonne dans une pièce au hasard. Décrocher
    = un papier de lore lu à voix basse (enregistrement)… mais la sonnerie attire L'Écoute. Choix risqué.
-4. **Les dessins qui changent** : les dessins d'enfants aux murs ont une version « après » (le monstre
+4. **Les dessins qui changent** *(fait)* : les dessins d'enfants aux murs ont une version « après » (le monstre
    dessiné plus près, puis plus là). Changés quand aucun joueur ne regarde (même script que les Doux).
-5. **Le miroir de la loge** : dans le reflet, une poupée de plus derrière toi (seulement dans le reflet).
+5. **Le miroir de la loge** *(fait)* : dans le reflet, une poupée de plus derrière toi (seulement dans le reflet).
 6. **Nouvelles zones** (déjà prévues dans MAP_design) : la **Laverie** (machines qui tournent = bruit
    de fond qui masque tes pas, mais aussi les siens), le **Parc** (extérieur, brouillard, manège qui
    grince), le **Plateau télé des Doux**, et **l'Envers** sous la piscine (la map vue « dessinée »,
