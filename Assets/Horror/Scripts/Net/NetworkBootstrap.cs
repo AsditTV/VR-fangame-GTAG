@@ -38,6 +38,8 @@ namespace Horror.Net
             Session.NoiseReceived += OnRemoteNoise;
             Session.EventReceived += OnRemoteEvent;
             NoiseSystem.NetworkForwarder = Session.IsOnline ? ForwardNoise : null;
+            PlayerTarget.RemoteCaught -= OnRemoteCaught;
+            PlayerTarget.RemoteCaught += OnRemoteCaught;
             if (wantsOnline)
                 Session.Join(mode, ok =>
                 {
@@ -128,6 +130,22 @@ namespace Horror.Net
         {
             // un autre joueur vient de mourir : on voit l'encre gicler là où il était
             if (e.kind == GameEventMessage.Kind.Mort) Horror.Player.DeathMarks.Spawn(e.position);
+            // un monstre m'a attrapé chez celui qui fait tourner l'IA : le screamer se joue ICI, avec ma copie du monstre
+            if (e.kind == GameEventMessage.Kind.Capture && Session != null && e.playerId == Session.LocalPlayerId)
+            {
+                PlayerTarget me = PlayerTargets.Local;
+                if (MonsterSync.At(e.value) is IScreamer monster && me != null && me.inputEnabled) me.Catch(monster);
+            }
+        }
+
+        /// <summary>Chez celui qui fait tourner l'IA : un monstre vient d'attraper un joueur distant, on le prévient.</summary>
+        private static void OnRemoteCaught(PlayerTarget victim, IScreamer monster)
+        {
+            if (Session == null || !Session.IsOnline || victim == null) return;
+            int index = MonsterSync.IndexOf(monster as MonoBehaviour);
+            if (index < 0) return;
+            victim.remoteDead = true;                                    // en attendant sa prochaine pose : pas deux captures
+            Session.SendEvent(new GameEventMessage { kind = GameEventMessage.Kind.Capture, playerId = victim.netId, value = index, position = victim.HeadPosition });
         }
 
         private static void OnRemoteNoise(NoiseMessage m)

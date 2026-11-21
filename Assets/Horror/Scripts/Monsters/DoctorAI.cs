@@ -18,7 +18,7 @@ namespace Horror.Monsters
     ///  - Pause : après une prise, il reste penché quelques secondes (les autres ont le temps de fuir).
     /// Se cacher : derrière un mur, un rideau, ou allongé dans un lit (HideZone) sans bouger.
     /// </summary>
-    public class DoctorAI : MonoBehaviour
+    public class DoctorAI : MonoBehaviour, IScreamer
     {
         public enum State { Patrouille, Inspecte, Traque, Pause }
 
@@ -71,7 +71,11 @@ namespace Horror.Monsters
         private int _pathIdx, _patrolNode;
         private Vector3 _target, _lastSeen;
         private float _stateTimer, _unseen, _speed, _stepTimer, _twitchAt, _repathAt;
-        private ArmLocomotion _prey;
+        private PlayerTarget _prey;
+        public Transform ScreamBody => transform;
+        public Transform ScreamFace => head;
+        public AudioClip ScreamClip => jumpscareSound != null ? jumpscareSound : scream;
+        public float ScreamScale => jumpscareScale;
         private Quaternion _headBase, _twitch = Quaternion.identity;
         private float _slideSign = 1f, _slideUntil;
         private bool _blocked, _rush;
@@ -124,13 +128,13 @@ namespace Horror.Monsters
         }
 
         /// <summary>Le joueur le plus proche qu'il voit (lanterne, ligne de vue, pas caché) ; null sinon.</summary>
-        private ArmLocomotion See()
+        private PlayerTarget See()
         {
             Vector3 eyes = head != null ? head.position : transform.position + Vector3.up * 2f;
             Vector3 fwd = head != null ? Vector3.ProjectOnPlane(head.forward, Vector3.up).normalized : transform.forward;
             if (fwd.sqrMagnitude < 0.01f) fwd = transform.forward;
-            ArmLocomotion best = null; float bestD = float.MaxValue;
-            foreach (ArmLocomotion p in ArmLocomotion.All)
+            PlayerTarget best = null; float bestD = float.MaxValue;
+            foreach (PlayerTarget p in PlayerTargets.All)
             {
                 if (p == null || !p.inputEnabled) continue;
                 Vector3 h = p.HeadPosition;
@@ -143,7 +147,7 @@ namespace Horror.Monsters
                     if (HideZone.MuffleAt(h) < 0.99f && p.Velocity.magnitude < 0.6f) continue;   // allongé dans un lit, immobile
                 }
                 if (Physics.Linecast(eyes, h, out RaycastHit hit, NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore)
-                    && !hit.transform.IsChildOf(p.transform) && !hit.transform.IsChildOf(transform)) continue;   // mur, rideau
+                    && !p.Owns(hit.transform) && !hit.transform.IsChildOf(transform)) continue;   // mur, rideau
                 if (d < bestD) { bestD = d; best = p; }
             }
             return best;
@@ -155,11 +159,11 @@ namespace Horror.Monsters
         {
             if (!Horror.Net.NetworkBootstrap.RunsAI) return;
             _stateTimer += Time.deltaTime;
-            ArmLocomotion seen = state == State.Pause ? null : See();
+            PlayerTarget seen = state == State.Pause ? null : See();
 
             if (seen != null)
             {
-                _prey = seen; _lastSeen = seen.transform.position; _unseen = 0f;
+                _prey = seen; _lastSeen = seen.root.position; _unseen = 0f;
                 if (state != State.Traque)
                 {
                     SetState(State.Traque);
@@ -238,9 +242,7 @@ namespace Horror.Monsters
             if (_prey == null) return;
             Vector3 reach = transform.position + transform.forward * 0.6f + Vector3.up * 1.2f;
             if (Vector3.Distance(reach, _prey.HeadPosition) > catchDistance) return;
-            Jumpscare js = _prey.GetComponent<Jumpscare>();
-            if (js != null) js.TriggerScreamer(transform, head, jumpscareSound != null ? jumpscareSound : scream, jumpscareScale);
-            else _prey.TeleportTo(_prey.SpawnPosition);
+            _prey.Catch(this);
             _prey = null;
             SetState(State.Pause);
         }

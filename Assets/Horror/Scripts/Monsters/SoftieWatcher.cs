@@ -16,7 +16,7 @@ namespace Horror.Monsters
     ///    Il ne grimpe pas : en hauteur (balcon, passerelles) tu es à l'abri.
     /// Le pivot de l'objet doit être au centre de la tête (ou aux pieds pour le marcheur), +Z = son visage.
     /// </summary>
-    public class SoftieWatcher : MonoBehaviour
+    public class SoftieWatcher : MonoBehaviour, IScreamer
     {
         [Tooltip("La tête qui se tourne (si vide : cet objet).")]
         public Transform head;
@@ -85,7 +85,7 @@ namespace Horror.Monsters
                 }
                 return;
             }
-            ArmLocomotion target = NearestPlayer();
+            PlayerTarget target = NearestPlayer();
             bool seen = SeenByAnyone();
 
             if (seen)
@@ -140,12 +140,15 @@ namespace Horror.Monsters
                 Catch(target);
         }
 
-        private void Catch(ArmLocomotion player)
+        public Transform ScreamBody => transform;
+        public Transform ScreamFace => head;
+        public AudioClip ScreamClip => jumpscareSound;
+        public float ScreamScale => jumpscareFaceScale;
+
+        private void Catch(PlayerTarget player)
         {
             _cooldown = 4f;
-            Jumpscare scare = player.GetComponent<Jumpscare>();
-            if (scare != null) scare.TriggerScreamer(transform, head, jumpscareSound, jumpscareFaceScale);
-            else player.TeleportTo(player.SpawnPosition);
+            player.Catch(this);
             _pause = pauseAfterCatch;                            // puis il retourne à sa place, dans le rang
         }
 
@@ -153,7 +156,7 @@ namespace Horror.Monsters
         {
             Vector3 me = head.position;
             float cos = Mathf.Cos(viewAngle * Mathf.Deg2Rad);
-            foreach (ArmLocomotion p in ArmLocomotion.All)
+            foreach (PlayerTarget p in PlayerTargets.All)
             {
                 if (p == null || p.head == null) continue;
                 Vector3 to = me - p.HeadPosition;
@@ -167,11 +170,11 @@ namespace Horror.Monsters
             return false;
         }
 
-        private ArmLocomotion NearestPlayer()
+        private PlayerTarget NearestPlayer()
         {
-            ArmLocomotion best = null;
+            PlayerTarget best = null;
             float bestD = range;
-            foreach (ArmLocomotion p in ArmLocomotion.All)
+            foreach (PlayerTarget p in PlayerTargets.All)
             {
                 if (p == null || SafeZone.Contains(p.HeadPosition)) continue;
                 // Joueur en plein jumpscare (mains bloquées) : on l'ignore, sinon le Doux repart

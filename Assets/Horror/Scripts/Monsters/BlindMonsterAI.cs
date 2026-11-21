@@ -24,7 +24,7 @@ namespace Horror.Monsters
     /// droit en glissant le long des murs (pratique pour la salle de test).
     /// Multijoueur (étape 6) : ce script ne tournera que chez l'hôte.
     /// </summary>
-    public class BlindMonsterAI : MonoBehaviour
+    public class BlindMonsterAI : MonoBehaviour, IScreamer
     {
         public enum State { Errance, Ecoute, Enquete, Chasse }
 
@@ -96,6 +96,11 @@ namespace Horror.Monsters
         public float CurrentSpeed => _currentSpeed;
         /// <summary>La tête du monstre (utilisée aussi par le jumpscare).</summary>
         public Transform Head => head;
+        // screamer joué chez la victime (ici ou, en ligne, chez un autre joueur)
+        public Transform ScreamBody => transform;
+        public Transform ScreamFace => head;
+        public AudioClip ScreamClip => jumpscareSound;
+        public float ScreamScale => 0.5f;
 
         private NavMeshAgent _agent;
         private Vector3 _target;
@@ -405,17 +410,14 @@ namespace Horror.Monsters
             if (_catchCooldown > 0f) return;
             Vector3 reach = transform.position + transform.forward * 0.6f + Vector3.up * 1.3f;
 
-            foreach (ArmLocomotion player in ArmLocomotion.All)
+            foreach (PlayerTarget player in PlayerTargets.All)
             {
-                if (player == null || SafeZone.Contains(player.HeadPosition) || Territory.IsForeign(player.HeadPosition, "Ecoute")) continue;
+                if (player == null || !player.inputEnabled || SafeZone.Contains(player.HeadPosition) || Territory.IsForeign(player.HeadPosition, "Ecoute")) continue;
                 if (Vector3.Distance(reach, player.HeadPosition) > catchDistance) continue;
 
                 _catchCooldown = 3f;
                 onCatch.Invoke(player.gameObject);
-                // Jumpscare s'il est installé sur le joueur (il s'occupe du respawn), sinon respawn direct
-                Jumpscare scare = player.GetComponent<Jumpscare>();
-                if (scare != null) scare.Trigger(this);
-                else if (respawnCaughtPlayer) player.TeleportTo(player.SpawnPosition);
+                player.Catch(this);   // ici : screamer (ou retour au départ) ; en ligne : « attrapé » envoyé au joueur
                 alert = 0f;
                 _pauseTimer = pauseAfterCatch;   // elle s'arrête, puis repart en errance
                 break;

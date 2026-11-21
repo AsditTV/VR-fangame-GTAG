@@ -33,6 +33,8 @@ namespace Horror.Net
             public TextMesh tag;
             public AudioSource voice;
             public AudioLowPassFilter muffle;
+            public PlayerTarget prey;          // pour les monstres (chez celui qui fait tourner l'IA)
+            public Vector3 lastHead; public float lastTime;
         }
 
         private readonly Dictionary<int, Remote> _remotes = new Dictionary<int, Remote>();
@@ -91,6 +93,7 @@ namespace Horror.Net
                 leftHand = l != null ? l.position : h.position, leftRotation = l != null ? l.rotation : h.rotation,
                 rightHand = rr != null ? rr.position : h.position, rightRotation = rr != null ? rr.rotation : h.rotation,
                 mouth = (byte)Mathf.RoundToInt(Mathf.Clamp01(_localMouth != null ? _localMouth.Openness : 0f) * 255f),
+                dead = !_local.inputEnabled,                              // en plein screamer : les monstres le laissent
             };
         }
 
@@ -98,6 +101,13 @@ namespace Horror.Net
         {
             if (!_remotes.TryGetValue(p.playerId, out Remote r)) r = Create(p.playerId);
             if (r == null) return;
+            if (r.hasPose && Time.time > r.lastTime + 0.01f)
+            {
+                Vector3 v = (p.head - r.lastHead) / (Time.time - r.lastTime);  // sa vitesse (le Docteur voit qui bouge)
+                r.prey.remoteVelocity = Vector3.Lerp(r.prey.remoteVelocity, v, 0.5f);
+            }
+            r.lastHead = p.head; r.lastTime = Time.time;
+            r.prey.remoteDead = p.dead;
             r.target = p;
             if (!r.hasPose) { Snap(r); r.hasPose = true; }
         }
@@ -106,6 +116,7 @@ namespace Horror.Net
         {
             if (!_remotes.TryGetValue(playerId, out Remote r)) return;
             if (r.voice != null) r.voice.transform.SetParent(null, true);   // la voix appartient à Photon : on la rend
+            PlayerTargets.RemoveRemote(r.prey);
             if (r.root != null) Destroy(r.root);
             _remotes.Remove(playerId);
         }
@@ -135,6 +146,8 @@ namespace Horror.Net
             r.tag.characterSize = 0.012f; r.tag.fontSize = 64; r.tag.color = new Color(0.98f, 0.93f, 0.82f);
             Font f = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             if (f != null) { r.tag.font = f; tagGo.GetComponent<MeshRenderer>().sharedMaterial = f.material; }
+            r.prey = new PlayerTarget(id, r.head, r.root.transform);
+            PlayerTargets.AddRemote(r.prey);                              // les monstres peuvent le chasser
             _remotes[id] = r;
             return r;
         }

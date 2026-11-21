@@ -21,6 +21,12 @@ namespace Horror.Net
         private readonly Dictionary<int, MonsterState> _targets = new Dictionary<int, MonsterState>();
         private INetworkSession _session;
         private bool _aiOff;
+        private static MonsterSync _instance;
+
+        /// <summary>Numéro d'un monstre (le même sur toutes les machines), -1 si inconnu.</summary>
+        public static int IndexOf(MonoBehaviour monster) => _instance != null ? _instance._ais.IndexOf(monster) : -1;
+        /// <summary>Le monstre portant ce numéro, ou null.</summary>
+        public static MonoBehaviour At(int index) => _instance != null && index >= 0 && index < _instance._ais.Count ? _instance._ais[index] : null;
         private float _nextSend;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -31,6 +37,7 @@ namespace Horror.Net
 
         private void Start()
         {
+            _instance = this;
             // ordre STABLE (le même sur toutes les machines) : par chemin dans la hiérarchie
             foreach (MonoBehaviour mb in FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include))
                 if (System.Array.IndexOf(AiTypes, mb.GetType().Name) >= 0) _ais.Add(mb);

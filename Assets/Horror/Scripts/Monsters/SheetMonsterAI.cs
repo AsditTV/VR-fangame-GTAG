@@ -15,7 +15,7 @@ namespace Horror.Monsters
     /// Il ne sort jamais de l'eau (son territoire) ; L'Écoute, elle, n'y entre pas.
     /// Astuce : lancer un objet au fond de l'eau l'attire ailleurs.
     /// </summary>
-    public class SheetMonsterAI : MonoBehaviour
+    public class SheetMonsterAI : MonoBehaviour, IScreamer
     {
         [Header("Zone")]
         public Bounds zone;                 // sa Laverie (coordonnées monde)
@@ -91,14 +91,14 @@ namespace Horror.Monsters
         {
             _cooldown -= Time.deltaTime;
             // un joueur debout dans l'eau (pas sur une machine) : la vibration ne s'arrête pas
-            foreach (ArmLocomotion p in ArmLocomotion.All)
+            foreach (PlayerTarget p in PlayerTargets.All)
                 if (p != null && p.inputEnabled && zone.Contains(p.HeadPosition) && StandsOnFloor(p)) Feel(p.HeadPosition);
 
             if (etat == Etat.Surgit) return;
 
             // perché sur une machine depuis trop longtemps : il vient sous toi et sort la tête pour te fixer
-            ArmLocomotion perched = null;
-            foreach (ArmLocomotion p in ArmLocomotion.All)
+            PlayerTarget perched = null;
+            foreach (PlayerTarget p in PlayerTargets.All)
                 if (p != null && p.inputEnabled && zone.Contains(p.HeadPosition) && !StandsOnFloor(p)) perched = p;
             _perchedFor = perched != null ? _perchedFor + Time.deltaTime : 0f;
             if (perched != null && !_hasTarget && _perchedFor > stareAfter && _cooldown <= 0f)
@@ -135,9 +135,14 @@ namespace Horror.Monsters
         }
 
         /// <summary>Vrai si le joueur est debout sur le carrelage (et pas sur une machine, un fil, une étagère).</summary>
-        private bool StandsOnFloor(ArmLocomotion p)
+        public Transform ScreamBody => transform;
+        public Transform ScreamFace => face != null ? face : transform;
+        public AudioClip ScreamClip => jumpscareSound;
+        public float ScreamScale => 0.5f;
+
+        private bool StandsOnFloor(PlayerTarget p)
         {
-            Rigidbody own = p.GetComponent<Rigidbody>();
+            Rigidbody own = p.Body;
             int n = Physics.RaycastNonAlloc(p.HeadPosition, Vector3.down, _hits, 3f * _scale, ~0, QueryTriggerInteraction.Ignore);
             float best = float.MaxValue; Collider first = null;
             for (int i = 0; i < n; i++)
@@ -156,7 +161,7 @@ namespace Horror.Monsters
             ShowScream(true);
             Vector3 from = transform.position, to = new Vector3(from.x, floorY - 0.15f * _scale, from.z);
             // il se tourne vers le joueur le plus proche et se penche sur lui en grandissant
-            ArmLocomotion victim = Nearest(to);
+            PlayerTarget victim = Nearest(to);
             Quaternion r0 = transform.rotation, r1 = r0;
             if (victim != null)
             {
@@ -173,7 +178,7 @@ namespace Horror.Monsters
                 yield return null;
             }
             transform.position = to;
-            foreach (ArmLocomotion p in ArmLocomotion.All)
+            foreach (PlayerTarget p in PlayerTargets.All)
             {
                 if (p == null || !p.inputEnabled) continue;
                 Vector3 h = p.HeadPosition;
@@ -181,9 +186,7 @@ namespace Horror.Monsters
                 if (dh < catchRadius * _scale && h.y < floorY + 2.2f * _scale)
                 {
                     _cooldown = 4f;
-                    Jumpscare js = p.GetComponent<Jumpscare>();
-                    if (js != null) js.TriggerScreamer(transform, face != null ? face : transform, jumpscareSound, 0.5f);
-                    else p.TeleportTo(p.SpawnPosition);
+                    p.Catch(this);
                 }
             }
             yield return new WaitForSeconds(standTime);
@@ -200,7 +203,7 @@ namespace Horror.Monsters
         }
 
         /// <summary>Il glisse sous le joueur perché, sort la tête de l'eau, le fixe, puis replonge (sans attraper).</summary>
-        private IEnumerator Stare(ArmLocomotion p)
+        private IEnumerator Stare(PlayerTarget p)
         {
             etat = Etat.Surgit;
             Vector3 under = new Vector3(p.HeadPosition.x, transform.position.y, p.HeadPosition.z);
@@ -234,10 +237,10 @@ namespace Horror.Monsters
             foreach (Renderer r in _calmFace) if (r != null) r.enabled = !on;
         }
 
-        private ArmLocomotion Nearest(Vector3 p)
+        private PlayerTarget Nearest(Vector3 p)
         {
-            ArmLocomotion best = null; float bd = float.MaxValue;
-            foreach (ArmLocomotion a in ArmLocomotion.All)
+            PlayerTarget best = null; float bd = float.MaxValue;
+            foreach (PlayerTarget a in PlayerTargets.All)
             {
                 if (a == null) continue;
                 float d = (a.HeadPosition - p).sqrMagnitude;

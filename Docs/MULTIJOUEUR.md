@@ -88,8 +88,26 @@ bloquer = avatar caché + muet ; débloquer = tout revient ; code de salle : rej
 DESTINATAIRE, pas l'expéditeur : chaque message porte maintenant le numéro de son expéditeur.
 
 **Pas encore fait / pas vérifié** :
-- **Les monstres ne poursuivent que le joueur du master client** : les autres ne peuvent pas encore être attrapés.
-  Il faut que l'IA voie les avatars distants comme des cibles et envoie « attrapé » au joueur concerné.
 - Le micro n'a pas été testé réellement (niveau 0 dans l'éditeur : deux enregistreurs sur le même micro).
   La voix a été testée avec un son du jeu à la place du micro.
 - Aucun test entre deux vrais appareils (casque + PC) : c'est le prochain test.
+
+## Tous les joueurs chassés + nouveau transport (21/11/2026)
+**Mesure qui a tout changé** : avec `SendReliableDataToPlayer` (l'envoi « fiable » brut de Fusion), A envoyait
+1 128 messages en 6 s, B en recevait 98 (plus de 90 % perdus : c'est fait pour de gros fichiers, ~16 messages/s
+passent). Les invités auraient vu la plupart des monstres immobiles et jamais reçu « attrapé ».
+
+**Nouveau transport (objets réseau Fusion)** — menu **Horror/11** crée les prefabs dans `Resources/Net/` :
+- `NetRelay` (un par joueur, créé par lui) : pose, bouche, mort, pseudo, couleur, identifiant stable en
+  propriétés synchronisées ; bruits et événements en RPC.
+- `MonsterRelay` (objet du master client : repris par le suivant s'il part) : positions/orientations des monstres.
+- `PhotonFusionSession` garde la même interface : le reste du jeu n'a pas changé.
+
+**Monstres** : ils ne parlent plus qu'à `PlayerTarget` (Scripts/Player) : le joueur local OU l'avatar d'un joueur
+distant. Chaque monstre décrit son screamer (`IScreamer`). Chez celui qui fait tourner l'IA, attraper un joueur
+distant envoie « Capture » (RPC) ; chez la victime, le screamer se joue avec SA copie du monstre.
+
+**Vérifié (éditeur, 2 clients)** : pseudo + identifiant reçus ; 17 monstres synchronisés ; le Docteur de A attrape
+l'avatar de B dans le jeu -> B reçoit « Capture, monstre n° 3 » une fois par capture ; bruit reçu ; voix connectée ;
+départ de B : avatar et proie retirés ; en solo, le Docteur attrape toujours le joueur local (screamer joué).
+**Pas vérifié** : entre deux vrais appareils ; le screamer chez la victime (B de test n'a pas de joueur).
