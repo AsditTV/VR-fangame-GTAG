@@ -114,7 +114,7 @@ regardant autour de soi.
 
 ---
 
-## Le Minitel : l'ordinateur des réglages (façon "ordinateur de Gorilla Tag")
+## Le Minitel : l'ordinateur des réglages (terminal de réglages du lobby)
 
 Un vieux terminal beige posé sur le comptoir de l'accueil (logique pour un lieu fermé en 1985).
 On tape sur ses grosses touches **avec le bout du doigt** (la gâchette plie l'index : le doigt

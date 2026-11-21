@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Horror.Interaction
 {
     /// <summary>
-    /// Le Minitel de l'accueil : l'ordinateur des réglages (comme l'ordinateur de Gorilla Tag, version 1985).
+    /// Le Minitel de l'accueil : l'ordinateur des réglages (un terminal de réglages dans le lobby, version 1985).
     /// Quatre grosses touches qu'on enfonce du doigt : ◄  ►  OK  BACK.
     /// Écrans (textes en anglais, vert sur noir) :
     ///   ROOM  : code de salle privée (le multijoueur arrive à l'étape 6 : le code est déjà mémorisé)

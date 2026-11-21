@@ -41,3 +41,24 @@ sur PC : cocher `forceOnPc` (les réglages PC sont remis en sortant du Play).
 ## Poupées fusionnées (fait)
 `InstitutBuilder.Fusion.cs` (menu 8, automatique) : les poupées et Doux immobiles sont fusionnés par matière
 (la tête des enfants du dortoir reste à part : elle tourne). Dortoir 747 -> 509 appels, loge 211 -> 157.
+
+## APK pour le Quest autonome (menu 10)
+**Prérequis (fait le 21/11/2026)** : module Android de Unity 6000.6.10f1 (Android Build Support + OpenJDK + SDK/NDK).
+Attention : si l'installateur affiche « Failed to delete old Unity Android Support installation files », choisir
+« Ignorer » puis réinstaller OpenJDK et SDK/NDK (le module principal efface ce qui a été installé avant lui).
+
+1. Menus **8** puis **9** (scène + occlusion).
+2. Menu **10 - Construire l'APK Quest** : configure OpenXR pour Android (chargeur OpenXR, Meta Quest, manettes Touch
+   Quest 2/Pro/3, rendu Single Pass Instanced, latence « Prioritize Input Polling »), vérifie les réglages
+   (identifiant `com.asdittv.calmfaces`, ARM64, IL2CPP, Vulkan, Android 12L minimum, textures ASTC) et compile
+   `Builds/CalmFaces.apk` (~150 Mo, ~6 min ; dossier ignoré par Git). Menu 10b = configurer sans compiler.
+3. Installer sur le casque (mode développeur activé dans l'appli Meta Horizon du téléphone, câble USB-C) :
+   - **Meta Quest Developer Hub** : glisser l'APK sur le casque ; ou
+   - en ligne de commande : `adb install -r Builds/CalmFaces.apk` (adb est dans
+     `...\Editor\Data\PlaybackEngines\AndroidPlayer\SDK\platform-tools`).
+   Le jeu apparaît dans la Bibliothèque > « Sources inconnues ».
+4. Mesurer : OVR Metrics Tool (images/s, GPU). Cible : 72 images/s stables minimum.
+
+Sur Android le profil Quest est appliqué tout seul (`QuestQuality`, niveau de qualité « Mobile » : pas de SSAO,
+pas de HDR, MSAA 4x). Le profil PC (avec SSAO) est exclu d'Android : l'alerte SSAO d'OpenXR au build le concerne
+lui, pas le Quest.

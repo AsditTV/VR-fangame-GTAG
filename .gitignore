@@ -46,3 +46,6 @@ secrets.json
 # Python (scripts de Tools/)
 __pycache__/
 *.pyc
+
+# Fichiers temporaires des outils de build Android
+/.utmp/

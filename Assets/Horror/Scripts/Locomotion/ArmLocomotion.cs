@@ -7,7 +7,7 @@ namespace Horror.Locomotion
 {
     /// <summary>
     /// Locomotion "aux bras" : le joueur se déplace en poussant sur le décor avec ses mains,
-    /// comme dans les fan games de type Gorilla Tag. Pas de joystick.
+    /// locomotion aux bras (on pousse le sol avec les mains). Pas de joystick.
     ///
     /// Principe, en une phrase : quand une main touche une surface, elle reste "collée" à l'endroit
     /// du contact, et c'est le CORPS qui bouge à la place de la main. Pousser le sol vers le bas
