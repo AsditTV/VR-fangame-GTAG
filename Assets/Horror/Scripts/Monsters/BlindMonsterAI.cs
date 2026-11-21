@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Horror.Locomotion;
 using Horror.Noise;
 using Horror.Player;
@@ -53,11 +53,24 @@ namespace Horror.Monsters
         [Header("Vitesses (m/s)")]
         public float patrolSpeed = 1.1f;
         public float investigateSpeed = 2.6f;
-        public float chaseSpeed = 6.2f;
+        [Tooltip("Vitesse de chasse. 6,2 était intenable pour un débutant ; ~4,9 : on galère, mais on peut s'en sortir.")]
+        public float chaseSpeed = 4.9f;
+        [Tooltip("En chasse, si elle n'entend plus rien depuis 1 s, elle ralentit (elle écoute en courant).")]
+        [Range(0.3f, 1f)] public float unsureSpeedFactor = 0.72f;
         [Tooltip("Temps pendant lequel elle reste figée à écouter avant de bouger.")]
         public float listenFreeze = 0.9f;
         [Tooltip("Temps passé à fouiller l'endroit d'un bruit avant d'abandonner.")]
         public float searchTime = 4f;
+
+        [Header("Te perdre (elle ne se fie qu'au son)")]
+        [Tooltip("En chasse : sans rien entendre pendant ce temps (s), elle te perd et fouille le dernier endroit.")]
+        public float chaseLoseTime = 2.5f;
+        [Tooltip("En chasse : un bruit plus faible que ça (audibilité 0..1) ne la remet pas sur ta piste. Loin et doucement = semée.")]
+        [Range(0f, 1f)] public float chaseMinAudibility = 0.12f;
+
+        [Header("Après avoir attrapé quelqu'un")]
+        [Tooltip("Elle reste penchée sur l'endroit (s) avant de repartir : les autres ont le temps de fuir.")]
+        public float pauseAfterCatch = 4f;
 
         [Header("Attraper")]
         [Tooltip("Distance (m) entre ses mains tendues et la tête d'un joueur pour l'attraper.")]
@@ -91,6 +104,10 @@ namespace Horror.Monsters
         private Vector3 _lookTarget;
         private float _currentSpeed;
         private float _catchCooldown;
+        private float _pauseTimer;
+
+        /// <summary>Vrai pendant la pause après une prise (elle ne bouge pas et n'entend rien).</summary>
+        public bool IsPaused => _pauseTimer > 0f;
 
         private void Awake()
         {
@@ -119,7 +136,9 @@ namespace Horror.Monsters
             var boosted = e;
             boosted.radius *= hearingMultiplier;
             float heard = NoiseSystem.Audibility(boosted, ears);
-            if (heard <= 0f) return;
+            if (heard <= 0f || IsPaused) return;
+            // en pleine course, un bruit trop faible ne la remet pas sur ta piste : on peut la semer en s'éloignant doucement
+            if (state == State.Chasse && heard < chaseMinAudibility) return;
             NoiseHeard?.Invoke(e, heard);
 
             _lastNoisePos = e.position;
@@ -156,6 +175,16 @@ namespace Horror.Monsters
             alert = Mathf.Max(0f, alert - alertDecay * Time.deltaTime);
             _catchCooldown -= Time.deltaTime;
 
+            if (_pauseTimer > 0f)
+            {
+                // penchée sur l'endroit où elle a attrapé quelqu'un : immobile, sourde, le temps que les autres fuient
+                _pauseTimer -= Time.deltaTime;
+                MoveTowards(transform.position, 0f);
+                if (_pauseTimer <= 0f) SetState(State.Errance);
+                UpdateKeysSound();
+                return;
+            }
+
             switch (state)
             {
                 case State.Errance:
@@ -188,9 +217,10 @@ namespace Horror.Monsters
                     break;
 
                 case State.Chasse:
-                    MoveTowards(_target, chaseSpeed);
-                    // Plus rien entendu depuis un moment et arrivée au dernier bruit : elle redevient enquêtrice
-                    if (Arrived(_target, 1f) && Time.time - _lastNoiseTime > 1.5f)
+                    float quiet = Time.time - _lastNoiseTime;
+                    MoveTowards(_target, chaseSpeed * (quiet > 1f ? unsureSpeedFactor : 1f));
+                    // Plus rien entendu : arrivée au dernier bruit, ou trop longtemps sans indice -> elle t'a perdu, elle fouille
+                    if ((Arrived(_target, 1f) && quiet > 1.5f) || quiet > chaseLoseTime)
                     {
                         alert = 0.6f;
                         SetState(State.Enquete);
@@ -213,6 +243,7 @@ namespace Horror.Monsters
             if ((dir.sqrMagnitude > 0.01f && Time.time - _lastNoiseTime < 4f) || state == State.Enquete)
                 yaw = Mathf.Clamp(Vector3.SignedAngle(transform.forward, dir, Vector3.up), -80f, 80f);
             Quaternion targetRot = _headBase * Quaternion.Euler(0f, yaw, 0f);
+            if (IsPaused) targetRot = _headBase * Quaternion.Euler(28f, 0f, 0f);   // tête penchée vers le sol
             float snap = Time.time - _lastNoiseTime < 0.2f ? 30f : 4f; // se tourne d'un coup vers un bruit
             head.localRotation = Quaternion.Slerp(head.localRotation, targetRot, 1f - Mathf.Exp(-snap * Time.deltaTime));
         }
@@ -251,10 +282,25 @@ namespace Horror.Monsters
             if (Physics.SphereCast(origin, 0.35f, dir, out RaycastHit hit, step + 0.1f, NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore)
                 && hit.transform != transform && !hit.transform.IsChildOf(transform))
             {
-                dir = Vector3.ProjectOnPlane(dir, hit.normal);
-                dir.y = 0f;
-                if (dir.sqrMagnitude < 0.01f) return;
-                dir.Normalize();
+                Vector3 slide = Vector3.ProjectOnPlane(dir, hit.normal);
+                slide.y = 0f;
+                if (slide.sqrMagnitude < 0.04f)
+                {
+                    // presque de face contre le mur (le bord d'une porte) : elle longe le mur du côté de son but,
+                    // au lieu de rester plantée là (elle restait bloquée dans le hall en pleine chasse)
+                    // elle choisit un côté et s'y tient un moment, sinon elle hésite sur place (gros meuble pile en face)
+                    Vector3 along = Vector3.Cross(Vector3.up, hit.normal);
+                    along.y = 0f;
+                    if (Time.time > _slideUntil)
+                    {
+                        float side = Vector3.Dot(along, to);
+                        _slideSign = Mathf.Abs(side) > 0.05f ? Mathf.Sign(side) : (UnityEngine.Random.value < 0.5f ? -1f : 1f);
+                    }
+                    _slideUntil = Time.time + 0.8f;
+                    slide = along * _slideSign;
+                    if (slide.sqrMagnitude < 0.01f) return;
+                }
+                dir = slide.normalized;
             }
             transform.position += dir * step;
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir, Vector3.up), 1f - Mathf.Exp(-8f * Time.deltaTime));
@@ -267,6 +313,7 @@ namespace Horror.Monsters
         private int _pathIndex;
         private Vector3 _pathTarget;
         private float _repathAt;
+        private float _slideSign = 1f, _slideUntil;
 
         /// <summary>Le prochain point à atteindre sur le chemin vers "target" (recalculé si la cible bouge).</summary>
         private Vector3 NextWaypoint(Vector3 target)
@@ -301,6 +348,7 @@ namespace Horror.Monsters
                                 NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore))
             {
                 Vector3 p = transform.position;
+                if (ground.point.y - p.y > 0.35f) return;   // plus haut qu'une marche (un meuble) : elle ne grimpe pas dessus
                 p.y = Mathf.Lerp(p.y, ground.point.y, 1f - Mathf.Exp(-15f * Time.deltaTime));
                 transform.position = p;
             }
@@ -360,7 +408,7 @@ namespace Horror.Monsters
                 if (scare != null) scare.Trigger(this);
                 else if (respawnCaughtPlayer) player.TeleportTo(player.SpawnPosition);
                 alert = 0f;
-                SetState(State.Errance);
+                _pauseTimer = pauseAfterCatch;   // elle s'arrête, puis repart en errance
                 break;
             }
         }

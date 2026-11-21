@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Horror.Noise;
 
 namespace Horror.Net
@@ -45,5 +45,6 @@ namespace Horror.Net
         public Kind kind;
         public int playerId;
         public int value;              // numéro du papier, de la porte, etc.
+        public Vector3 position;       // où (la mort : là où l'encre gicle chez les autres)
     }
 }

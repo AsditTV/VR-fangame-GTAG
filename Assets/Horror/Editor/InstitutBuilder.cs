@@ -6,6 +6,7 @@ using Horror.Interaction;
 using Horror.Locomotion;
 using Horror.Lore;
 using Horror.Monsters;
+using Horror.Player;
 using Horror.World;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -112,6 +113,7 @@ namespace Horror.EditorTools
             SetupBlackout();
             SetupMonster(data, graph);
             SetupPlayer(data, items);
+            SetupDeath();
             SetupLook();
             new GameObject("Réseau (solo tant que Photon n'est pas installé)").AddComponent<Horror.Net.NetworkBootstrap>();
 
@@ -912,6 +914,43 @@ namespace Horror.EditorTools
                 }
             }
             Debug.Log("[Horror] Décor : " + nFrames + " cadres, " + nGarlands + " guirlandes, " + nToys + " jouets.");
+        }
+
+        // ------------------------------------------------------------------ la mort (le noir chuchoté, la rature d'encre)
+
+        /// <summary>Le noir après une mort (chuchotement d'enfant sous-titré) et la rature d'encre que voient les autres.
+        /// Les phrases doivent suivre l'ordre de Tools/Audio/make_whispers.py (qui fabrique les murmures).</summary>
+        private static void SetupDeath()
+        {
+            const string D = Audio + "Death/";
+            string[] lines =
+            {
+                "You breathed too loud.", "She heard your heart.", "Mila hid under the bed.\nHide like Mila.",
+                "Don't run.\nShe hears running.", "We were twenty-three.", "The Softies move\nwhen you look away.",
+                "Odette is still in the water.", "Count the doors.\nOne is missing.", "Now you know\nwhy we whisper.",
+                "Find my drawing.\nPlease.",
+            };
+            var clips = new List<AudioClip>();
+            var subs = new List<string>();
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var c = Load<AudioClip>(D + $"murmure_{i + 1:00}.wav");
+                if (c == null) continue;
+                clips.Add(c); subs.Add(lines[i]);
+            }
+            foreach (Jumpscare js in Object.FindObjectsByType<Jumpscare>(FindObjectsInactive.Include))
+            {
+                js.deathWhispers = clips.ToArray();
+                js.whisperLines = subs.ToArray();
+            }
+            var go = new GameObject("Ratures (morts vues par les autres)");
+            DeathMarks dm = go.AddComponent<DeathMarks>();
+            dm.ink = MakeMat("Encre_Mort", new Color(0.05f, 0.03f, 0.07f));
+            dm.ink.color = new Color(0.025f, 0.015f, 0.035f);
+            dm.ink.SetFloat("_Smoothness", 0.3f);    // un peu luisante, pas un miroir (trop brillante, elle paraissait blanche)
+            dm.ink.SetFloat("_Metallic", 0f);
+            EditorUtility.SetDirty(dm.ink);
+            dm.sound = Load<AudioClip>(D + "encre_mort.wav");
         }
 
         // ------------------------------------------------------------------ ambiances complétées (sans musique)
@@ -1848,10 +1887,41 @@ namespace Horror.EditorTools
             var go = new GameObject("Réseau de passage (monstres)");
             WaypointGraph g = go.AddComponent<WaypointGraph>();
             g.points = new Vector3[data.navPoints.Length];
-            for (int i = 0; i < data.navPoints.Length; i++) g.points[i] = P(data.navPoints[i]);
+            Physics.SyncTransforms();
+            int moved = 0;
+            for (int i = 0; i < data.navPoints.Length; i++)
+            {
+                Vector3 p0 = P(data.navPoints[i]);
+                g.points[i] = FreeNavSpot(p0);
+                if ((g.points[i] - p0).sqrMagnitude > 0.01f) moved++;
+            }
+            if (moved > 0) Debug.Log($"[Horror] Réseau de passage : {moved} point(s) sortis des meubles (ex. le pouf du hall).");
             g.links = data.navLinks;
             g.roomCount = data.rooms.Length;
             return g;
+        }
+
+        /// <summary>Un point de passage posé DANS un meuble (le pouf au centre du hall) bloquait les monstres :
+        /// on le déplace au plus près, là où un monstre tient debout.</summary>
+        private static Vector3 FreeNavSpot(Vector3 p)
+        {
+            bool Blocked(Vector3 q)
+            {
+                foreach (Collider c in Physics.OverlapCapsule(q + Vector3.up * 0.5f, q + Vector3.up * 1.6f, 0.4f, ~0, QueryTriggerInteraction.Ignore))
+                    if (c.bounds.max.y > q.y + 0.35f) return true;   // le sol (plus bas) ne compte pas
+                return false;
+            }
+            if (!Blocked(p)) return p;
+            for (float r = 0.5f; r <= 5f; r += 0.5f)
+                for (int a = 0; a < 16; a++)
+                {
+                    float ang = a * Mathf.PI / 8f;
+                    Vector3 q = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * r;
+                    if (!Physics.Raycast(q + Vector3.up * 0.4f, Vector3.down, out RaycastHit fh, 1f, ~0, QueryTriggerInteraction.Ignore)) continue;
+                    q.y = fh.point.y;
+                    if (!Blocked(q)) return q;
+                }
+            return p;
         }
 
         private static void SetupMonster(MapData data, WaypointGraph graph)

@@ -1,4 +1,4 @@
-using Horror.Locomotion;
+﻿using Horror.Locomotion;
 using Horror.Noise;
 using Horror.Player;
 using Horror.World;
@@ -48,6 +48,9 @@ namespace Horror.Monsters
         private bool _movedUnseen;
         private bool _wasSeen = true;
         private float _cooldown;
+        private float _pause;
+        [Tooltip("Après une prise, il reste planté là (s) avant de retourner à sa place.")]
+        public float pauseAfterCatch = 4f;
 
         private void Start()
         {
@@ -70,6 +73,18 @@ namespace Horror.Monsters
         private void Update()
         {
             _cooldown -= Time.deltaTime;
+            if (_pause > 0f)
+            {
+                // il reste debout sur l'endroit de la prise, puis rejoint son rang (les autres joueurs le voient)
+                _pause -= Time.deltaTime;
+                if (_shuffle != null) _shuffle.volume = 0f;
+                if (_pause <= 0f)
+                {
+                    if (SeenByAnyone()) _pause = 0.25f;                         // jamais sous les yeux de quelqu'un
+                    else transform.SetPositionAndRotation(_home, _homeRot);
+                }
+                return;
+            }
             ArmLocomotion target = NearestPlayer();
             bool seen = SeenByAnyone();
 
@@ -131,7 +146,7 @@ namespace Horror.Monsters
             Jumpscare scare = player.GetComponent<Jumpscare>();
             if (scare != null) scare.TriggerScreamer(transform, head, jumpscareSound, jumpscareFaceScale);
             else player.TeleportTo(player.SpawnPosition);
-            transform.SetPositionAndRotation(_home, _homeRot);   // il retourne à sa place, dans le rang
+            _pause = pauseAfterCatch;                            // puis il retourne à sa place, dans le rang
         }
 
         private bool SeenByAnyone()

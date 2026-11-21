@@ -72,6 +72,23 @@ namespace Horror.Player
         [Tooltip("Durée de la ruée du visage (s) : très court = plus violent.")]
         public float lungeTime = 0.14f;
 
+        [Header("Le noir après la mort")]
+        [Tooltip("Chuchotements d'enfant (un au hasard, jamais deux fois de suite). Assets/Horror/Audio/Death.")]
+        public AudioClip[] deathWhispers = new AudioClip[0];
+        [Tooltip("Sous-titres, dans le même ordre que deathWhispers.")]
+        [TextArea] public string[] whisperLines = new string[0];
+        [Tooltip("Le noir dure le temps du chuchotement, borné entre ces deux valeurs (s).")]
+        public float minBlackTime = 2.2f, maxBlackTime = 3.2f;
+
+        [Tooltip("Pour les vidéos : impose le murmure (index), -1 = au hasard.")]
+        public int forceWhisper = -1;
+
+        /// <summary>Vrai pendant que le sous-titre du murmure est affiché (le noir après la mort).</summary>
+        public bool ShowingWhisper => _whisperText != null && _whisperText.gameObject.activeSelf;
+
+        private TextMesh _whisperText;
+        private int _lastWhisper = -1, _lastWhisper2 = -1;
+
         /// <summary>Calque réservé au screamer : pendant le jumpscare, la caméra ne voit que lui.</summary>
         public const int ScreamerLayer = 30;
 
@@ -85,6 +102,16 @@ namespace Horror.Player
             int oldMask = cam != null ? cam.cullingMask : 0;
             CameraClearFlags oldClear = cam != null ? cam.clearFlags : CameraClearFlags.Skybox;
             Color oldBg = cam != null ? cam.backgroundColor : Color.black;
+
+            // la rature : ce que les autres voient (giclée et flaque d'encre, son), et l'annonce réseau
+            Vector3 deathPos = transform.position;
+            DeathMarks.Spawn(deathPos);
+            Horror.Net.NetworkBootstrap.Session?.SendEvent(new Horror.Net.GameEventMessage
+            {
+                kind = Horror.Net.GameEventMessage.Kind.Mort,
+                playerId = Horror.Net.NetworkBootstrap.Session.LocalPlayerId,
+                position = deathPos,
+            });
 
             // 0) coupure sèche au noir
             SetFade(1f, Color.black);
@@ -128,7 +155,7 @@ namespace Horror.Player
                 fillGo.transform.SetParent(head, false);
                 fillGo.transform.localPosition = new Vector3(0.05f, 0.08f, 0.02f);
                 Light f = fillGo.AddComponent<Light>();
-                f.type = LightType.Point; f.color = new Color(0.85f, 0.82f, 1f); f.intensity = 1.6f; f.range = 1.2f;
+                f.type = LightType.Point; f.color = new Color(0.85f, 0.82f, 1f); f.intensity = 3.5f; f.range = 1.5f;
                 f.cullingMask = 1 << ScreamerLayer;
                 fillGo.transform.SetParent(clone.transform, true);
             }
@@ -225,18 +252,68 @@ namespace Horror.Player
                 yield return null;
             }
 
-            // 4) coupure au noir, on rend le monde à la caméra, retour à la Salle de jeux
+            // 4) coupure au noir, retour à la Salle de jeux pendant le noir
             SetFade(1f, Color.black);
             if (clone != null) Destroy(clone);
-            if (cam != null) { cam.cullingMask = oldMask; cam.clearFlags = oldClear; cam.backgroundColor = oldBg; }
             _locomotion.TeleportTo(_locomotion.SpawnPosition);
-            yield return new WaitForSeconds(blackTime);
+
+            // 5) le noir : une voix d'enfant chuchote un morceau de l'histoire (sous-titré, devant les yeux)
+            int w = PickWhisper();
+            float black = blackTime;
+            if (w >= 0)
+            {
+                AudioClip wc = deathWhispers[w];
+                black = Mathf.Clamp(wc.length + 0.3f, minBlackTime, maxBlackTime);
+                yield return new WaitForSeconds(0.35f);
+                _audio.PlayOneShot(wc, 0.9f);   // la fin du murmure peut déborder sur le retour de l'image : c'est voulu
+                if (cam != null && w < whisperLines.Length)
+                {
+                    ShowWhisper(head, whisperLines[w]);
+                    SetFade(0f, Color.black);   // la caméra ne voit que le calque du screamer : noir + sous-titre
+                }
+                yield return new WaitForSeconds(black - 0.35f);
+                SetFade(1f, Color.black);
+                HideWhisper();
+            }
+            else yield return new WaitForSeconds(black);
+            if (cam != null) { cam.cullingMask = oldMask; cam.clearFlags = oldClear; cam.backgroundColor = oldBg; }
 
             // 3) On revient dans la Salle de jeux
             _locomotion.inputEnabled = true;
             yield return Fade(1f, 0f, fadeInTime);
             IsPlaying = false;
         }
+
+        private int PickWhisper()
+        {
+            int n = deathWhispers != null ? deathWhispers.Length : 0;
+            if (n == 0) return -1;
+            if (forceWhisper >= 0 && forceWhisper < n) return forceWhisper;
+            int pick = Random.Range(0, n);
+            for (int tries = 0; tries < 8 && n > 2 && (pick == _lastWhisper || pick == _lastWhisper2); tries++) pick = Random.Range(0, n);
+            _lastWhisper2 = _lastWhisper; _lastWhisper = pick;
+            return deathWhispers[pick] != null ? pick : -1;
+        }
+
+        private void ShowWhisper(Transform head, string line)
+        {
+            if (_whisperText == null)
+            {
+                var go = new GameObject("Murmure (sous-titre)") { layer = ScreamerLayer };
+                go.transform.SetParent(head, false);
+                go.transform.localPosition = new Vector3(0f, -0.12f, 1.6f);
+                _whisperText = go.AddComponent<TextMesh>();
+                _whisperText.anchor = TextAnchor.MiddleCenter;
+                _whisperText.alignment = TextAlignment.Center;
+                _whisperText.characterSize = 0.012f;
+                _whisperText.fontSize = 64;
+                _whisperText.color = new Color(0.78f, 0.74f, 0.82f);
+            }
+            _whisperText.text = line;
+            _whisperText.gameObject.SetActive(true);
+        }
+
+        private void HideWhisper() { if (_whisperText != null) _whisperText.gameObject.SetActive(false); }
 
         private IEnumerator Fade(float from, float to, float duration)
         {

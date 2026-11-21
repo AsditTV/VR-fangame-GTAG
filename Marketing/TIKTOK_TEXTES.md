@@ -54,3 +54,14 @@ Refaire la vidéo : voir `Tools/Trailer/make_gameplay.py` (et TESTER_DANS_UNITY.
 
 **Commentaire épinglé :**
 > Every room has its own rule. Which one would get you first? 👀
+
+## Vidéo 5 — POV : « don't make a sound » (`calm_faces_pov_tiktok.mp4`)
+Vrai gameplay : la marche à la rame, la claque de trop, le demi-tour, L'Écoute qui court (son IA réagit au bruit),
+le screamer, le murmure. 9,9 s : courte pour être revue en boucle (la fin renvoie au début).
+
+**Description :**
+> POV: you made ONE sound. 🤫
+> #calmfaces #vrhorror #gtagfangame #gtag #metaquest3 #vr #horrorgame #pov #jumpscare
+
+**Commentaire épinglé :**
+> Would you have turned around? 👀

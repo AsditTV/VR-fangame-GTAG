@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using Horror.Noise;
 using Horror.World;
@@ -33,6 +33,7 @@ namespace Horror.Net
             bool wantsOnline = autoJoin && OnlineFactory != null && Array.IndexOf(onlineModes, mode) >= 0;
             Session = wantsOnline ? OnlineFactory() : new OfflineSession();
             Session.NoiseReceived += OnRemoteNoise;
+            Session.EventReceived += OnRemoteEvent;
             NoiseSystem.NetworkForwarder = Session.IsOnline ? ForwardNoise : null;
             if (wantsOnline)
                 Session.Join(mode, ok =>
@@ -47,6 +48,7 @@ namespace Horror.Net
         {
             if (Session == null) return;
             Session.NoiseReceived -= OnRemoteNoise;
+            Session.EventReceived -= OnRemoteEvent;
             NoiseSystem.NetworkForwarder = null;
             Session.Leave();
             Session = new OfflineSession();
@@ -55,6 +57,7 @@ namespace Horror.Net
         private void UseOffline()
         {
             Session.NoiseReceived -= OnRemoteNoise;
+            Session.EventReceived -= OnRemoteEvent;
             Session.Leave();
             Session = new OfflineSession();
             NoiseSystem.NetworkForwarder = null;
@@ -63,6 +66,12 @@ namespace Horror.Net
         private static void ForwardNoise(NoiseEvent e)
         {
             if (!Session.IsHost) Session.SendNoise(NoiseMessage.From(e));   // l'hôte entend déjà ses propres bruits
+        }
+
+        private static void OnRemoteEvent(GameEventMessage e)
+        {
+            // un autre joueur vient de mourir : on voit l'encre gicler là où il était
+            if (e.kind == GameEventMessage.Kind.Mort) Horror.Player.DeathMarks.Spawn(e.position);
         }
 
         private static void OnRemoteNoise(NoiseMessage m)

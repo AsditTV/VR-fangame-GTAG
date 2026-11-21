@@ -162,3 +162,22 @@ En Play, un script crée `Horror.Tests.FrameRecorder.Begin(dossier, caméra de l
 (`Glide`, `Hold`, `FollowHead` + `Wait` pour les screamers) ; chaque image est enregistrée en JPG 1080 x 1920 à
 30 images/s de temps de jeu. Montage : `python Tools/Trailer/make_gameplay.py <dossier> <sortie.mp4>`
 (textes, sons du jeu recalés, logo de fin). Résultat : Marketing/calm_faces_gameplay_tiktok.mp4.
+
+## Mort, poursuite, vidéo POV (menu 8)
+1. **Mourir** : après le screamer, ~2,5 à 3 s de noir (au lieu de 0,6) : une voix d'enfant chuchote une phrase
+   de l'histoire, sous-titrée devant tes yeux (10 phrases, jamais la même deux fois de suite), puis la Salle de jeux.
+   Au casque : le noir est-il trop long ? Le sous-titre se lit-il bien (taille, distance 1,6 m) ?
+2. **La rature** : là où tu es mort, une giclée d'encre et une flaque noire au sol (25 s), avec un son
+   d'éclaboussure. En ligne, c'est ce que les autres verront (événement réseau « Mort », déjà branché).
+3. **Après une prise** : L'Écoute reste penchée 4 s sur l'endroit (sourde et immobile) avant de repartir ;
+   un Doux reste planté 4 s puis regagne sa place (seulement quand personne ne le regarde).
+4. **La poursuite** : L'Écoute court à 4,9 m/s (au lieu de 6,2). Si elle n'entend plus rien depuis 1 s, elle
+   ralentit ; après 2,5 s sans un bruit, elle te perd et va fouiller le dernier endroit. Les bruits faibles et
+   lointains ne la remettent pas sur ta piste. À tester : la fuir en ramant fort (dur), puis se figer (elle doit
+   passer à côté). Réglages : BlindMonsterAI > chaseSpeed, unsureSpeedFactor, chaseLoseTime, chaseMinAudibility.
+5. **Correctif** : elle se bloquait contre les meubles en pleine chasse (le pouf du hall) ; 19 points de passage
+   étaient plantés dans des meubles. Elle longe maintenant les obstacles et ne grimpe plus dessus.
+
+### Filmer la vidéo POV
+En Play : `Horror.Tests.PovScareDirector.Begin("<dossier>")` (réglages : playerStart, monsterStart, strokes,
+whisper), puis `python Tools/Trailer/make_pov.py <dossier> <sortie.mp4>`. Résultat : Marketing/calm_faces_pov_tiktok.mp4.
