@@ -271,7 +271,7 @@ for k in range(12):                  # boucles de laine sur le dessus et l'arri�
         t = s / 13 * 2.3 * math.pi
         pts.append(tuple(base + Vector((math.cos(t) * 0.018, s * 0.004, math.sin(t) * 0.022 + 0.012))))
     loops.append(pts)
-new_object("Laine", tete, curve_mesh(loops, 0.0065, "laine"), [M_LAINE], 0.03)
+new_object("Laine", tete, curve_mesh(loops, 0.0065, "laine", res=3, bevel_res=1), [M_LAINE], 0.03)   # allégé : 14 800 -> ~4 000 triangles
 
 # ============================================================== masque en papier froissé (UV gardés)
 mask = O["Masque_Papier"]

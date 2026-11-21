@@ -115,6 +115,7 @@ namespace Horror.EditorTools
             SetupMonster(data, graph);
             SetupPlayer(data, items);
             SetupDeath();
+            MarkStaticDecor();
             SetupLook();
             new GameObject("Réseau (solo tant que Photon n'est pas installé)").AddComponent<Horror.Net.NetworkBootstrap>();
 
@@ -283,7 +284,7 @@ namespace Horror.EditorTools
         /// </summary>
         private static void SetupDormChildren()
         {
-            var proto = Load<GameObject>("Assets/Horror/Art/Character/LeDessine.glb");
+            var proto = Load<GameObject>("Assets/Horror/Art/Character/LeDessine_PNJ.glb");
             if (proto == null) return;
             var root = new GameObject("Les enfants du dortoir");
             // (côté, rang) : côté -1 = rangée x = -6,3 (12 lits), côté 1 = rangée x = +6,3 (11 lits) ; jamais le lit vide
@@ -917,6 +918,35 @@ namespace Horror.EditorTools
             Debug.Log("[Horror] Décor : " + nFrames + " cadres, " + nGarlands + " guirlandes, " + nToys + " jouets.");
         }
 
+        // ------------------------------------------------------------------ performances (Quest)
+
+        /// <summary>Le décor qui ne bouge jamais est regroupé par Unity (static batching) : beaucoup moins d'appels de
+        /// dessin, ce qui compte énormément sur le Quest. Règle sûre : seulement ce qui n'a ni script ni physique sur
+        /// lui ou au-dessus de lui (monstres, portes, objets à prendre, miroir et sa poupée restent mobiles).</summary>
+        private static void MarkStaticDecor()
+        {
+            string[] roots = { "Décor (cadres, guirlandes, jouets)", "L'Envers (zone secrète)",
+                               "La loge (Doux sans tête, peaux de Doux)", "Laverie (porte 23)" };
+            int n = 0;
+            foreach (string name in roots)
+            {
+                GameObject root = GameObject.Find(name);
+                if (root == null) continue;
+                foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true))
+                {
+                    bool moving = false;
+                    for (Transform t = r.transform; t != null; t = t.parent)
+                        if (t.GetComponent<MonoBehaviour>() != null || t.GetComponent<Rigidbody>() != null || t.GetComponent<Animator>() != null
+                            || t.GetComponent<ParticleSystem>() != null) { moving = true; break; }
+                    if (moving) continue;
+                    var flags = GameObjectUtility.GetStaticEditorFlags(r.gameObject) | StaticEditorFlags.BatchingStatic;
+                    GameObjectUtility.SetStaticEditorFlags(r.gameObject, flags);
+                    n++;
+                }
+            }
+            Debug.Log($"[Horror] Décor regroupé (static batching) : {n} objets.");
+        }
+
         // ------------------------------------------------------------------ la mort (le noir chuchoté, la rature d'encre)
 
         /// <summary>Le noir après une mort (chuchotement d'enfant sous-titré) et la rature d'encre que voient les autres.
@@ -1057,7 +1087,7 @@ namespace Horror.EditorTools
             if (Load<Material>(mp) != null) AssetDatabase.DeleteAsset(mp);
             AssetDatabase.CreateAsset(mat, mp);
             quad.GetComponent<Renderer>().sharedMaterial = mat;
-            var proto = Load<GameObject>("Assets/Horror/Art/Character/LeDessine.glb");
+            var proto = Load<GameObject>("Assets/Horror/Art/Character/LeDessine_PNJ.glb");
             GameObject ghost = proto != null ? (GameObject)PrefabUtility.InstantiatePrefab(proto) : null;
             if (ghost != null)
             {

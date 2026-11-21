@@ -106,7 +106,7 @@ namespace Horror.EditorTools
         {
             var root = new GameObject("Mannequin d'essai (grimpe sur sa tête)");
             root.transform.position = position;
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Horror/Art/Character/LeDessine.glb");
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Horror/Art/Character/LeDessine_PNJ.glb");
             if (model != null)
             {
                 var doll = (GameObject)PrefabUtility.InstantiatePrefab(model);

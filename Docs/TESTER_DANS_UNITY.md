@@ -197,3 +197,9 @@ whisper), puis `python Tools/Trailer/make_pov.py <dossier> <sortie.mp4>`. Résul
    les yeux du miroir, elle se rapproche. Un petit rire d'enfant la première fois. Au casque : le reflet n'est
    pas en stéréo (vieux miroir terne) : dis-moi si ça gêne. La caméra du reflet ne tourne que si tu es à moins
    de 4,5 m (rien ne coûte au Quest le reste du temps).
+
+## Performances (menu 8 puis menu 9)
+Après chaque menu 8, lance **Horror > 9 - Préparer pour le Quest** (occlusion culling : les pièces cachées
+derrière les murs ne sont plus dessinées). Les poupées de décor utilisent une version allégée (18 k triangles au
+lieu de 60 k), la Laverie est allégée, et le décor fixe est regroupé. Détails et chiffres : Docs/PERF_QUEST.md.
+Au casque : rien ne doit « apparaître » en tournant la tête au coin d'une porte (sinon, dis-le moi).

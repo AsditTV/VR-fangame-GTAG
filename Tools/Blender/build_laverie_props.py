@@ -120,8 +120,9 @@ bm = bmesh.new()
 for x in (-0.22, 0.18):
     disc(bm, Vector((x, 0.13, H + 0.06)), Vector((0, -1, 0)), 0.035, 0.03, 14)
 part(root, "Boutons", bm, [M_BOUTON], 0.05)
-ring = [(math.cos(a) * 0.235, -D / 2 - 0.012, 0.5 + math.sin(a) * 0.235) for a in [2 * math.pi * k / 40 for k in range(41)]]
-part(root, "Hublot_Cercle", curve_mesh([ring], 0.03, "cercle"), [M_CHROME], 0.05)
+ring = [(math.cos(a) * 0.235, -D / 2 - 0.012, 0.5 + math.sin(a) * 0.235) for a in [2 * math.pi * k / 24 for k in range(25)]]
+# anneau allégé pour le Quest : 3 800 -> ~400 triangles (x32 machines dans la Laverie)
+part(root, "Hublot_Cercle", curve_mesh([ring], 0.03, "cercle", res=2, bevel_res=1), [M_CHROME], 0.05)
 bm = bmesh.new()
 disc(bm, Vector((0, -D / 2 - 0.004, 0.5)), Vector((0, -1, 0)), 0.215, 0.01, 32)
 part(root, "Hublot_Vitre", bm, [M_VITRE], 0.05)
@@ -175,7 +176,7 @@ root = start("DrapPendu")
 M_DRAP = material("Drap_Pendu", srgb("#E9ECEE"), "tissu", 0.85, seed=76)
 M_PINCE = material("Pinces", srgb("#E6A9B8"), "feutre", 0.7, seed=77)
 bm = bmesh.new()
-COLS, ROWS = 36, 20
+COLS, ROWS = 18, 10          # allégé pour le Quest (était 36 x 20 : 4 200 triangles par drap, x15)
 grid = []
 for i in range(ROWS + 1):
     t = i / ROWS
