@@ -1,6 +1,6 @@
 # Multijoueur : ce qui est prêt et ce qu'il te reste à faire
 
-État : **le code est préparé, le SDK Photon n'est pas installé.** Le jeu reste 100 % solo tant que tu n'as pas fait les étapes ci-dessous.
+État (21/11/2026) : **comptes et apps Photon créés (« CALM FACES - Fusion » et « CALM FACES - Voice », 20 CCU gratuits chacune) ; le SDK n'est pas encore installé dans Unity.** Le jeu reste 100 % solo tant que tu n'as pas fait les étapes ci-dessous.
 Niveau de confiance sur le plan : *probable* (Fusion change parfois ses API entre versions : on adaptera l'adaptateur à la version que tu installes).
 
 ## Ce qui existe déjà (`Assets/Horror/Scripts/Net/`)
@@ -41,3 +41,15 @@ Principe : **l'IA des monstres ne tourne que chez l'hôte.** Les invités envoie
 - **Le Quest en Wi-Fi** : 20 envois de pose par seconde suffisent ; plus, ça ne sert à rien et ça vide la batterie.
 - **La triche** : avec un hôte joueur, l'hôte peut tricher. Pour un jeu entre amis, c'est acceptable ; pour un jeu public classé, il faudrait un serveur dédié (plus tard, et payant).
 - **Le Store Meta** exige une politique de confidentialité dès qu'il y a de la voix en ligne (le micro est une donnée personnelle).
+
+## Fait le 21/11/2026
+- Apps Photon créées sur le tableau de bord (Multiplayer Game) : **CALM FACES - Fusion** (Fusion 2) et
+  **CALM FACES - Voice** (Voice). Leurs App ID se lisent sur https://dashboard.photonengine.com (Your Apps).
+- Interface réseau prête pour la sécurité vocale : `INetworkSession.RemotePlayers`, `PlayerName`, `PlayerUserId`
+  (identifiant STABLE du compte, pour retenir les blocages) ; la voix réseau doit lire `VoiceModeration.ShouldHear(userId)`.
+
+## Prochaine étape
+1. Installer **Photon Fusion 2** puis **Photon Voice 2** dans Unity (paquets officiels Photon / Asset Store).
+2. Coller les App ID dans `PhotonAppSettings` (toi, depuis le tableau de bord : jamais dans le code ni le chat).
+3. J'écris `PhotonFusionSession` et le branchement de Voice (volume de chaque voix = `ShouldHear`).
+4. Test à 2 casques (ou 1 casque + l'éditeur) : rejoindre, se voir, s'entendre, couper/bloquer.

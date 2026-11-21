@@ -1,5 +1,16 @@
 # Fiche du store — CALM FACES (Meta Horizon Store)
 
+## État au 21/11/2026 (tableau de bord Meta, organisation AsditSociety)
+- App **CALM FACES** créée (Meta Horizon Store), soumission **v1 en brouillon**, rien d'envoyé à l'examen.
+- Rempli et enregistré : nom, brève description, description longue (EN), 5 mots-clés (horror, scary, monster,
+  climbing, stealth), catégorie Jeux, genres Survival + Adventure + Action (Meta n'a pas de genre « Horror »),
+  Early Access activé, Single player + PVE, manettes Touch, sans déplacement, debout, confort Intense, Internet
+  non requis, sans abonnement, fonctions sociales : Non, éditeur AsditSociety, site, politique de confidentialité
+  et lien d'assistance (https://asdittv.github.io/calm-faces/).
+- **Reste pour toi** : vérification de l'organisation (identité), Accord de distribution des développeurs (contrat),
+  préférences de partage, images (section Éléments : glisser les fichiers), classification IARC (pays + e-mail de
+  contact), tarif, et l'APK signé avec TA clé de publication.
+
 Textes prêts à coller dans le tableau de bord développeur Meta (onglet *Store listing*). Anglais = langue
 principale du store ; le français est la traduction à ajouter dans *Localizations*.
 
