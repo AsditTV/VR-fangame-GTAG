@@ -119,6 +119,7 @@ namespace Horror.EditorTools
             MarkStaticDecor();
             SetupLook();
             new GameObject("Réseau (solo tant que Photon n'est pas installé)").AddComponent<Horror.Net.NetworkBootstrap>();
+            new GameObject("Profil graphique (Quest : automatique)").AddComponent<Horror.Core.QuestQuality>();
 
             EnsureFolder("Assets/Horror/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);

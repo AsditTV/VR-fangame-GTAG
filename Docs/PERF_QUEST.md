@@ -32,3 +32,8 @@ Scène entière : 1,30 M -> 0,87 M triangles. Cibles indicatives Quest 3 autonom
 4. **60 lumières temps réel** : passer les appliques en lumière précalculée (lightmaps) et ne garder en temps réel
    que celles qui grésillent près du joueur.
 5. Build Android + profilage dans le casque (OVR Metrics Tool) : seul juge réel.
+
+## Profil graphique Quest (automatique)
+`Horror.Core.QuestQuality` (objet « Profil graphique » posé par le menu 8) : sur Android (Quest autonome) il coupe
+le grain, l'aberration chromatique et le HDR, allège le halo, met le MSAA 4x. Sur PC rien ne change. Pour le voir
+sur PC : cocher `forceOnPc` (les réglages PC sont remis en sortant du Play).
