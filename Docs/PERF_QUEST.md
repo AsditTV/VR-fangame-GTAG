@@ -37,3 +37,7 @@ Scène entière : 1,30 M -> 0,87 M triangles. Cibles indicatives Quest 3 autonom
 `Horror.Core.QuestQuality` (objet « Profil graphique » posé par le menu 8) : sur Android (Quest autonome) il coupe
 le grain, l'aberration chromatique et le HDR, allège le halo, met le MSAA 4x. Sur PC rien ne change. Pour le voir
 sur PC : cocher `forceOnPc` (les réglages PC sont remis en sortant du Play).
+
+## Poupées fusionnées (fait)
+`InstitutBuilder.Fusion.cs` (menu 8, automatique) : les poupées et Doux immobiles sont fusionnés par matière
+(la tête des enfants du dortoir reste à part : elle tourne). Dortoir 747 -> 509 appels, loge 211 -> 157.

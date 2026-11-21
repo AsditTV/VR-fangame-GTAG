@@ -237,3 +237,11 @@ par l'accueil pour reprendre le monte-charge. **Page de Mila** : au sol de l'iso
    cri (Jumpscare > stareTime, 0 = l'ancien screamer). Visage éclairé quelle que soit la pose.
 5. **Infirmerie habillée** : feuilles et dessins par terre, encre, peluches, dessins aux murs, griffonnages qui
    donnent des conseils (« HE CAN'T SEE IN THE DARK »), planning des tests, notes, fiches des lits, toise.
+
+## Confort, screamers avec relief, poupées fusionnées (menu 8 puis 9)
+1. **Panneau COMFORT** (Salle de jeux, sous le tableau des objectifs) : bouton FLASH = flashs rouges ON/OFF ;
+   bouton SCARE = FULL (double coup, cri fort) ou SOFT (screamer court, sans arrêt, cri moins fort). Mémorisé.
+2. **Screamers** : lumière par en dessous + lumière de côté en hauteur (des ombres sur le visage, plus effrayant
+   qu'un visage blanc et plat). Au casque : assez lisible ? trop sombre ?
+3. **Poupées fusionnées** : enfants du dortoir (la tête tourne toujours), peaux de la loge, poupées de
+   l'infirmerie : un maillage par matière. Dortoir 747 -> 509 appels de dessin, loge 211 -> 157.

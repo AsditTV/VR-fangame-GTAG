@@ -116,6 +116,7 @@ namespace Horror.EditorTools
             SetupMonster(data, graph);
             SetupPlayer(data, items);
             SetupDeath();
+            MergeDecorModels();
             MarkStaticDecor();
             SetupLook();
             new GameObject("Réseau (solo tant que Photon n'est pas installé)").AddComponent<Horror.Net.NetworkBootstrap>();
@@ -762,6 +763,25 @@ namespace Horror.EditorTools
             // --- le tableau des objectifs (à gauche de la porte)
             Plate("Tableau des objectifs", new Vector3(10.2f, 1.9f, wallZ), new Vector3(2.6f, 1.9f, 0.04f), panel);
             GameObject board = Label("", new Vector3(10.2f, 2.0f, wallZ + 0.04f), 0.016f, new Color(0.98f, 0.93f, 0.82f));
+
+            // --- le panneau de confort (sous les objectifs) : flashs, screamers doux
+            Plate("Panneau de confort", new Vector3(10.2f, 0.62f, wallZ), new Vector3(2.0f, 0.55f, 0.04f), panel);
+            GameObject comfortText = Label("", new Vector3(10.65f, 0.66f, wallZ + 0.04f), 0.009f, new Color(0.95f, 0.92f, 0.86f));
+            var comfort = root.AddComponent<ComfortSettings>();
+            comfort.display = comfortText.GetComponent<TextMesh>();
+            comfort.toggleSound = click;
+            PressButton ComfortButton(string name, float x)
+            {
+                GameObject b = Plate(name, new Vector3(x, 0.6f, wallZ + 0.03f), new Vector3(0.18f, 0.18f, 0.08f), btnMat);
+                b.GetComponent<Collider>().isTrigger = true;
+                PressButton pb = b.AddComponent<PressButton>();
+                pb.clickSound = click;
+                return pb;
+            }
+            comfort.flashesButton = ComfortButton("Bouton FLASHES", 9.75f);
+            comfort.scaresButton = ComfortButton("Bouton SCARES", 9.4f);
+            Label("FLASH", new Vector3(9.75f, 0.78f, wallZ + 0.04f), 0.007f, new Color(0.95f, 0.92f, 0.86f));
+            Label("SCARE", new Vector3(9.4f, 0.78f, wallZ + 0.04f), 0.007f, new Color(0.95f, 0.92f, 0.86f));
             var goals = root.AddComponent<ExplorationGoals>();
             goals.board = board.GetComponent<TextMesh>();
             goals.discoverSound = Load<AudioClip>(Audio + "Ambience/music_box_far.wav");

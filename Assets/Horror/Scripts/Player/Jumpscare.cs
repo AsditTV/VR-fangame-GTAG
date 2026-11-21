@@ -148,18 +148,18 @@ namespace Horror.Player
                 }
                 var lightGo = new GameObject("Lumière du screamer") { layer = ScreamerLayer };
                 lightGo.transform.SetParent(head, false);
-                lightGo.transform.localPosition = new Vector3(0f, -0.35f, 0.15f);
+                lightGo.transform.localPosition = new Vector3(0f, -0.6f, 0.05f);   // par en dessous : ombres qui montent sur le visage
                 Light l = lightGo.AddComponent<Light>();
-                l.type = LightType.Point; l.color = new Color(1f, 0.8f, 0.72f); l.intensity = 0.45f; l.range = 3f;
+                l.type = LightType.Point; l.color = new Color(1f, 0.8f, 0.72f); l.intensity = 1.2f; l.range = 2.5f;
                 l.cullingMask = 1 << ScreamerLayer;
                 _screamLights.Add(lightGo);   // reste accrochée à la caméra : le visage est toujours éclairé, quelle que soit la pose
                 // petite lumière de face, douce : un visage plat (le portrait de L'Écoute) restait noir sous la seule
                 // lumière d'en bas
                 var fillGo = new GameObject("Lumière de face du screamer") { layer = ScreamerLayer };
                 fillGo.transform.SetParent(head, false);
-                fillGo.transform.localPosition = new Vector3(0.04f, 0.16f, 0.06f);
+                fillGo.transform.localPosition = new Vector3(0.45f, 0.55f, -0.05f);   // en haut, de côté : un relief, pas un visage plat
                 Light f = fillGo.AddComponent<Light>();
-                f.type = LightType.Point; f.color = new Color(0.9f, 0.86f, 1f); f.intensity = 0.35f; f.range = 2f;
+                f.type = LightType.Point; f.color = new Color(0.9f, 0.86f, 1f); f.intensity = 1.0f; f.range = 2.2f;
                 f.cullingMask = 1 << ScreamerLayer;
                 _screamLights.Add(fillGo);
             }
