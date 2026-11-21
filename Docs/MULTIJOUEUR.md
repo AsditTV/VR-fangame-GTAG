@@ -61,6 +61,9 @@ Principe : **l'IA des monstres ne tourne que chez l'hôte.** Les invités envoie
 
 ## Prochaine étape
 1. ~~Installer Photon Fusion 2 puis Photon Voice 2~~ (fait).
-2. Coller les App ID dans `PhotonAppSettings` (toi, depuis le tableau de bord : jamais dans le code ni le chat).
-3. J'écris `PhotonFusionSession` et le branchement de Voice (volume de chaque voix = `ShouldHear`).
+2. ~~Coller les App ID dans `PhotonAppSettings`~~ (fait : format vérifié, fichier hors dépôt).
+   **Test du 21/11/2026** : depuis l'éditeur, `PhotonFusionSession.Join("test")` rejoint la salle `calmfaces-test`
+   (en ligne, master client = fait tourner les monstres, joueur n° 1), puis la quitte proprement. Un seul appareil :
+   l'échange entre deux joueurs n'est PAS encore vérifié.
+3. ~~`PhotonFusionSession`~~ (fait). Reste : avatars des autres joueurs, puis Photon Voice (volume = `ShouldHear`).
 4. Test à 2 casques (ou 1 casque + l'éditeur) : rejoindre, se voir, s'entendre, couper/bloquer.
