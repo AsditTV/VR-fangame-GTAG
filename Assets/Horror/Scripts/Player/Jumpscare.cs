@@ -153,9 +153,9 @@ namespace Horror.Player
                 // lumière d'en bas
                 var fillGo = new GameObject("Lumière de face du screamer") { layer = ScreamerLayer };
                 fillGo.transform.SetParent(head, false);
-                fillGo.transform.localPosition = new Vector3(0.05f, 0.08f, 0.02f);
+                fillGo.transform.localPosition = new Vector3(0.04f, 0.16f, 0.06f);
                 Light f = fillGo.AddComponent<Light>();
-                f.type = LightType.Point; f.color = new Color(0.85f, 0.82f, 1f); f.intensity = 3.5f; f.range = 1.5f;
+                f.type = LightType.Point; f.color = new Color(0.9f, 0.86f, 1f); f.intensity = 9f; f.range = 2f;
                 f.cullingMask = 1 << ScreamerLayer;
                 fillGo.transform.SetParent(clone.transform, true);
             }
@@ -196,8 +196,21 @@ namespace Horror.Player
                 clone.transform.localScale = Vector3.one * scale;
                 clone.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
                 clone.transform.position += head.TransformPoint(new Vector3(0f, 0f, 1.5f)) - Center(cloneHead);   // d'abord devant toi
+                // centre du CRÂNE (la plus grosse pièce de la tête), pas de tout : câbles et cornets le décalaient
                 Vector3 hc = Center(cloneHead);
+                float best = 0f;
+                foreach (Renderer r in cloneHead.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (facePart != null && r.transform.IsChildOf(facePart)) continue;
+                    Vector3 sz = r.bounds.size;
+                    float vol = sz.x * sz.y * sz.z;
+                    if (vol > best) { best = vol; hc = r.bounds.center; }
+                }
                 Vector3 faceDir = facePart != null ? (Center(facePart) - hc) : clone.transform.forward;
+                // visage plat (portrait de L'Écoute, masque...) : sa normale est bien plus fiable que les centres
+                // (les cornets et le chignon décalent le centre de la tête : on finissait par voir sa nuque)
+                if (facePart != null && FlatNormal(facePart, out Vector3 n))
+                    faceDir = Vector3.Dot(n, Center(facePart) - hc) >= 0f ? n : -n;
                 if (faceDir.sqrMagnitude > 1e-6f)
                 {
                     Quaternion fix = Quaternion.FromToRotation(faceDir.normalized, (head.position - hc).normalized);
@@ -282,6 +295,21 @@ namespace Horror.Player
             _locomotion.inputEnabled = true;
             yield return Fade(1f, 0f, fadeInTime);
             IsPlaying = false;
+        }
+
+        /// <summary>Normale d'une pièce plate (son plus petit côté), en monde. Faux si la pièce n'est pas plate.</summary>
+        private static bool FlatNormal(Transform part, out Vector3 normal)
+        {
+            normal = Vector3.forward;
+            MeshFilter mf = part.GetComponentInChildren<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) return false;
+            Vector3 e = Vector3.Scale(mf.sharedMesh.bounds.size, mf.transform.lossyScale);
+            e = new Vector3(Mathf.Abs(e.x), Mathf.Abs(e.y), Mathf.Abs(e.z));
+            float min = Mathf.Min(e.x, Mathf.Min(e.y, e.z)), mid = e.x + e.y + e.z - min - Mathf.Max(e.x, Mathf.Max(e.y, e.z));
+            if (min > 0.35f * mid) return false;   // pas assez plate (une tête de Doux en volume)
+            Vector3 local = min == e.x ? Vector3.right : min == e.y ? Vector3.up : Vector3.forward;
+            normal = mf.transform.TransformDirection(local).normalized;
+            return true;
         }
 
         private int PickWhisper()

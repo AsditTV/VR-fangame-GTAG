@@ -1,4 +1,4 @@
-# Tester le jeu dans Unity (guide pas à pas)
+﻿# Tester le jeu dans Unity (guide pas à pas)
 
 Tout le code compile, mais rien n'a encore tourné dans Unity : ce guide sert à faire le premier
 vrai test. Note chaque erreur rouge de la console et envoie-la.
@@ -181,3 +181,7 @@ En Play, un script crée `Horror.Tests.FrameRecorder.Begin(dossier, caméra de l
 ### Filmer la vidéo POV
 En Play : `Horror.Tests.PovScareDirector.Begin("<dossier>")` (réglages : playerStart, monsterStart, strokes,
 whisper), puis `python Tools/Trailer/make_pov.py <dossier> <sortie.mp4>`. Résultat : Marketing/calm_faces_pov_tiktok.mp4.
+6. **La charge** : à moins de 7 m du dernier bruit, L'Écoute fonce à 7,5 m/s et ne lâche plus (si tu t'es éloigné
+   sans bruit, elle charge l'endroit vide). Réglages : chargeSpeed, chargeDistance.
+7. **Screamer** : son visage (le portrait aux yeux qui pleurent) est enfin visible : il est visé depuis le crâne
+   (avant, câbles et cornets faussaient la visée et on voyait sa nuque) et éclairé de face.

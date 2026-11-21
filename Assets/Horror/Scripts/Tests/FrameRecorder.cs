@@ -74,7 +74,13 @@ namespace Horror.Tests
         }
 
         /// <summary>La caméra suit la tête du joueur (vue à la première personne, mains comprises).</summary>
-        public void FollowHead() { _follow = true; StopGlide(); }
+        public void FollowHead() { _follow = true; _snap = true; StopGlide(); }
+
+        [Tooltip("Stabilisation de la vue tête (s) : 0 = brut ; ~0,2 = comme un gimbal (la marche à la rame saccade).")]
+        public float followSmoothing = 0f;
+        [Tooltip("Stabilisation de l'orientation (s), plus courte : on garde la nervosité des regards.")]
+        public float followTurnSmoothing = 0f;
+        private bool _snap;
 
         /// <summary>Travelling de (from, regard fromLook) à (to, regard toLook) en « seconds » secondes de jeu.</summary>
         public void Glide(Vector3 from, Vector3 fromLook, Vector3 to, Vector3 toLook, float seconds)
@@ -120,7 +126,19 @@ namespace Horror.Tests
         private void LateUpdate()
         {
             if (!_follow || source == null) return;
-            transform.SetPositionAndRotation(source.transform.position, source.transform.rotation);
+            Vector3 p = source.transform.position; Quaternion r = source.transform.rotation;
+            if (!_snap)
+            {
+                if (followSmoothing > 0f)
+                {
+                    Vector3 sm = Vector3.Lerp(transform.position, p, 1f - Mathf.Exp(-Time.deltaTime / followSmoothing));
+                    // jamais plus de 5 cm derrière la tête : sinon la caméra voit l'intérieur du corps du joueur
+                    p += Vector3.ClampMagnitude(sm - p, 0.05f);
+                }
+                if (followTurnSmoothing > 0f) r = Quaternion.Slerp(transform.rotation, r, 1f - Mathf.Exp(-Time.deltaTime / followTurnSmoothing));
+            }
+            _snap = false;
+            transform.SetPositionAndRotation(p, r);
             _cam.cullingMask = source.cullingMask;          // le screamer ne montre que le monstre, sur fond noir
             _cam.clearFlags = source.clearFlags;
             _cam.backgroundColor = source.backgroundColor;

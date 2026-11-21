@@ -55,6 +55,10 @@ namespace Horror.Monsters
         public float investigateSpeed = 2.6f;
         [Tooltip("Vitesse de chasse. 6,2 était intenable pour un débutant ; ~4,9 : on galère, mais on peut s'en sortir.")]
         public float chaseSpeed = 4.9f;
+        [Tooltip("La charge finale : tout près du dernier bruit (et bruit récent), elle fonce. De loin, on peut encore la semer.")]
+        public float chargeSpeed = 7.5f;
+        [Tooltip("Distance (m) au dernier bruit sous laquelle elle charge.")]
+        public float chargeDistance = 7f;
         [Tooltip("En chasse, si elle n'entend plus rien depuis 1 s, elle ralentit (elle écoute en courant).")]
         [Range(0.3f, 1f)] public float unsureSpeedFactor = 0.72f;
         [Tooltip("Temps pendant lequel elle reste figée à écouter avant de bouger.")]
@@ -218,9 +222,14 @@ namespace Horror.Monsters
 
                 case State.Chasse:
                     float quiet = Time.time - _lastNoiseTime;
-                    MoveTowards(_target, chaseSpeed * (quiet > 1f ? unsureSpeedFactor : 1f));
+                    Vector3 gap = _target - transform.position; gap.y = 0f;
+                    // près du dernier bruit, elle s'engage : elle fonce sur l'endroit (si tu t'es éloigné sans bruit, elle charge le vide)
+                    float run = gap.magnitude < chargeDistance ? chargeSpeed
+                              : quiet > 1f ? chaseSpeed * unsureSpeedFactor
+                              : chaseSpeed;
+                    MoveTowards(_target, run);
                     // Plus rien entendu : arrivée au dernier bruit, ou trop longtemps sans indice -> elle t'a perdu, elle fouille
-                    if ((Arrived(_target, 1f) && quiet > 1.5f) || quiet > chaseLoseTime)
+                    if ((Arrived(_target, 1f) && quiet > 1.5f) || (quiet > chaseLoseTime && gap.magnitude > chargeDistance))
                     {
                         alert = 0.6f;
                         SetState(State.Enquete);
