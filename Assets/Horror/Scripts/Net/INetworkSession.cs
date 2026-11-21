@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Horror.Net
 {
@@ -15,6 +16,13 @@ namespace Horror.Net
         bool IsHost { get; }
         int LocalPlayerId { get; }
         int PlayerCount { get; }
+
+        /// <summary>Les AUTRES joueurs de la salle (identifiants réseau de la session).</summary>
+        IReadOnlyList<int> RemotePlayers { get; }
+        /// <summary>Pseudo affiché d'un joueur.</summary>
+        string PlayerName(int playerId);
+        /// <summary>Identifiant STABLE du compte (le même d'une partie à l'autre) : sert à retenir les joueurs bloqués.</summary>
+        string PlayerUserId(int playerId);
 
         /// <summary>Rejoint (ou crée) une salle pour ce mode (ModeSelector.Current : « exploration », « inktag »...).</summary>
         void Join(string mode, Action<bool> done);

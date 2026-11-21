@@ -714,13 +714,15 @@ namespace Horror.EditorTools
             Material panel = MakeMat("Lobby_Panneau", new Color(0.30f, 0.24f, 0.34f));
             Material btnMat = MakeMat("Lobby_Bouton", new Color(0.95f, 0.62f, 0.72f));
             Material soonMat = MakeMat("Lobby_Bouton_Bientot", new Color(0.55f, 0.55f, 0.6f));
-            float wallZ = playroom.min.z + 0.06f;
+            float wallZ = playroom.min.z + 0.18f;          // surface du mur à +0,155 (épaisseur du papier peint) : les panneaux posés devant
 
+            // à plat contre le mur (avant : tourné vers le centre de la pièce, les grands panneaux s'enfonçaient en biais)
+            Vector3 WallNormal(Vector3 maq) { Vector3 d = roomCenter - P(maq); d.x = 0f; d.y = 0f; return d.sqrMagnitude > 0.0001f ? d.normalized : Vector3.forward; }
             GameObject Label(string text, Vector3 maq, float size, Color c)
             {
                 GameObject l = SafeZoneShopBuilder.Label(root.transform, text, Vector3.zero, size, c);
                 l.transform.position = P(maq);
-                l.transform.rotation = Quaternion.LookRotation(-Flat(roomCenter - P(maq)));
+                l.transform.rotation = Quaternion.LookRotation(-WallNormal(maq));
                 return l;
             }
             GameObject Plate(string name, Vector3 maq, Vector3 size, Material m)
@@ -729,7 +731,7 @@ namespace Horror.EditorTools
                 go.name = name;
                 go.transform.SetParent(root.transform, false);
                 go.transform.position = P(maq);
-                go.transform.rotation = Quaternion.LookRotation(Flat(roomCenter - P(maq)));
+                go.transform.rotation = Quaternion.LookRotation(WallNormal(maq));
                 go.transform.localScale = size * s_w;
                 go.GetComponent<Renderer>().sharedMaterial = m;
                 return go;
@@ -778,10 +780,72 @@ namespace Horror.EditorTools
                 pb.clickSound = click;
                 return pb;
             }
-            comfort.flashesButton = ComfortButton("Bouton FLASHES", 9.75f);
-            comfort.scaresButton = ComfortButton("Bouton SCARES", 9.4f);
-            Label("FLASH", new Vector3(9.75f, 0.78f, wallZ + 0.04f), 0.007f, new Color(0.95f, 0.92f, 0.86f));
-            Label("SCARE", new Vector3(9.4f, 0.78f, wallZ + 0.04f), 0.007f, new Color(0.95f, 0.92f, 0.86f));
+            comfort.flashesButton = ComfortButton("Bouton FLASHES", 9.9f);
+            comfort.scaresButton = ComfortButton("Bouton SCARES", 9.6f);
+            Label("FLASH", new Vector3(9.9f, 0.78f, wallZ + 0.04f), 0.009f, new Color(0.95f, 0.92f, 0.86f));
+            Label("SCARE", new Vector3(9.6f, 0.78f, wallZ + 0.04f), 0.009f, new Color(0.95f, 0.92f, 0.86f));
+
+            // --- le tutoriel du premier lancement (panneau flottant) ; le bouton TUTO le relance ou le passe
+            var coachGo = new GameObject("Tutoriel (premier lancement)");
+            coachGo.transform.SetParent(root.transform, false);
+            var coach = coachGo.AddComponent<TutorialCoach>();
+            var tutoPanel = new GameObject("Panneau du tutoriel").transform;
+            tutoPanel.SetParent(coachGo.transform, false);
+            tutoPanel.position = roomCenter + Vector3.up * 1.5f;
+            var back = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Object.DestroyImmediate(back.GetComponent<Collider>());
+            back.name = "Fond";
+            back.transform.SetParent(tutoPanel, false);
+            back.transform.localPosition = new Vector3(0f, 0f, 0.01f);
+            back.transform.localScale = new Vector3(0.95f, 0.62f, 1f);
+            back.GetComponent<Renderer>().sharedMaterial = MakeMat("Tutoriel_Fond", new Color(0.08f, 0.06f, 0.1f));
+            GameObject tutoText = SafeZoneShopBuilder.Label(tutoPanel, "", Vector3.zero, 0.0055f, new Color(0.98f, 0.93f, 0.82f));
+            tutoText.transform.localRotation = Quaternion.identity;
+            coach.panel = tutoPanel;
+            coach.text = tutoText.GetComponent<TextMesh>();
+            coach.stepSound = coin;
+            coach.replayButton = ComfortButton("Bouton TUTO", 9.3f);
+            Label("TUTO", new Vector3(9.3f, 0.78f, wallZ + 0.04f), 0.009f, new Color(0.95f, 0.92f, 0.86f));
+            // --- le tableau PLAYERS (sécurité du chat vocal) : couper, bloquer, signaler chaque joueur ; couper tout le monde
+            Plate("Tableau des joueurs", new Vector3(13.6f, 1.6f, wallZ), new Vector3(3.4f, 1.95f, 0.04f), panel);
+            var pboard = root.AddComponent<PlayersBoard>();
+            pboard.header = Label("PLAYERS", new Vector3(13.6f, 2.38f, wallZ + 0.04f), 0.014f, new Color(0.98f, 0.9f, 0.8f)).GetComponent<TextMesh>();
+            pboard.confirmSound = coin;
+            Color small = new Color(0.95f, 0.92f, 0.86f);
+            Label("MUTE", new Vector3(14.25f, 2.12f, wallZ + 0.04f), 0.009f, small);
+            Label("BLOCK", new Vector3(14.65f, 2.12f, wallZ + 0.04f), 0.009f, small);
+            Label("REPORT", new Vector3(15.05f, 2.12f, wallZ + 0.04f), 0.009f, small);
+            var prow = new List<PlayersBoard.Row>();
+            for (int i = 0; i < 6; i++)
+            {
+                float y = 1.93f - i * 0.22f;
+                var rowRoot = new GameObject("Joueur " + (i + 1));
+                rowRoot.transform.SetParent(root.transform, false);
+                var row = new PlayersBoard.Row { root = rowRoot };
+                GameObject lbl = Label("PLAYER", new Vector3(12.85f, y, wallZ + 0.04f), 0.012f, small);
+                lbl.transform.SetParent(rowRoot.transform, true);
+                row.label = lbl.GetComponent<TextMesh>();
+                PressButton RowButton(string n, float x, Material m)
+                {
+                    GameObject b = Plate(n + " " + (i + 1), new Vector3(x, y, wallZ + 0.03f), new Vector3(0.15f, 0.15f, 0.07f), m);
+                    b.GetComponent<Collider>().isTrigger = true;
+                    b.transform.SetParent(rowRoot.transform, true);
+                    PressButton pb = b.AddComponent<PressButton>();
+                    pb.clickSound = click;
+                    return pb;
+                }
+                row.mute = RowButton("Bouton MUTE", 14.25f, btnMat);
+                row.block = RowButton("Bouton BLOCK", 14.65f, soonMat);
+                row.report = RowButton("Bouton REPORT", 15.05f, MakeMat("Lobby_Bouton_Signaler", new Color(0.85f, 0.25f, 0.25f)));
+                prow.Add(row);
+            }
+            pboard.rows = prow.ToArray();
+            GameObject muteAll = Plate("Bouton MUTE ALL", new Vector3(13.6f, 0.82f, wallZ + 0.03f), new Vector3(0.2f, 0.2f, 0.08f), btnMat);
+            muteAll.GetComponent<Collider>().isTrigger = true;
+            pboard.muteAllButton = muteAll.AddComponent<PressButton>();
+            pboard.muteAllButton.clickSound = click;
+            pboard.muteAllLabel = Label("MUTE ALL: OFF", new Vector3(13.6f, 1.02f, wallZ + 0.04f), 0.011f, small).GetComponent<TextMesh>();
+
             var goals = root.AddComponent<ExplorationGoals>();
             goals.board = board.GetComponent<TextMesh>();
             goals.discoverSound = Load<AudioClip>(Audio + "Ambience/music_box_far.wav");

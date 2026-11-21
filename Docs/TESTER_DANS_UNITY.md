@@ -254,3 +254,17 @@ par l'accueil pour reprendre le monte-charge. **Page de Mila** : au sol de l'iso
    qu'un visage blanc et plat). Au casque : assez lisible ? trop sombre ?
 3. **Poupées fusionnées** : enfants du dortoir (la tête tourne toujours), peaux de la loge, poupées de
    l'infirmerie : un maillage par matière. Dortoir 747 -> 509 appels de dessin, loge 211 -> 157.
+
+## Avant publication : pause, tutoriel, sécurité vocale (menu 8 puis 9)
+1. **Pause au menu du casque** : appuie sur le bouton Meta pendant une partie solo. Le jeu doit se figer (monstres
+   immobiles, sons coupés), tes mains disparaître, et tout reprendre en revenant. En ligne (plus tard) seul ton
+   personnage s'arrête. Dans l'éditeur, cliquer hors de la fenêtre ne met pas en pause (`HeadsetFocusPause.pauseInEditor`).
+2. **Tutoriel du premier lancement** : un panneau flotte devant toi dans la Salle de jeux. Il avance quand tu as
+   vraiment avancé avec les mains (2,5 m), puis sauté (35 cm), puis lit « la voix » et « la salle sûre ».
+   Bouton **TUTO** (panneau de confort) : le relancer, ou le passer s'il est en cours. Les textes se lisent-ils ?
+3. **Tableau PLAYERS** (mur sud, entre les objectifs et les modes) : en solo « Nobody else here ». En ligne :
+   MUTE / BLOCK / REPORT par joueur, et MUTE ALL. Les blocages et signalements sont gardés dans
+   `voice_moderation.json` (dossier de données du jeu). Le signalement n'est encore envoyé à personne :
+   il faudra le brancher sur le service de Meta (Platform SDK) avant la sortie en ligne.
+4. **Panneaux du lobby** : ils étaient tournés vers le centre de la pièce et s'enfonçaient en biais dans le mur ;
+   ils sont maintenant à plat. Vérifie qu'aucun ne traverse le mur.

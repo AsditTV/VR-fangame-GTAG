@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Horror.Net
 {
@@ -9,6 +10,9 @@ namespace Horror.Net
         public bool IsHost => true;
         public int LocalPlayerId => 0;
         public int PlayerCount => 1;
+        public IReadOnlyList<int> RemotePlayers => Array.Empty<int>();
+        public string PlayerName(int playerId) => "";
+        public string PlayerUserId(int playerId) => "";
 
         public void Join(string mode, Action<bool> done) => done?.Invoke(true);
         public void Leave() { }
