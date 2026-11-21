@@ -296,6 +296,7 @@ namespace Horror.Monsters
         /// <summary>Avance le long du chemin ; vrai quand il est arrivé au bout.</summary>
         private bool FollowPath(float speed)
         {
+            if (_stuck) { _stuck = false; return true; }               // coincé dans un angle : on abandonne ce but
             // un point bouché par un meuble : assez près, on le considère atteint (sinon il pousse le meuble à l'infini)
             while (_pathIdx < _path.Count - 1 && (Arrived(_path[_pathIdx], 0.7f) || (_blocked && Arrived(_path[_pathIdx], 1.6f)))) _pathIdx++;
             if (_pathIdx >= _path.Count - 1 && _blocked && Arrived(_path[_path.Count - 1], 1.6f)) return true;
@@ -303,6 +304,10 @@ namespace Horror.Monsters
             Move(_path[_pathIdx], speed);
             return false;
         }
+
+        private bool _stuck;
+        private float _progressAt, _lastMove = -10f;
+        private Vector3 _progressPos;
 
         private bool Arrived(Vector3 p, float tol)
         {
@@ -313,6 +318,15 @@ namespace Horror.Monsters
         private void Move(Vector3 goal, float speed)
         {
             _speed = Mathf.Lerp(_speed, speed, 1f - Mathf.Exp(-5f * Time.deltaTime));
+            // anti-blocage : s'il n'a pas avancé de 25 cm en 2,5 s (pris entre un meuble et un mur), il passe à autre chose
+            if (Time.time - _lastMove > 0.5f) { _progressAt = Time.time; _progressPos = transform.position; }
+            _lastMove = Time.time;
+            if (Time.time - _progressAt > 2.5f)
+            {
+                Vector3 moved = transform.position - _progressPos; moved.y = 0f;
+                if (moved.magnitude < 0.25f && speed > 0.1f) _stuck = true;
+                _progressAt = Time.time; _progressPos = transform.position;
+            }
             Vector3 to = goal - transform.position; to.y = 0f;
             if (to.sqrMagnitude < 0.01f || _speed < 0.02f) return;
             Vector3 dir = to.normalized;

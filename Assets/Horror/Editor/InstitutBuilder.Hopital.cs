@@ -629,9 +629,24 @@ namespace Horror.EditorTools
                     FragileNoisy fn = chute.gameObject.AddComponent<FragileNoisy>();
                     fn.crash = Load<AudioClip>(A + "fracas_metal.wav");
                 }
+                // une poignée (seul ce chariot en a une) : il y pose ses deux mains
+                Renderer chromeR = FindChild(cart.transform, "Chariot") != null ? FindChild(cart.transform, "Chariot").GetComponentInChildren<Renderer>() : null;
+                var handle = new GameObject("Poignée").transform;
+                handle.SetParent(cart.transform, false);
+                void Bar(Vector3 pos, Vector3 scale, Vector3 euler)
+                {
+                    GameObject b = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    Object.DestroyImmediate(b.GetComponent<Collider>());
+                    b.transform.SetParent(handle, false);
+                    b.transform.localPosition = pos; b.transform.localScale = scale; b.transform.localEulerAngles = euler;
+                    if (chromeR != null) b.GetComponent<Renderer>().sharedMaterial = chromeR.sharedMaterial;
+                }
+                Bar(new Vector3(0f, 1f, -0.2f), new Vector3(0.026f, 0.23f, 0.026f), new Vector3(0f, 0f, 90f));   // la barre
+                Bar(new Vector3(-0.22f, 0.875f, -0.19f), new Vector3(0.018f, 0.13f, 0.018f), Vector3.zero);       // montants
+                Bar(new Vector3(0.22f, 0.875f, -0.19f), new Vector3(0.018f, 0.13f, 0.018f), Vector3.zero);
                 foreach (Transform t in cart.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 2;   // Ignore Raycast : le Docteur ne s'y cogne pas
                 Rigidbody crb = cart.AddComponent<Rigidbody>();                // cinématique : il pousse le joueur au lieu de le traverser
-                crb.isKinematic = true; crb.interpolation = RigidbodyInterpolation.Interpolate;
+                crb.isKinematic = true; crb.interpolation = RigidbodyInterpolation.None;   // l'interpolation écraserait la position qu'on lui donne
                 DoctorCart dc = cart.AddComponent<DoctorCart>();
                 dc.doctor = ai;
                 dc.squeak = Load<AudioClip>(A + "chariot_grince.wav");

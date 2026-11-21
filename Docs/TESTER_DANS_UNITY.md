@@ -221,13 +221,15 @@ la chambre froide (noir complet, poupées assises en rang) et l'isolement (griff
 **Objets fragiles** (plateaux d'instruments, bocaux, pieds à perfusion, dans les salles ET dans les couloirs) :
 les frôler les fait tomber avec un fracas énorme (34 m). Le Docteur l'entend même à travers un mur. Ils se
 remettent en place 3 min plus tard, hors de vue. Test : clic droit sur un « Chute_* » > FragileNoisy > Faire tomber.
-**Son chariot** : en ronde, il pousse un chariot d'instruments devant lui. La roulette couine et les instruments
+**Son chariot** : en ronde, il pousse un chariot d'instruments devant lui, une main sur la poignée, la lanterne
+levée dans l'autre (bras placés par le script, mains à ~5 cm de la poignée). La roulette couine et les instruments
 tintent : on l'entend venir de loin, même quand sa comptine est couverte. Dès qu'il te voit ou part voir un bruit,
 il le **lâche** (« clang ») : le chariot reste planté au milieu du couloir, et son plateau s'écrase si tu le frôles
 en fuyant (fracas de 34 m, il revient droit dessus). De temps en temps (40 à 75 s), il le **gare** et continue sans
 lui : plus de couinement, il est silencieux... jusqu'à ce qu'il revienne le chercher (45 s plus tard). Il ne
 reprend pas un chariot dont le plateau est par terre (il attend qu'il se remette en place).
 Test sans casque : Play, sélectionne « Chariot du Docteur » > DoctorCart (Attached), et appelle GoTo sur le Docteur.
+S'il reste coincé entre un meuble et un mur (moins de 25 cm en 2,5 s), il abandonne ce point et passe au suivant.
 Au casque : la zone est-elle assez éclairée pour s'orienter ? Le faisceau du Docteur se voit-il assez tôt ?
 **Sonnette de l'accueil** (comptoir du hall de l'infirmerie, « RING FOR THE DOCTOR ») : appuie, « ding ! », le
 Docteur remonte vers l'accueil. Une diversion : tu fouilles ailleurs pendant ce temps... mais il faudra repasser
