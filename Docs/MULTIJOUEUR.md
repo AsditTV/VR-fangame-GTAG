@@ -67,3 +67,29 @@ Principe : **l'IA des monstres ne tourne que chez l'hôte.** Les invités envoie
    l'échange entre deux joueurs n'est PAS encore vérifié.
 3. ~~`PhotonFusionSession`~~ (fait). Reste : avatars des autres joueurs, puis Photon Voice (volume = `ShouldHear`).
 4. Test à 2 casques (ou 1 casque + l'éditeur) : rejoindre, se voir, s'entendre, couper/bloquer.
+
+## Avatars, voix, monstres (21/11/2026)
+**Jouer à plusieurs** : sur le Minitel, page ROOM, tapez le MÊME code (4 à 6 chiffres) sur chaque casque. 2,5 s après
+le dernier chiffre, le jeu rejoint la salle `coop-CODE`. Effacer le code = retour en solo. Le code est gardé d'une
+partie à l'autre. (Test PC : `CalmFaces.exe -online` rejoint la salle « test ».)
+
+| Brique | Fichier | État |
+|---|---|---|
+| Avatars des autres | `Net/NetworkAvatars.cs` | Copie de ma poupée pilotée par la pose reçue (15/s, lissée), à SA couleur, pseudo au-dessus, bouche animée par sa voix. Bloqué = caché. |
+| Voix de proximité | `Net/Photon/CalmVoiceClient.cs` | Photon Voice suit la salle Fusion (« _voice »). Ma voix porte mon identifiant ; celle des autres sort de la tête de leur avatar (3D, 1,5 à 25 m), étouffée derrière un mur. Coupé/bloqué = volume 0. Respecte le mode micro du Minitel. |
+| Micro partagé | `Player/MicMouth.cs` | En ligne, le micro est à Photon Voice (un seul programme peut l'ouvrir sur Quest) : MicMouth lit son niveau (bouche + bruit pour les monstres). |
+| Monstres | `Net/MonsterSync.cs` | L'IA tourne chez le master client ; il envoie position/orientation 10/s ; chez les autres l'IA est éteinte et le monstre suit (démarche animée). |
+
+**Vérifié (éditeur, 2 clients Photon dans le même Unity)** : chacun voit l'autre (pseudo reçu, avatar affiché, part
+quand il quitte) ; voix transmise de B vers A (son joué sur la tête de l'avatar) ; couper = volume 0 + « (MUTED) » ;
+bloquer = avatar caché + muet ; débloquer = tout revient ; code de salle : rejoint puis quitte.
+
+**Bug trouvé et corrigé** : en mode partagé, le joueur indiqué par Fusion à la réception d'un message est le
+DESTINATAIRE, pas l'expéditeur : chaque message porte maintenant le numéro de son expéditeur.
+
+**Pas encore fait / pas vérifié** :
+- **Les monstres ne poursuivent que le joueur du master client** : les autres ne peuvent pas encore être attrapés.
+  Il faut que l'IA voie les avatars distants comme des cibles et envoie « attrapé » au joueur concerné.
+- Le micro n'a pas été testé réellement (niveau 0 dans l'éditeur : deux enregistreurs sur le même micro).
+  La voix a été testée avec un son du jeu à la place du micro.
+- Aucun test entre deux vrais appareils (casque + PC) : c'est le prochain test.

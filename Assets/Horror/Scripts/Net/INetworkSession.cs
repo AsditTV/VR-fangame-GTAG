@@ -23,6 +23,8 @@ namespace Horror.Net
         string PlayerName(int playerId);
         /// <summary>Identifiant STABLE du compte (le même d'une partie à l'autre) : sert à retenir les joueurs bloqués.</summary>
         string PlayerUserId(int playerId);
+        /// <summary>Couleur de poupée choisie par ce joueur (index de GameSettings.Palette).</summary>
+        int PlayerColorIndex(int playerId);
 
         /// <summary>Rejoint (ou crée) une salle pour ce mode (ModeSelector.Current : « exploration », « inktag »...).</summary>
         void Join(string mode, Action<bool> done);

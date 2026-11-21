@@ -2,6 +2,7 @@
 using UnityEngine;
 using Horror.Noise;
 using Horror.World;
+using Horror.Player;
 
 namespace Horror.Net
 {
@@ -31,6 +32,8 @@ namespace Horror.Net
         {
             string mode = ModeSelector.Current;
             bool wantsOnline = autoJoin && OnlineFactory != null && Array.IndexOf(onlineModes, mode) >= 0;
+            if (OnlineFactory != null && Array.IndexOf(Environment.GetCommandLineArgs(), "-online") >= 0)
+            { wantsOnline = true; mode = "test"; }                       // tests : CalmFaces.exe -online rejoint la salle « test »
             Session = wantsOnline ? OnlineFactory() : new OfflineSession();
             Session.NoiseReceived += OnRemoteNoise;
             Session.EventReceived += OnRemoteEvent;
@@ -44,6 +47,39 @@ namespace Horror.Net
                 });
         }
 
+        // ---------------------------------------------------------------- code de salle (Minitel)
+        // Jouer à plusieurs : taper le même code de salle (4 à 6 chiffres) sur le Minitel. Le code stable 2,5 s, on rejoint
+        // la salle « coop-CODE » ; code changé, on change de salle ; code effacé, retour en solo. Le code est gardé :
+        // au lancement suivant, on retourne dans la même salle (l'effacer pour jouer seul).
+        private string _seenCode, _joinedCode;
+        private float _codeStableAt;
+        private bool _joining;
+
+        private void Update()
+        {
+            if (OnlineFactory == null || _joining) return;
+            string code = GameSettings.RoomCode ?? "";
+            if (code != _seenCode) { _seenCode = code; _codeStableAt = Time.unscaledTime + 2.5f; return; }
+            if (Time.unscaledTime < _codeStableAt) return;
+            bool want = code.Length >= 4;
+            bool online = Session != null && Session.IsOnline;
+            if (want && !online)
+            {
+                _joining = true;
+                GoOnline("coop", ok =>
+                {
+                    _joining = false;
+                    _joinedCode = ok ? code : null;
+                    if (!ok) _codeStableAt = Time.unscaledTime + 15f;    // pas de réseau : on réessaie dans 15 s
+                });
+            }
+            else if (online && _joinedCode != null && _joinedCode != code)
+            {
+                UseOffline();                                            // code changé ou effacé : on quitte la salle
+                _joinedCode = null;
+            }
+        }
+
         private void OnDestroy()
         {
             if (Session == null) return;
@@ -52,6 +88,26 @@ namespace Horror.Net
             NoiseSystem.NetworkForwarder = null;
             Session.Leave();
             Session = new OfflineSession();
+        }
+
+        /// <summary>Passe en ligne maintenant (tests, ou futur bouton du lobby) : rejoint la salle du mode donné.</summary>
+        public static void GoOnline(string mode, Action<bool> done = null)
+        {
+            if (OnlineFactory == null || (Session != null && Session.IsOnline)) { done?.Invoke(Session != null && Session.IsOnline); return; }
+            if (Session != null) { Session.NoiseReceived -= OnRemoteNoise; Session.EventReceived -= OnRemoteEvent; }
+            Session = OnlineFactory();
+            Session.NoiseReceived += OnRemoteNoise;
+            Session.EventReceived += OnRemoteEvent;
+            NoiseSystem.NetworkForwarder = ForwardNoise;
+            Session.Join(mode, ok =>
+            {
+                if (!ok)
+                {
+                    Session.NoiseReceived -= OnRemoteNoise; Session.EventReceived -= OnRemoteEvent;
+                    Session.Leave(); Session = new OfflineSession(); NoiseSystem.NetworkForwarder = null;
+                }
+                done?.Invoke(ok);
+            });
         }
 
         private void UseOffline()

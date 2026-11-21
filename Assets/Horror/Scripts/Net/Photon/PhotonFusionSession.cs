@@ -43,7 +43,14 @@ namespace Horror.Net
         private Callbacks _callbacks;
         private readonly Dictionary<int, PlayerRef> _players = new Dictionary<int, PlayerRef>();
         private readonly Dictionary<int, string> _names = new Dictionary<int, string>(), _userIds = new Dictionary<int, string>();
+        private readonly Dictionary<int, int> _colors = new Dictionary<int, int>();
+        /// <summary>Appelé une fois la salle rejointe, avec l'objet du NetworkRunner : la voix s'y accroche.</summary>
+        public static Action<GameObject, string> AfterJoin;
+        /// <summary>Mon identifiant dans cette session (celui de l'appareil ; un test peut en donner un autre).</summary>
+        public string MyUserId { get; set; } = LocalUserId;
         private readonly List<int> _remote = new List<int>();
+        private readonly HashSet<int> _helloSent = new HashSet<int>();
+        private float _nextHelloRound;
 
         public bool IsOnline => _runner != null && _runner.IsRunning;
         public bool IsHost => !IsOnline || _runner.IsSharedModeMasterClient;
@@ -52,6 +59,7 @@ namespace Horror.Net
         public IReadOnlyList<int> RemotePlayers => _remote;
         public string PlayerName(int playerId) => _names.TryGetValue(playerId, out string n) ? n : "PLAYER " + playerId;
         public string PlayerUserId(int playerId) => _userIds.TryGetValue(playerId, out string u) ? u : "";
+        public int PlayerColorIndex(int playerId) => _colors.TryGetValue(playerId, out int c) ? c : 0;
 
         public event Action<PlayerPose> PoseReceived;
         public event Action<NoiseMessage> NoiseReceived;
@@ -65,7 +73,11 @@ namespace Horror.Net
             UnityEngine.Object.DontDestroyOnLoad(go);
             _runner = go.AddComponent<NetworkRunner>();
             _runner.ProvideInput = false;
-            _callbacks = go.AddComponent<Callbacks>();
+            // nos rappels sur un objet À PART : Fusion inscrit tout seul les composants posés sur l'objet du runner
+            // (c'est ainsi que la voix reçoit les siens) ; sur le même objet, chaque message arriverait en double
+            var cbGo = new GameObject("Photon Fusion (rappels)");
+            UnityEngine.Object.DontDestroyOnLoad(cbGo);
+            _callbacks = cbGo.AddComponent<Callbacks>();
             _callbacks.session = this;
             _runner.AddCallbacks(_callbacks);
             string code = GameSettings.RoomCode;
@@ -86,6 +98,7 @@ namespace Horror.Net
             }
             Debug.Log($"[Horror] Photon : salle « {args.SessionName} » rejointe ({(IsHost ? "je fais tourner les monstres" : "invité")}).");
             BroadcastHello(null);
+            AfterJoin?.Invoke(go, MyUserId);
             done?.Invoke(true);
         }
 
@@ -96,8 +109,10 @@ namespace Horror.Net
                 if (_runner.IsRunning) _runner.Shutdown();
                 UnityEngine.Object.Destroy(_runner.gameObject);
             }
+            if (_callbacks != null) UnityEngine.Object.Destroy(_callbacks.gameObject);
+            _callbacks = null;
             _runner = null;
-            _players.Clear(); _names.Clear(); _userIds.Clear(); _remote.Clear();
+            _players.Clear(); _names.Clear(); _userIds.Clear(); _colors.Clear(); _remote.Clear(); _helloSent.Clear();
         }
 
         // ---------------------------------------------------------------- envoi
@@ -105,7 +120,7 @@ namespace Horror.Net
         public void SendPose(PlayerPose p) => Broadcast(Msg.Pose, w =>
         {
             Write(w, p.head); Write(w, p.headRotation); Write(w, p.leftHand); Write(w, p.rightHand);
-            Write(w, p.leftRotation); Write(w, p.rightRotation); w.Write(p.dead);
+            Write(w, p.leftRotation); Write(w, p.rightRotation); w.Write(p.dead); w.Write(p.mouth);
         });
 
         // envoyé à tous : seul celui qui fait tourner les monstres l'utilise (NetworkBootstrap.OnRemoteNoise vérifie IsHost)
@@ -120,7 +135,7 @@ namespace Horror.Net
 
         private void BroadcastHello(PlayerRef? only)
         {
-            void Body(BinaryWriter w) { w.Write(GameSettings.Name ?? ""); w.Write(LocalUserId); }
+            void Body(BinaryWriter w) { w.Write(GameSettings.Name ?? ""); w.Write(MyUserId); w.Write(GameSettings.ColorIndex); }
             if (only.HasValue) Send(only.Value, Msg.Hello, Body); else Broadcast(Msg.Hello, Body);
         }
 
@@ -136,6 +151,7 @@ namespace Horror.Net
             using var ms = new MemoryStream(64);
             using var w = new BinaryWriter(ms);
             w.Write((byte)type);
+            w.Write(_runner.LocalPlayer.PlayerId);   // l'expéditeur : en mode partagé, Fusion ne le donne pas à la réception
             body(w);
             w.Flush();
             _runner.SendReliableDataToPlayer(to, ReliableKey.FromInts((int)type, 0, 0, 0), new ReadOnlySpan<byte>(ms.GetBuffer(), 0, (int)ms.Length));
@@ -148,19 +164,21 @@ namespace Horror.Net
             if (data.Length < 1) return;
             using var r = new BinaryReader(new MemoryStream(data.ToArray()));
             var type = (Msg)r.ReadByte();
-            int id = from.PlayerId;
+            if (data.Length < 5) return;
+            int id = r.ReadInt32();                  // l'expéditeur, écrit par Send (« from » est le destinataire en mode partagé)
             switch (type)
             {
                 case Msg.Hello:
                     _names[id] = GameSettings.Sanitize(r.ReadString());
                     _userIds[id] = r.ReadString();
+                    _colors[id] = r.ReadInt32();
                     break;
                 case Msg.Pose:
                     if (VoiceModeration.IsBlocked(PlayerUserId(id))) return;   // joueur bloqué : on ne l'affiche pas
                     PoseReceived?.Invoke(new PlayerPose
                     {
                         playerId = id, head = ReadV(r), headRotation = ReadQ(r), leftHand = ReadV(r), rightHand = ReadV(r),
-                        leftRotation = ReadQ(r), rightRotation = ReadQ(r), dead = r.ReadBoolean(),
+                        leftRotation = ReadQ(r), rightRotation = ReadQ(r), dead = r.ReadBoolean(), mouth = r.ReadByte(),
                     });
                     break;
                 case Msg.Noise:
@@ -175,18 +193,45 @@ namespace Horror.Net
             }
         }
 
+        /// <summary>
+        /// Chaque image : la liste des joueurs suit celle de Fusion (un arrivant ne déclenche pas toujours OnPlayerJoined
+        /// pour ceux déjà là), et chaque joueur vu pour la première fois reçoit notre « bonjour ». Toutes les 5 s, on le
+        /// renvoie à ceux dont on n'a pas encore le pseudo (un message parti avant que l'autre soit prêt se perd).
+        /// </summary>
+        internal void Tick()
+        {
+            if (!IsOnline) return;
+            bool round = Time.unscaledTime >= _nextHelloRound;
+            if (round) _nextHelloRound = Time.unscaledTime + 5f;
+            foreach (PlayerRef p in _runner.ActivePlayers)
+            {
+                if (p == _runner.LocalPlayer) continue;
+                int id = p.PlayerId;
+                if (!_remote.Contains(id)) { _remote.Add(id); _players[id] = p; PlayerJoined?.Invoke(id); }
+                if (_helloSent.Add(id) || (round && !_userIds.ContainsKey(id))) BroadcastHello(p);
+            }
+            for (int i = _remote.Count - 1; i >= 0; i--)
+            {
+                bool still = false;
+                foreach (PlayerRef p in _runner.ActivePlayers) if (p.PlayerId == _remote[i]) { still = true; break; }
+                if (!still && _players.TryGetValue(_remote[i], out PlayerRef gone)) OnLeft(gone);
+                else if (!still) _remote.RemoveAt(i);
+            }
+        }
+
         internal void OnJoined(PlayerRef p)
         {
             _players[p.PlayerId] = p;
             if (p == _runner.LocalPlayer) return;
-            if (!_remote.Contains(p.PlayerId)) _remote.Add(p.PlayerId);
-            BroadcastHello(p);                   // le nouveau venu apprend notre pseudo
+            if (_remote.Contains(p.PlayerId)) return;
+            _remote.Add(p.PlayerId);
+            if (_helloSent.Add(p.PlayerId)) BroadcastHello(p);   // le nouveau venu apprend notre pseudo
             PlayerJoined?.Invoke(p.PlayerId);
         }
 
         internal void OnLeft(PlayerRef p)
         {
-            _players.Remove(p.PlayerId); _names.Remove(p.PlayerId); _userIds.Remove(p.PlayerId);
+            _players.Remove(p.PlayerId); _names.Remove(p.PlayerId); _userIds.Remove(p.PlayerId); _colors.Remove(p.PlayerId); _helloSent.Remove(p.PlayerId);
             _remote.Remove(p.PlayerId);
             PlayerLeft?.Invoke(p.PlayerId);
         }
@@ -200,6 +245,7 @@ namespace Horror.Net
         private class Callbacks : MonoBehaviour, INetworkRunnerCallbacks
         {
             public PhotonFusionSession session;
+            private void Update() => session?.Tick();
             public void OnPlayerJoined(NetworkRunner runner, PlayerRef player) => session?.OnJoined(player);
             public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) => session?.OnLeft(player);
             public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ReadOnlySpan<byte> data) => session?.OnData(player, data);

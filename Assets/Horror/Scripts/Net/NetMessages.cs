@@ -15,6 +15,7 @@ namespace Horror.Net
         public Vector3 leftHand, rightHand;
         public Quaternion leftRotation, rightRotation;
         public bool dead;
+        public byte mouth;             // ouverture de la bouche 0..255 (la voix anime la poupée chez les autres)
     }
 
     /// <summary>L'état d'un monstre, calculé UNIQUEMENT chez l'hôte, et recopié chez les autres.</summary>

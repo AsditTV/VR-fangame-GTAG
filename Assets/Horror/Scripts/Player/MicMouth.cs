@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 #if UNITY_ANDROID && !UNITY_EDITOR
 using UnityEngine.Android;
@@ -48,6 +49,12 @@ namespace Horror.Player
 
         /// <summary>Volume brut du micro (RMS). Servira au monstre aveugle pour "entendre" la voix.</summary>
         public float RawLevel => _rawLevel;
+
+        /// <summary>
+        /// En ligne, le micro appartient au chat vocal (Photon Voice) : un seul programme peut l'ouvrir sur Quest.
+        /// La voix fournit alors le niveau ici, et MicMouth ferme son propre micro.
+        /// </summary>
+        public static Func<float> ExternalLevel;
 
         const int SampleWindow = 256;
         AudioClip _clip;
@@ -116,7 +123,13 @@ namespace Horror.Player
         void Update()
         {
             float target;
-            if (isLocal)
+            if (isLocal && ExternalLevel != null)
+            {
+                if (_micStarted) { if (Microphone.IsRecording(_device)) Microphone.End(_device); _micStarted = false; _micReady = false; }
+                _rawLevel = ExternalLevel();
+                target = micEnabled ? Mathf.Clamp01((_rawLevel - noiseGate) * sensitivity) : 0f;
+            }
+            else if (isLocal)
             {
                 if (!_micStarted && Time.time >= _nextMicRetry)
                     StartMic();

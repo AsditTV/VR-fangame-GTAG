@@ -13,6 +13,7 @@ namespace Horror.Net
         public IReadOnlyList<int> RemotePlayers => Array.Empty<int>();
         public string PlayerName(int playerId) => "";
         public string PlayerUserId(int playerId) => "";
+        public int PlayerColorIndex(int playerId) => 0;
 
         public void Join(string mode, Action<bool> done) => done?.Invoke(true);
         public void Leave() { }

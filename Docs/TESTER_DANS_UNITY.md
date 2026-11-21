@@ -268,3 +268,13 @@ par l'accueil pour reprendre le monte-charge. **Page de Mila** : au sol de l'iso
    il faudra le brancher sur le service de Meta (Platform SDK) avant la sortie en ligne.
 4. **Panneaux du lobby** : ils étaient tournés vers le centre de la pièce et s'enfonçaient en biais dans le mur ;
    ils sont maintenant à plat. Vérifie qu'aucun ne traverse le mur.
+
+## Multijoueur à deux (casque + PC, ou deux casques)
+1. Sur chaque appareil : Minitel > ROOM > tape le même code (ex. 4242), puis attends ~3 s.
+2. Le tableau PLAYERS doit afficher « PLAYERS (1) » et le pseudo de l'autre.
+3. Tu dois voir l'autre (poupée à sa couleur, pseudo au-dessus) et l'entendre de la direction où il est ;
+   derrière un mur, sa voix est étouffée. Sa bouche bouge quand il parle.
+4. MUTE sur sa ligne : tu ne l'entends plus. BLOCK : il disparaît. Re-BLOCK : il revient.
+5. Les monstres doivent être au même endroit chez les deux (celui qui est arrivé en premier les fait tourner).
+   Limite connue : seul ce joueur-là peut se faire attraper pour l'instant.
+6. Efface le code de salle : retour en solo.
