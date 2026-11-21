@@ -122,6 +122,15 @@ namespace Horror.Player
                 l.type = LightType.Point; l.color = new Color(1f, 0.8f, 0.72f); l.intensity = 5f; l.range = 3f;
                 l.cullingMask = 1 << ScreamerLayer;
                 lightGo.transform.SetParent(clone.transform, true);
+                // petite lumière de face, douce : un visage plat (le portrait de L'Écoute) restait noir sous la seule
+                // lumière d'en bas
+                var fillGo = new GameObject("Lumière de face du screamer") { layer = ScreamerLayer };
+                fillGo.transform.SetParent(head, false);
+                fillGo.transform.localPosition = new Vector3(0.05f, 0.08f, 0.02f);
+                Light f = fillGo.AddComponent<Light>();
+                f.type = LightType.Point; f.color = new Color(0.85f, 0.82f, 1f); f.intensity = 1.6f; f.range = 1.2f;
+                f.cullingMask = 1 << ScreamerLayer;
+                fillGo.transform.SetParent(clone.transform, true);
             }
             if (cam != null)
             {
@@ -256,7 +265,7 @@ namespace Horror.Player
             if (_fader != null) return;
             GameObject quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             quad.name = "Fondu au noir";
-            Destroy(quad.GetComponent<Collider>());
+            DestroyImmediate(quad.GetComponent<Collider>());   // tout de suite : sinon le Rigidbody du joueur le voit (erreur PhysX)
             quad.transform.SetParent(head, false);
             quad.layer = ScreamerLayer;   // visible aussi quand la caméra ne voit plus que le screamer
             quad.transform.localPosition = new Vector3(0f, 0f, 0.05f);

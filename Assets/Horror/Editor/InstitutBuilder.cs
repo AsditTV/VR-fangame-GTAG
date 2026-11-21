@@ -104,11 +104,16 @@ namespace Horror.EditorTools
             SetupLaverie(map);
             SetupLobbyAndGoals(data, playroom);
             SetupDecor(data);
+            EnrichAmbience();
+            SetupLoge(map);
+            SetupStandardPhone();
+            SetupChangingDrawing();
             SetupInkTrails(graph, playroom);
             SetupBlackout();
             SetupMonster(data, graph);
             SetupPlayer(data, items);
             SetupLook();
+            new GameObject("Réseau (solo tant que Photon n'est pas installé)").AddComponent<Horror.Net.NetworkBootstrap>();
 
             EnsureFolder("Assets/Horror/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -586,7 +591,7 @@ namespace Horror.EditorTools
             if (src == null) return;
             Vector3[] v = src.vertices;
             Mesh dst = Object.Instantiate(src);
-            dst.name = src.name + "_porte23";
+            dst.name = src.name.EndsWith("_porte23") ? src.name : src.name + "_porte23";   // une seule copie, même après plusieurs découpes
             bool changed = false;
             for (int s = 0; s < src.subMeshCount; s++)
             {
@@ -601,6 +606,17 @@ namespace Horror.EditorTools
                 dst.SetTriangles(keep, s);
             }
             if (!changed) { Object.DestroyImmediate(dst); return; }
+            int left = 0;
+            for (int s = 0; s < dst.subMeshCount; s++) left += (int)dst.GetIndexCount(s);
+            if (left == 0)
+            {
+                // tout le maillage était dans la zone : on cache l'objet (un collider vide ferait une erreur PhysX)
+                Object.DestroyImmediate(dst);
+                MeshCollider empty = mf.GetComponent<MeshCollider>();
+                if (empty != null) Object.DestroyImmediate(empty);
+                mf.gameObject.SetActive(false);
+                return;
+            }
             EnsureFolder("Assets/Horror/Art/Map/Genere");
             string path = "Assets/Horror/Art/Map/Genere/" + dst.name + ".asset";
             if (Load<Mesh>(path) != null) AssetDatabase.DeleteAsset(path);
@@ -785,6 +801,7 @@ namespace Horror.EditorTools
             GameObject msg = SafeZoneShopBuilder.Label(end.transform, "YOU FOUND ME.\nNOW SHE CAN'T HEAR ME.\n- 23", Vector3.zero, 0.02f, new Color(0.85f, 0.9f, 1f));
             msg.transform.position = P(new Vector3(47f - 0.06f, 2.4f, 0f));
             msg.transform.rotation = Quaternion.LookRotation(-Flat(Dir(new Vector3(-1f, 0f, 0f))));
+            SetupEnvers(end, P(data.spawn));
             end.SetActive(false);
             goals.ending = end;
         }
@@ -802,6 +819,7 @@ namespace Horror.EditorTools
             GameObject[] frames = { Load<GameObject>(D + "Cadre_family.glb"), Load<GameObject>(D + "Cadre_friends.glb"),
                                     Load<GameObject>(D + "Cadre_lady.glb"), Load<GameObject>(D + "Cadre_pool.glb") };
             GameObject garland = Load<GameObject>(D + "Guirlande.glb");
+            GameObject lamp = Load<GameObject>(D + "Applique.glb");
             GameObject[] toys = { Load<GameObject>(D + "Lapin.glb"), Load<GameObject>(D + "Cubes.glb") };
             if (frames[0] == null) return;
             Physics.SyncTransforms();
@@ -851,6 +869,18 @@ namespace Horror.EditorTools
                     }
                 }
 
+                // 1 bis) une applique murale (lumière chaude qui grésille) sur le premier mur touché
+                if (lamp != null && Wall(new Vector3(c.x, lo.y + 2.1f * s_w, c.z), Vector3.right, size.x * 0.5f + 1.5f, out RaycastHit lh))
+                {
+                    GameObject l = Put(lamp, lh.point + lh.normal * 0.01f, Quaternion.LookRotation(lh.normal, Vector3.up), Vector3.one * 1.4f);
+                    var lg = new GameObject("Lumière de l'applique");
+                    lg.transform.SetParent(l.transform, false);
+                    lg.transform.position = lh.point + lh.normal * 0.3f;
+                    Light li = lg.AddComponent<Light>();
+                    li.type = LightType.Point; li.color = new Color(1f, 0.8f, 0.62f); li.intensity = 0.7f; li.range = 5f * s_w;
+                    lg.AddComponent<LightFlicker>();
+                }
+
                 // 2) une guirlande dans la longueur de la pièce, sous le plafond
                 if (garland != null)
                 {
@@ -882,6 +912,281 @@ namespace Horror.EditorTools
                 }
             }
             Debug.Log("[Horror] Décor : " + nFrames + " cadres, " + nGarlands + " guirlandes, " + nToys + " jouets.");
+        }
+
+        // ------------------------------------------------------------------ ambiances complétées (sans musique)
+
+        /// <summary>Complète les ambiances par pièce là où il n'y avait rien : dortoir (respirations d'enfants),
+        /// Standard (lignes qui grésillent), couloir (horloge), hall (courant d'air), Laverie (eau). Pas de musique
+        /// dans les zones dangereuses : on doit entendre les monstres.</summary>
+        private static void EnrichAmbience()
+        {
+            const string Z = Audio + "Zones/";
+            foreach (AmbientZone z in Object.FindObjectsByType<AmbientZone>(FindObjectsInactive.Include))
+            {
+                if (z.isSafe || z.loop != null) continue;
+                string n = z.gameObject.name;
+                if (n.Contains("Ecole")) { z.loop = Load<AudioClip>(Z + "dortoir_respirations.wav"); z.loopVolume = 0.35f; }
+                else if (n.Contains("Standard")) { z.loop = Load<AudioClip>(Z + "standard_gresillement.wav"); z.loopVolume = 0.25f; }
+                else if (n.Contains("Couloir")) { z.loop = Load<AudioClip>(Z + "couloir_horloge.wav"); z.loopVolume = 0.3f; }
+                else if (n.Contains("Hall") || n.Contains("Foyer")) { z.loop = Load<AudioClip>(Z + "hall_vent.wav"); z.loopVolume = 0.35f; }
+            }
+            // la Laverie n'est pas une pièce de la maquette : sa zone d'ambiance
+            Vector3 la = P(new Vector3(31.2f, 0f, -7f)), lb = P(new Vector3(47f, 5.5f, 7f));
+            var go = new GameObject("Ambiance Laverie");
+            go.transform.position = (la + lb) * 0.5f;
+            AmbientZone lz = go.AddComponent<AmbientZone>();
+            lz.size = new Vector3(Mathf.Abs(lb.x - la.x), Mathf.Abs(lb.y - la.y) + 1f, Mathf.Abs(lb.z - la.z));
+            lz.priority = 5;
+            lz.loop = Load<AudioClip>(Audio + "World/drap_eau_loop.wav"); lz.loopVolume = 0.3f;
+            lz.oneShots = LoadMany(Audio + "Ambience", "drip_");
+        }
+
+        // ------------------------------------------------------------------ la loge : le Doux sans tête et les peaux
+
+        /// <summary>La loge (derrière la scène) en nouveaux modèles : un Doux sans tête face au miroir, sa tête
+        /// posée sur la coiffeuse, et les costumes vides (des « peaux » de Doux) pendus au portant. Les anciens
+        /// sont découpés des maillages fusionnés de la maquette.</summary>
+        private static void SetupLoge(GameObject map)
+        {
+            var proto = Load<GameObject>(DouxFolder + "Doux_Ours.glb");
+            if (proto == null) return;
+            // 1) découper les anciens (Doux assis + sa tête + 8 costumes)
+            var boxes = new[] {
+                MaqBox(25.9f, 27.3f, 1.0f, 3.4f, -25.9f, -24.5f), MaqBox(27.0f, 28.1f, 1.8f, 3.1f, -27.0f, -25.9f),
+                MaqBox(16.0f, 22.2f, 1.6f, 3.0f, -26.7f, -26.1f) };
+            foreach (MeshFilter mf in map.GetComponentsInChildren<MeshFilter>(true))
+                if (mf.gameObject.name.Contains("Theatre_doux_") || mf.gameObject.name.Contains("Theatre_tissu_creme"))
+                    foreach (Bounds b in boxes) CutOutBox(mf, b);
+            var root = new GameObject("La loge (Doux sans tête, peaux de Doux)");
+            // ampoules du miroir de loge (chaudes, qui grésillent) et une lampe nue au-dessus du portant
+            foreach (Vector3 lp in new[] { new Vector3(26.9f, 2.6f, -25.6f), new Vector3(19f, 3.3f, -25.4f) })
+            {
+                var lg = new GameObject("Lumière de la loge");
+                lg.transform.SetParent(root.transform, false);
+                lg.transform.position = P(lp);
+                Light li = lg.AddComponent<Light>();
+                li.type = LightType.Point; li.color = new Color(1f, 0.78f, 0.6f); li.intensity = 1.1f; li.range = 6f * s_w;
+                lg.AddComponent<LightFlicker>();
+            }
+            Quaternion facingMirror = Quaternion.LookRotation(Flat(Dir(Vector3.back)), Vector3.up);
+            // 2) le Doux sans tête, debout devant le miroir
+            GameObject headless = PlaceDoux(root.transform, "Doux sans tête (loge)", "Ours", 2, P(new Vector3(26.6f, 1.1f, -25.2f)), facingMirror);
+            Transform t = FindChild(headless.transform, "Tete");
+            if (t != null) t.gameObject.SetActive(false);
+            // 3) sa tête, posée sur la coiffeuse (une 2e copie dont on ne garde que la tête)
+            GameObject headOnly = PlaceDoux(root.transform, "Tête de Doux (coiffeuse)", "Ours", 2, Vector3.zero, Quaternion.identity);
+            Transform h = FindChild(headOnly.transform, "Tete");
+            foreach (Transform c in headOnly.transform) if (c != h) c.gameObject.SetActive(false);
+            headOnly.transform.SetPositionAndRotation(P(new Vector3(27.55f, 1.94f, -26.45f)) - Vector3.up * 1.40f * s_w,
+                                                     facingMirror * Quaternion.Euler(0f, 200f, 0f));
+            // 4) les peaux de Doux pendues au portant (sans tête, pieds dans le vide)
+            string[] kinds = { "Lapin", "Ours", "Chat", "Chien" };
+            for (int k = 0; k < 8; k++)
+            {
+                float x = 16.5f + k * 0.72f;
+                float sc = 0.8f;
+                Vector3 hook = P(new Vector3(x, 2.85f, -26.4f));
+                GameObject skin = PlaceDoux(root.transform, "Peau de Doux " + (k + 1), kinds[k % 4], k % 6,
+                                            hook - Vector3.up * 1.40f * s_w * sc, facingMirror * Quaternion.Euler(0f, (k % 2 == 0 ? 8f : -8f), 0f));
+                skin.transform.localScale = Vector3.one * s_w * sc;
+                Transform sh = FindChild(skin.transform, "Tete");
+                if (sh != null) sh.gameObject.SetActive(false);
+            }
+        }
+
+        private static Bounds MaqBox(float x0, float x1, float y0, float y1, float z0, float z1)
+        {
+            Vector3 a = P(new Vector3(x0, y0, z0)), b = P(new Vector3(x1, y1, z1));
+            return new Bounds((a + b) * 0.5f, new Vector3(Mathf.Abs(b.x - a.x), Mathf.Abs(b.y - a.y), Mathf.Abs(b.z - a.z)));
+        }
+
+        // ------------------------------------------------------------------ le téléphone du Standard
+
+        private static void SetupStandardPhone()
+        {
+            var proto = Load<GameObject>("Assets/Horror/Art/Map/Decor/Telephone.glb");
+            if (proto == null) return;
+            Physics.SyncTransforms();
+            Vector3 spot = P(new Vector3(-18.6f, 0f, 3.4f));
+            if (Physics.Raycast(spot + Vector3.up * 3f, Vector3.down, out RaycastHit fh, 6f, ~0, QueryTriggerInteraction.Ignore)) spot = fh.point;
+            var root = new GameObject("Téléphone du Standard");
+            var table = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            table.name = "Guéridon_bois";
+            table.transform.SetParent(root.transform, false);
+            table.transform.localScale = new Vector3(0.5f, 0.75f, 0.5f) * s_w;
+            table.transform.position = spot + Vector3.up * 0.375f * s_w;
+            table.GetComponent<Renderer>().sharedMaterial = MakeMat("Gueridon", new Color(0.55f, 0.42f, 0.38f));
+            Vector3 top = spot + Vector3.up * 0.75f * s_w;
+            var phone = (GameObject)PrefabUtility.InstantiatePrefab(proto);
+            phone.transform.SetParent(root.transform, false);
+            phone.transform.position = top;
+            phone.transform.localScale = Vector3.one * 2.6f;   // bien visible sur le guéridon
+            var btn = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            btn.name = "Décrocher (invisible)";
+            btn.transform.SetParent(root.transform, false);
+            btn.transform.position = top + Vector3.up * 0.2f;
+            btn.transform.localScale = new Vector3(0.35f, 0.12f, 0.2f);
+            btn.GetComponent<Renderer>().enabled = false;
+            PressButton press = btn.AddComponent<PressButton>();
+            GameObject txt = SafeZoneShopBuilder.Label(root.transform, "", Vector3.zero, 0.012f, new Color(0.9f, 0.88f, 0.95f));
+            txt.transform.position = top + Vector3.up * 0.75f;
+            txt.transform.rotation = Quaternion.LookRotation(Flat(Dir(Vector3.right)));
+            StandardPhone sp = root.AddComponent<StandardPhone>();
+            sp.button = press;
+            sp.text = txt.GetComponent<TextMesh>();
+            sp.ring = Load<AudioClip>(Audio + "World/telephone_sonnerie.wav");
+            sp.whisper = Load<AudioClip>(Audio + "World/telephone_murmure.wav");
+        }
+
+        // ------------------------------------------------------------------ le dessin qui change (fond du dortoir)
+
+        private static void SetupChangingDrawing()
+        {
+            const string D = "Assets/Horror/Art/Map/Decor/";
+            string[] keys = { "family", "pool", "friends", "lady" };
+            var mats = new List<Material>();
+            foreach (string k in keys)
+            {
+                var proto = Load<GameObject>(D + "Cadre_" + k + ".glb");
+                Transform d = proto != null ? FindChild(proto.transform, "Dessin") : null;
+                if (d != null) mats.Add(d.GetComponent<Renderer>().sharedMaterial);
+            }
+            var frameProto = Load<GameObject>(D + "Cadre_family.glb");
+            if (mats.Count < 2 || frameProto == null) return;
+            Physics.SyncTransforms();
+            Vector3 from = P(new Vector3(0f, 1.8f, 27.5f));
+            if (!Physics.Raycast(from, Flat(Dir(Vector3.forward)), out RaycastHit hit, 10f, ~0, QueryTriggerInteraction.Ignore)) return;
+            var frame = (GameObject)PrefabUtility.InstantiatePrefab(frameProto);
+            frame.name = "Le dessin qui change (fond du dortoir)";
+            frame.transform.SetPositionAndRotation(hit.point + hit.normal * 0.03f, Quaternion.LookRotation(hit.normal, Vector3.up));
+            frame.transform.localScale = Vector3.one * 3f;
+            ChangingDrawing cd = frame.AddComponent<ChangingDrawing>();
+            cd.target = FindChild(frame.transform, "Dessin").GetComponent<Renderer>();
+            cd.versions = mats.ToArray();
+            cd.scratch = Load<AudioClip>(Audio + "Ambience/creak_02.wav");
+        }
+
+        // ------------------------------------------------------------------ l'Envers (après la fin)
+
+        /// <summary>
+        /// L'Envers : l'Institut « vu de l'autre côté du dessin ». Une pièce de papier blanc où tout est tracé au
+        /// crayon (contours noirs), avec les dessins des enfants en géant. On y entre par la machine 23 une fois
+        /// la fin débloquée (bouton ENTER) ; un bouton ramène à la Salle de jeux. Aucun monstre : ici, on peut crier.
+        /// </summary>
+        private static void SetupEnvers(GameObject ending, Vector3 spawn)
+        {
+            var root = new GameObject("L'Envers (zone secrète)");
+            Material paper = MakeMat("Envers_Papier", new Color(0.97f, 0.95f, 0.9f));
+            Material pencil = MakeMat("Envers_Crayon", new Color(0.12f, 0.1f, 0.14f));
+            // le papier luit un peu : l'Envers doit paraître blanc malgré l'étalonnage sombre du reste du jeu
+            paper.EnableKeyword("_EMISSION"); paper.SetColor("_EmissionColor", new Color(0.62f, 0.6f, 0.56f));
+            paper.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None; EditorUtility.SetDirty(paper);
+            Vector3 O = new Vector3(0f, 60f, 0f);   // très au-dessus (sous -30 m, le joueur est ramené au spawn)
+            GameObject Box(string name, Material m, Vector3 c, Vector3 size, bool solid = true)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                go.name = name; go.transform.SetParent(root.transform, false);
+                go.transform.position = P(O + c); go.transform.localScale = size * s_w;
+                go.GetComponent<Renderer>().sharedMaterial = m;
+                if (!solid) Object.DestroyImmediate(go.GetComponent<Collider>());
+                return go;
+            }
+            void Line(Vector3 a, Vector3 b)   // un trait de crayon (un peu tremblé)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                Object.DestroyImmediate(go.GetComponent<Collider>());
+                go.transform.SetParent(root.transform, false);
+                Vector3 wa = P(O + a), wb = P(O + b);
+                go.transform.position = (wa + wb) * 0.5f; go.transform.up = (wb - wa).normalized;
+                go.transform.localScale = new Vector3(0.05f * s_w, (wb - wa).magnitude * 0.5f, 0.05f * s_w);
+                go.GetComponent<Renderer>().sharedMaterial = pencil;
+            }
+            void Sketch(Vector3 lo, Vector3 hi)   // une boîte dessinée seulement en contours
+            {
+                Vector3[] v = { new Vector3(lo.x, lo.y, lo.z), new Vector3(hi.x, lo.y, lo.z), new Vector3(hi.x, lo.y, hi.z), new Vector3(lo.x, lo.y, hi.z),
+                                new Vector3(lo.x, hi.y, lo.z), new Vector3(hi.x, hi.y, lo.z), new Vector3(hi.x, hi.y, hi.z), new Vector3(lo.x, hi.y, hi.z) };
+                int[,] e = { { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 }, { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 }, { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 } };
+                for (int i = 0; i < 12; i++) Line(v[e[i, 0]] + Vector3.up * 0.01f, v[e[i, 1]] + Vector3.right * 0.015f);
+            }
+            const float W = 8f, H = 6f;
+            Box("Envers_Sol", paper, new Vector3(0f, -0.05f, 0f), new Vector3(2 * W, 0.1f, 2 * W));
+            Box("Envers_Plafond", paper, new Vector3(0f, H, 0f), new Vector3(2 * W, 0.1f, 2 * W));
+            Box("Envers_Mur_N", paper, new Vector3(0f, H / 2, W), new Vector3(2 * W, H, 0.1f));
+            Box("Envers_Mur_S", paper, new Vector3(0f, H / 2, -W), new Vector3(2 * W, H, 0.1f));
+            Box("Envers_Mur_E", paper, new Vector3(W, H / 2, 0f), new Vector3(0.1f, H, 2 * W));
+            Box("Envers_Mur_O", paper, new Vector3(-W, H / 2, 0f), new Vector3(0.1f, H, 2 * W));
+            Sketch(new Vector3(-W, 0f, -W), new Vector3(W, H, W));                         // la pièce elle-même, dessinée
+            for (int i = 0; i < 6; i++) Sketch(new Vector3(-6f + i * 2.2f, 0f, 4.5f), new Vector3(-4.6f + i * 2.2f, 0.6f, 6.5f));   // des lits
+            Sketch(new Vector3(-1.2f, 0f, -W), new Vector3(1.2f, 2.6f, -W + 0.2f));        // une porte qui ne s'ouvre pas
+            Sketch(new Vector3(-1f, 0f, -1f), new Vector3(1f, 0.9f, 1f));                   // une table
+            string[] keys = { "family", "friends", "lady", "pool" };
+            Vector3[] spots = { new Vector3(-W + 0.06f, 3f, -3f), new Vector3(-W + 0.06f, 3f, 3f), new Vector3(W - 0.06f, 3f, -3f), new Vector3(W - 0.06f, 3f, 3f) };
+            for (int i = 0; i < 4; i++)
+            {
+                var proto = Load<GameObject>("Assets/Horror/Art/Map/Decor/Cadre_" + keys[i] + ".glb");
+                if (proto == null) continue;
+                var f = (GameObject)PrefabUtility.InstantiatePrefab(proto);
+                f.transform.SetParent(root.transform, false);
+                Vector3 n = Flat(Dir(new Vector3(spots[i].x < 0 ? 1f : -1f, 0f, 0f)));
+                f.transform.SetPositionAndRotation(P(O + spots[i]) - Vector3.up * 1.0f, Quaternion.LookRotation(n, Vector3.up));
+                f.transform.localScale = Vector3.one * 6f;
+            }
+            GameObject msg = SafeZoneShopBuilder.Label(root.transform, "HERE, NOBODY LISTENS.\nHERE, WE CAN SCREAM.\n\n- MILA, AND THE 22 OTHERS", Vector3.zero, 0.05f, new Color(0.15f, 0.12f, 0.18f));
+            msg.transform.position = P(O + new Vector3(0f, 3.6f, W - 0.08f));
+            msg.transform.rotation = Quaternion.LookRotation(-Flat(Dir(Vector3.back)));
+            foreach (Vector3 lp in new[] { new Vector3(-4f, 5f, 0f), new Vector3(4f, 5f, 0f), new Vector3(0f, 5f, -5f) })
+            {
+                var lg = new GameObject("Lumière de l'Envers"); lg.transform.SetParent(root.transform, false);
+                lg.transform.position = P(O + lp);
+                Light li = lg.AddComponent<Light>(); li.type = LightType.Point; li.color = new Color(1f, 0.97f, 0.92f); li.intensity = 3.5f; li.range = 14f * s_w;
+            }
+            // atmosphère propre : pas de brouillard noir, étalonnage clair (volume local prioritaire sur le global)
+            var atmo = new GameObject("Atmosphère de l'Envers"); atmo.transform.SetParent(root.transform, false);
+            atmo.transform.position = P(O + new Vector3(0f, H / 2, 0f));
+            AtmosphereZone az = atmo.AddComponent<AtmosphereZone>();
+            az.size = new Vector3(2 * W, H + 2f, 2 * W) * s_w;
+            BoxCollider vb = atmo.AddComponent<BoxCollider>(); vb.isTrigger = true; vb.size = az.size;
+            var vol = atmo.AddComponent<UnityEngine.Rendering.Volume>();
+            vol.isGlobal = false; vol.priority = 10f; vol.blendDistance = 1f;
+            string vpath = "Assets/Horror/Art/Map/Genere/Envers_Etalonnage.asset";
+            if (Load<UnityEngine.Rendering.VolumeProfile>(vpath) != null) AssetDatabase.DeleteAsset(vpath);
+            var vp = ScriptableObject.CreateInstance<UnityEngine.Rendering.VolumeProfile>();
+            AssetDatabase.CreateAsset(vp, vpath);
+            var ec = vp.Add<UnityEngine.Rendering.Universal.ColorAdjustments>(true); ec.name = "ColorAdjustments"; AssetDatabase.AddObjectToAsset(ec, vp);
+            ec.postExposure.Override(1.2f); ec.saturation.Override(-35f); ec.contrast.Override(25f); ec.colorFilter.Override(Color.white);
+            var es = vp.Add<UnityEngine.Rendering.Universal.SplitToning>(true); es.name = "SplitToning"; AssetDatabase.AddObjectToAsset(es, vp);
+            es.shadows.Override(Color.grey); es.highlights.Override(Color.grey);
+            var ev = vp.Add<UnityEngine.Rendering.Universal.Vignette>(true); ev.name = "Vignette"; AssetDatabase.AddObjectToAsset(ev, vp);
+            ev.intensity.Override(0.18f); ev.color.Override(new Color(0.3f, 0.28f, 0.3f));
+            EditorUtility.SetDirty(vp);
+            vol.sharedProfile = vp;
+            var arrival = new GameObject("Arrivée dans l'Envers"); arrival.transform.SetParent(root.transform, false);
+            arrival.transform.position = P(O + new Vector3(0f, 0.3f, -5.5f));
+            // retour : un bouton crayonné près de la porte dessinée
+            GameObject back = Box("Bouton retour", MakeMat("Lobby_Bouton", new Color(0.95f, 0.62f, 0.72f)), new Vector3(1.8f, 1.1f, -W + 0.08f), new Vector3(0.22f, 0.22f, 0.08f));
+            back.GetComponent<Collider>().isTrigger = true;
+            var backSpot = new GameObject("Retour Salle de jeux"); backSpot.transform.SetParent(root.transform, false); backSpot.transform.position = spawn;
+            Teleporter tb = back.AddComponent<Teleporter>();
+            tb.button = back.AddComponent<PressButton>();
+            tb.destination = backSpot.transform;
+            GameObject backTxt = SafeZoneShopBuilder.Label(root.transform, "BACK", Vector3.zero, 0.02f, new Color(0.15f, 0.12f, 0.18f));
+            backTxt.transform.position = P(O + new Vector3(1.8f, 1.45f, -W + 0.08f));
+            backTxt.transform.rotation = Quaternion.LookRotation(-Flat(Dir(Vector3.forward)));
+            // entrée : dans la fin (machine 23), un bouton ENTER
+            var enter = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            enter.name = "Bouton ENTER (machine 23)";
+            enter.transform.SetParent(ending.transform, false);
+            enter.transform.position = P(new Vector3(47f - 1.3f, 1.2f, 0.55f));
+            enter.transform.localScale = new Vector3(0.08f, 0.22f, 0.22f) * s_w;
+            enter.GetComponent<Renderer>().sharedMaterial = MakeMat("Lobby_Bouton", new Color(0.95f, 0.62f, 0.72f));
+            enter.GetComponent<Collider>().isTrigger = true;
+            Teleporter te = enter.AddComponent<Teleporter>();
+            te.button = enter.AddComponent<PressButton>();
+            te.destination = arrival.transform;
+            GameObject enterTxt = SafeZoneShopBuilder.Label(ending.transform, "CRAWL IN", Vector3.zero, 0.014f, new Color(0.85f, 0.9f, 1f));
+            enterTxt.transform.position = P(new Vector3(47f - 1.32f, 1.55f, 0.55f));
+            enterTxt.transform.rotation = Quaternion.LookRotation(-Flat(Dir(new Vector3(-1f, 0f, 0f))));
         }
 
         // ------------------------------------------------------------------ traces et coupures
@@ -1100,6 +1405,17 @@ namespace Horror.EditorTools
                 dst.SetTriangles(keep, s);
             }
             if (!changed) { Object.DestroyImmediate(dst); return; }
+            int left = 0;
+            for (int s = 0; s < dst.subMeshCount; s++) left += (int)dst.GetIndexCount(s);
+            if (left == 0)
+            {
+                // tout le maillage était dans la zone : on cache l'objet (un collider vide ferait une erreur PhysX)
+                Object.DestroyImmediate(dst);
+                MeshCollider empty = mf.GetComponent<MeshCollider>();
+                if (empty != null) Object.DestroyImmediate(empty);
+                mf.gameObject.SetActive(false);
+                return;
+            }
             EnsureFolder("Assets/Horror/Art/Map/Genere");
             string path = "Assets/Horror/Art/Map/Genere/" + dst.name + ".asset";
             if (Load<Mesh>(path) != null) AssetDatabase.DeleteAsset(path);   // fichier produit par ce menu : on le refait

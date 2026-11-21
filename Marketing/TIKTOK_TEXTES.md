@@ -42,3 +42,15 @@
 
 **Commentaire de relance :**
 > Comment a word. If she hears you, she comes. 🤐
+
+## Vidéo 4 — vrai gameplay (`calm_faces_gameplay_tiktok.mp4`)
+Images filmées dans le vrai jeu (Unity, `Horror.Tests.FrameRecorder`), son remis au montage avec les sons du jeu.
+Plans : le théâtre et ses Doux, la loge (peaux de Doux), le téléphone du Standard, la Laverie (le Drap), deux screamers.
+Refaire la vidéo : voir `Tools/Trailer/make_gameplay.py` (et TESTER_DANS_UNITY.md, « Filmer une vidéo »).
+
+**Description :**
+> Real gameplay. The phone rings. Don't answer. ☎️🤫
+> #calmfaces #vrhorror #gtagfangame #gtag #metaquest3 #vr #horrorgame #indiegame #gameplay
+
+**Commentaire épinglé :**
+> Every room has its own rule. Which one would get you first? 👀

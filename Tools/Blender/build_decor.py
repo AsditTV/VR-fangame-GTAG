@@ -152,3 +152,44 @@ for i, (x, y, z, rot) in enumerate(((0, 0, 0, 8), (0.02, 0.01, 0.12, -14), (0.12
     bmesh.ops.translate(bm, vec=Vector((x, y, z + 0.06)), verts=bm.verts)
     part(root, "Cube_" + str(i), bm, [mats[i]], 0.06)
 export("Cubes")
+
+# ------------------------------------------------ applique murale (abat-jour de tissu de travers) : la lampe des pièces
+root = start("Applique")
+M_LAITON = material("Laiton", srgb("#B89A6A"), None, 0.35)
+M_LAITON.node_tree.nodes["Principled BSDF"].inputs["Metallic"].default_value = 0.8
+M_ABAT = material("Abat_Jour", srgb("#EBC7CF"), "tissu", 0.9, seed=86)
+M_AMPOULE = material("Ampoule", srgb("#FFE9C4"), None, 0.2)
+M_AMPOULE.node_tree.nodes["Principled BSDF"].inputs["Emission Color"].default_value = srgb("#FFD9A0")
+M_AMPOULE.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = 3.0
+bm = bmesh.new()
+disc(bm, Vector((0, 0.01, 0)), Vector((0, -1, 0)), 0.05, 0.02, 16)                          # platine au mur
+part(root, "Platine", bm, [M_LAITON], 0.05)
+part(root, "Bras", curve_mesh([[(0, 0, 0), (0, -0.08, 0.02), (0, -0.14, 0.08)]], 0.008, "bras"), [M_LAITON], 0.05)
+bm = bmesh.new()
+tube(bm, 0.0, 0.16, lambda t, a: 0.09 - 0.045 * t + 0.004 * math.sin(6 * a), 20, 6, 0.002, 30, 1, cap0=False, cap1=False)
+bmesh.ops.solidify(bm, geom=bm.faces[:], thickness=0.004)
+bmesh.ops.rotate(bm, cent=Vector(), matrix=Matrix.Rotation(math.radians(9), 3, "X"), verts=bm.verts)   # de travers
+bmesh.ops.translate(bm, vec=Vector((0, -0.15, 0.04)), verts=bm.verts)
+part(root, "Abat_Jour", bm, [M_ABAT], 0.06)
+bm = bmesh.new()
+ellipsoid(bm, Vector((0, -0.15, 0.1)), (0.025, 0.025, 0.032), 0.0, 10, 1, 12, 8)
+part(root, "Ampoule", bm, [M_AMPOULE], 0.05)
+export("Applique")
+
+# ------------------------------------------------ vieux téléphone à cadran (le Standard)
+root = start("Telephone")
+M_BAKE = material("Bakelite", srgb("#C7B6DC"), "feutre", 0.35, seed=87)
+M_CADRAN = material("Cadran", srgb("#F1E6D2"), None, 0.4)
+M_FILT = material("Cordon", srgb("#3A3240"), None, 0.6)
+bm = bmesh.new()
+ellipsoid(bm, Vector((0, 0, 0.06)), (0.11, 0.09, 0.065), 0.003, 20, 1, 24, 14)
+for v in bm.verts:
+    v.co.z = max(v.co.z, 0.0)
+part(root, "Socle", bm, [M_BAKE], 0.06)
+bm = bmesh.new()
+disc(bm, Vector((0, -0.07, 0.085)), Vector((0, -0.8, 0.6)), 0.045, 0.008, 24)
+part(root, "Cadran", bm, [M_CADRAN], 0.05)
+hand = [(-0.1, 0.0, 0.135), (-0.05, 0.0, 0.15), (0.05, 0.0, 0.15), (0.1, 0.0, 0.135)]
+part(root, "Combine", curve_mesh([hand], 0.022, "combine"), [M_BAKE], 0.06)
+part(root, "Cordon", curve_mesh([[(0.1, 0.0, 0.12), (0.15, 0.04, 0.05), (0.12, 0.08, 0.01), (0.06, 0.06, 0.02)]], 0.004, "cordon"), [M_FILT], 0.05)
+export("Telephone")

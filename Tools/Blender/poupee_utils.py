@@ -225,12 +225,13 @@ def disc(bm, center, normal, radius, depth, segs=20, wobble=0.0, seed=0):
     bmesh.ops.transform(bm, matrix=Matrix.Translation(center) @ m, verts=ret["verts"])
 
 
-def curve_mesh(points_list, radius, name):
-    """Fils / laine : courbes avec épaisseur, converties en maillage (bmesh renvoyé)."""
+def curve_mesh(points_list, radius, name, res=6, bevel_res=2):
+    """Fils / laine : courbes avec épaisseur, converties en maillage (bmesh renvoyé).
+    res / bevel_res : finesse le long de la courbe et autour (à baisser pour le Quest)."""
     cu = bpy.data.curves.new(name, "CURVE")
     cu.dimensions = "3D"
     cu.bevel_depth = radius
-    cu.bevel_resolution = 2
+    cu.bevel_resolution = bevel_res
     for pts in points_list:
         sp = cu.splines.new("NURBS")
         sp.points.add(len(pts) - 1)
@@ -238,7 +239,7 @@ def curve_mesh(points_list, radius, name):
             p.co = (co[0], co[1], co[2], 1)
         sp.use_endpoint_u = True
         sp.order_u = 3
-        sp.resolution_u = 6
+        sp.resolution_u = res
     ob = bpy.data.objects.new(name, cu)
     bpy.context.scene.collection.objects.link(ob)
     deps = bpy.context.evaluated_depsgraph_get()

@@ -39,7 +39,7 @@ COLC, CHIGNON, CUIVRE = srgb("#E6DDCF"), srgb("#4A4052"), srgb("#86A396")
 
 
 # ============================================================== texture de la robe (encre qui remonte)
-def robe_texture(size=1024):
+def robe_texture(size=512):   # 512 suffit sur Quest (était 1024)
     """u = tour de la robe (0..1), v = du bas (0) à la taille (1). Raccordable en u."""
     h = pu.weave_height(size, 340, 21) * 0.5 + 0.25
     y, x = np.mgrid[0:size, 0:size] / size          # y : 0 en haut de l'image = taille
@@ -119,7 +119,7 @@ M_BOUTON = material("Bouton_Jais", srgb("#2B2430"), None, 0.25)
 M_MANCHE = O["Buste_Mesh"].data.materials[0]          # même tissu que le buste
 
 # ============================================================== robe (cloche plissée, bas déchiré)
-SEGS, RINGS = 120, 70
+SEGS, RINGS = 64, 38        # allégé pour le Quest (était 120 x 70)
 R_T = [(0.0, 0.150), (0.10, 0.200), (0.25, 0.262), (0.50, 0.335), (0.75, 0.400), (1.0, 0.455)]
 TT, RR = np.array([a for a, _ in R_T]), np.array([b for _, b in R_T])
 
@@ -182,24 +182,24 @@ def stick_on_robe(obj, gap):
 
 # gouttes d'encre qui pendent sous l'ourlet
 bm = bmesh.new()
-for k in range(26):
+for k in range(18):
     th = rng.uniform(0, 2 * math.pi)
     t = 1.0
     r = float(np.interp(t, TT, RR)) * (1 + 0.07 * math.sin(13 * th + 0.8))
     z = hem_z(th)
     L = rng.uniform(0.02, 0.07)
     ellipsoid(bm, Vector((math.cos(th) * r, math.sin(th) * r * 0.92, z - L * 0.5)), (0.006, 0.006, L * 0.55),
-              0.0, 10, k, 10, 8)
-    ellipsoid(bm, Vector((math.cos(th) * r, math.sin(th) * r * 0.92, z - L)), (0.009, 0.009, 0.011), 0.0, 10, k, 10, 8)
+              0.0, 10, k, 8, 6)
+    ellipsoid(bm, Vector((math.cos(th) * r, math.sin(th) * r * 0.92, z - L)), (0.009, 0.009, 0.011), 0.0, 10, k, 8, 6)
 new_object("Gouttes_Encre", ROOT, bm, [M_ENCRE], 0.05)
 
 # ============================================================== tablier, poche, buste, tête, portrait : froissés
-wrinkle_existing(O["Tablier"], 0.006, 9, cuts=2, seed=1)
+wrinkle_existing(O["Tablier"], 0.006, 9, cuts=1, seed=1)
 stick_on_robe(O["Tablier"], 0.008)
 for _n in ("Poche", "Papier_Poche_0", "Papier_Poche_1"):
     if _n in O:
         stick_on_robe(O[_n], 0.016)
-wrinkle_existing(O["Buste_Mesh"], 0.003, 14, cuts=1, seed=2)
+wrinkle_existing(O["Buste_Mesh"], 0.003, 14, cuts=0, seed=2)
 wrinkle_existing(O["Tete_Nuit"], 0.004, 7, cuts=0, seed=3)
 wrinkle_existing(O["Portrait"], 0.0035, 20, cuts=1, seed=4)
 
@@ -219,7 +219,7 @@ for s in range(160):
     k = -1 + 2 * s / 159
     rr = R * math.sqrt(max(0.05, 1 - k * k)) + 0.004
     spiral.append(tuple(wc + u * math.cos(a) * rr + w * math.sin(a) * rr + ax * k * h.z * 0.75))
-new_object("Chignon_Laine", TETE, curve_mesh([spiral], 0.007, "spirale"), [M_LAINE], 0.03)
+new_object("Chignon_Laine", TETE, curve_mesh([spiral], 0.007, "spirale", res=3, bevel_res=1), [M_LAINE], 0.03)
 
 # ============================================================== cornets acoustiques
 tete_w = TETE.matrix_world.translation
@@ -234,12 +234,12 @@ for name in ("Cornet_G", "Cornet_D", "Cornet_Haut"):
         tt = t if far_top else 1 - t
         return 0.011 + 0.004 * tt + (bell - 0.015) * (tt ** 4.5) + 0.0008 * math.sin(6 * a)
     bm = bmesh.new()
-    grid = tube(bm, z0, z1, horn_r, 28, 26, 0.0, 10, 0, cap0=not far_top, cap1=far_top is False)
+    grid = tube(bm, z0, z1, horn_r, 20, 16, 0.0, 10, 0, cap0=not far_top, cap1=far_top is False)
     bmesh.ops.solidify(bm, geom=bm.faces[:], thickness=0.003)
     # rebord roulé du pavillon
     zr = z1 if far_top else z0
-    rim = [Vector((math.cos(2 * math.pi * k / 40) * bell, math.sin(2 * math.pi * k / 40) * bell, zr)) for k in range(41)]
-    rbm = curve_mesh([[tuple(c2 + Vector((c.x * 0, 0, 0))) for c2 in rim]], 0.004, "rebord")
+    rim = [Vector((math.cos(2 * math.pi * k / 24) * bell, math.sin(2 * math.pi * k / 24) * bell, zr)) for k in range(25)]
+    rbm = curve_mesh([[tuple(c2 + Vector((c.x * 0, 0, 0))) for c2 in rim]], 0.004, "rebord", res=2, bevel_res=1)
     tmp = bpy.data.meshes.new("tmp"); rbm.to_mesh(tmp); bm.from_mesh(tmp); rbm.free(); bpy.data.meshes.remove(tmp)
     bmesh.ops.translate(bm, vec=Vector((c.x, c.y, 0)), verts=bm.verts)
     finish(ob, bm, [M_CUIVRE], 0.05)
@@ -328,7 +328,7 @@ for sign in (1, -1):
     loops2.append([tuple(bow_c + Vector((sign * (0.11 * (1 - math.cos(t)) * 0.5), 0.016 * math.sin(t) + 0.012, 0.05 * math.sin(t))))
                    for t in [s / 20 * 2 * math.pi for s in range(21)]])
     loops2.append([tuple(bow_c), tuple(bow_c + Vector((sign * 0.04, 0.016, -0.15))), tuple(bow_c + Vector((sign * 0.07, 0.012, -0.36)))])
-new_object("Noeud_Tablier", ROOT, curve_mesh(loops2, 0.009, "noeud"), [M_DENTELLE], 0.03)
+new_object("Noeud_Tablier", ROOT, curve_mesh(loops2, 0.009, "noeud", res=3, bevel_res=1), [M_DENTELLE], 0.03)
 M_PIECE = material("Robe_Piece", srgb("#968AA6"), "tissu", 0.9, seed=16)
 bm_p, bm_s = bmesh.new(), bmesh.new()
 for th0, z0, w, h in ((2.4, 0.92, 0.22, 0.08), (-0.5, 0.62, 0.18, 0.07)):

@@ -134,3 +134,31 @@ la Laverie inondée.
    « horror.fin23 » des PlayerPrefs (Edit > Clear All PlayerPrefs efface tout, crayons compris).
 4. **Décor** : dessins d'enfants encadrés de travers, guirlandes de fanions, peluches et cubes oubliés,
    dans toutes les pièces. **Laverie** : l'eau est maintenant aux chevilles.
+
+## Les 8 chantiers : ambiances, Envers, loge, téléphone, dessin, Quest, réseau, vidéo (menu 8)
+1. **Appliques** : une lampe murale par pièce, lumière chaude qui grésille. Au casque : est-ce assez
+   lisible sans être éclairé comme en plein jour ?
+2. **Ambiances** (jamais de musique là où un monstre chasse) : dortoir = respirations d'enfants qui dorment,
+   Standard = lignes qui grésillent, couloir = horloge, hall = courant d'air, Laverie = eau + gouttes.
+3. **La loge** (derrière la toile de fond du théâtre) : un Doux sans tête face au miroir, sa tête posée sur
+   la coiffeuse, et 8 « peaux » de Doux pendues au portant. Ampoules du miroir qui grésillent.
+4. **Le téléphone du Standard** : sonne au hasard (toutes les 1,5 à 3,5 min, 12 s). La sonnerie est un
+   BRUIT : L'Écoute vient. Appuie sur le combiné pendant qu'il sonne : une voix chuchote et une phrase de
+   l'histoire s'écrit au-dessus (6 messages, dans l'ordre). Pour tester vite : clic droit sur
+   « Téléphone du Standard » > StandardPhone > Faire sonner.
+5. **Le dessin qui change** (dortoir) : regarde-le, détourne la tête 6 s en restant à moins de 9 m,
+   regarde à nouveau : ce n'est plus le même dessin (petit grattement de crayon).
+6. **L'Envers** (récompense de la fin) : à la machine 23 éclairée, bouton rose « CRAWL IN » -> pièce de
+   papier blanc tout dessinée au crayon, dessins géants, message final. Pas de monstre. Bouton « BACK » ->
+   retour Salle de jeux. Elle est très haut au-dessus de la carte (sous -30 m, le jeu ramène au spawn).
+7. **Screamers** : nouveaux cris GRAVES (impact sub-basse + rugissement saturé, un par monstre) et
+   lumière de face (le visage de L'Écoute se lit enfin). Au casque : sursaut ou pas ? Volume trop fort ?
+   Anciens cris gardés dans VR-fangame-GTAG_sauvegardes/audio_jumpscare_v1. Refaire : Tools/Audio/cris_graves.sh.
+8. **L'Écoute allégée** : 124 000 -> 62 500 triangles (robe, chignon, cornets moins découpés), même allure.
+9. **Réseau** : rien de visible (le jeu reste solo). Voir Docs/MULTIJOUEUR.md pour Photon.
+
+### Filmer une vidéo de vrai gameplay (sans casque)
+En Play, un script crée `Horror.Tests.FrameRecorder.Begin(dossier, caméra de la tête)` puis enchaîne des plans
+(`Glide`, `Hold`, `FollowHead` + `Wait` pour les screamers) ; chaque image est enregistrée en JPG 1080 x 1920 à
+30 images/s de temps de jeu. Montage : `python Tools/Trailer/make_gameplay.py <dossier> <sortie.mp4>`
+(textes, sons du jeu recalés, logo de fin). Résultat : Marketing/calm_faces_gameplay_tiktok.mp4.

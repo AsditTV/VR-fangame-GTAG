@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace Horror.Noise
@@ -69,6 +69,17 @@ namespace Horror.Noise
             var e = new NoiseEvent(position, radius, type, source);
             Heard?.Invoke(e);
             NetworkForwarder?.Invoke(e);
+        }
+
+        /// <summary>
+        /// Un bruit reçu par le réseau (fait par un autre joueur) : on le fait entendre ici, sans le renvoyer
+        /// (sinon il ferait des allers-retours à l'infini). Appelé par Horror.Net.NetworkBootstrap.
+        /// </summary>
+        public static void ReceiveRemote(NoiseEvent e)
+        {
+            if (e.radius <= 0.05f) return;
+            e.time = Time.time;
+            Heard?.Invoke(e);
         }
 
         /// <summary>
