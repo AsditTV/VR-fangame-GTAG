@@ -612,6 +612,31 @@ namespace Horror.EditorTools
             ai.step = Load<AudioClip>(A + "docteur_pas.wav");
             ai.jumpscareSound = Load<AudioClip>(Audio + "Jumpscare/docteur_cri.wav");
             BuildDoctorGraph(ai);
+
+            // son chariot d'instruments : poussé en ronde, lâché quand il te voit, garé de temps en temps
+            GameObject cart = HPut(doc.transform.parent, "Plateau", new Vector3(24f, 0f, -58.4f), 200f, false);
+            if (cart != null)
+            {
+                cart.name = "Chariot du Docteur";
+                Transform chute = null;
+                foreach (Transform t in cart.GetComponentsInChildren<Transform>(true)) if (t.name.StartsWith("Chute_")) { chute = t; break; }
+                foreach (Transform c in cart.transform)
+                    if (c != chute && c.GetComponentInChildren<Renderer>() != null) AddBoundsCollider(cart.transform, c, false);
+                if (chute != null)
+                {
+                    AddBoundsCollider(chute, chute, false, -0.02f);
+                    AddBoundsCollider(chute, chute, true, 0.25f);
+                    FragileNoisy fn = chute.gameObject.AddComponent<FragileNoisy>();
+                    fn.crash = Load<AudioClip>(A + "fracas_metal.wav");
+                }
+                foreach (Transform t in cart.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 2;   // Ignore Raycast : le Docteur ne s'y cogne pas
+                Rigidbody crb = cart.AddComponent<Rigidbody>();                // cinématique : il pousse le joueur au lieu de le traverser
+                crb.isKinematic = true; crb.interpolation = RigidbodyInterpolation.Interpolate;
+                DoctorCart dc = cart.AddComponent<DoctorCart>();
+                dc.doctor = ai;
+                dc.squeak = Load<AudioClip>(A + "chariot_grince.wav");
+                dc.release = Load<AudioClip>(A + "chariot_lache.wav");
+            }
         }
 
         private static void BuildDoctorGraph(DoctorAI ai)

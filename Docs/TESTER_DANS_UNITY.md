@@ -214,13 +214,20 @@ la chambre froide (noir complet, poupées assises en rang) et l'isolement (griff
 **Le Docteur** (masque de corbeau, lanterne verte) :
 1. Il **voit** ce que sa lanterne éclaire (cône de 55°, 10 m, le faisceau vert est visible) ; tout près (2 m),
    il te sent même de dos. Murs et rideaux coupent sa vue ; allongé immobile dans un lit, tu es invisible.
-2. Il est **sourd** aux petits bruits (tes pas, ta voix) : seuls les **fracas** l'attirent.
+2. Il est **sourd** aux petits bruits (tes pas, ta voix normale) : seuls les **fracas** et les **cris** l'attirent.
 3. Il **fredonne** une comptine en patrouillant. Quand il **se tait** et claque du bec : il t'a vu.
-4. Il ne court jamais (4 m/s en traque) ; caché 4 s, il te perd et fouille le dernier endroit.
+4. En traque il COURT (5,6 m/s) ; caché 4 s, il te perd et fouille le dernier endroit.
 5. Screamer unique : croassement + bec, il fonce de face (yeux rouges, bec cousu).
 **Objets fragiles** (plateaux d'instruments, bocaux, pieds à perfusion, dans les salles ET dans les couloirs) :
 les frôler les fait tomber avec un fracas énorme (34 m). Le Docteur l'entend même à travers un mur. Ils se
 remettent en place 3 min plus tard, hors de vue. Test : clic droit sur un « Chute_* » > FragileNoisy > Faire tomber.
+**Son chariot** : en ronde, il pousse un chariot d'instruments devant lui. La roulette couine et les instruments
+tintent : on l'entend venir de loin, même quand sa comptine est couverte. Dès qu'il te voit ou part voir un bruit,
+il le **lâche** (« clang ») : le chariot reste planté au milieu du couloir, et son plateau s'écrase si tu le frôles
+en fuyant (fracas de 34 m, il revient droit dessus). De temps en temps (40 à 75 s), il le **gare** et continue sans
+lui : plus de couinement, il est silencieux... jusqu'à ce qu'il revienne le chercher (45 s plus tard). Il ne
+reprend pas un chariot dont le plateau est par terre (il attend qu'il se remette en place).
+Test sans casque : Play, sélectionne « Chariot du Docteur » > DoctorCart (Attached), et appelle GoTo sur le Docteur.
 Au casque : la zone est-elle assez éclairée pour s'orienter ? Le faisceau du Docteur se voit-il assez tôt ?
 **Sonnette de l'accueil** (comptoir du hall de l'infirmerie, « RING FOR THE DOCTOR ») : appuie, « ding ! », le
 Docteur remonte vers l'accueil. Une diversion : tu fouilles ailleurs pendant ce temps... mais il faudra repasser

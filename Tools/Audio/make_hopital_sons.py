@@ -163,3 +163,20 @@ for at in (1.3, 3.9, 6.2):
 for at in (0.6, 2.2, 5.1, 7.0):
     place(hum2, np.sin(2 * np.pi * 980 * t(0.12)) * env(int(0.12 * SR), 0.005, 0.05) * 0.06, at)
 save(OUT, "hopital_bourdon", hum2, 0.5)
+
+# --- le chariot du Docteur : roulette qui couine (boucle 3,6 s) + instruments qui tintent ; choc quand il le lâche
+tt = t(3.6)
+cart = 0.05 * bp(rng.standard_normal(len(tt)), 120, 600)                      # roulement sourd
+for at in np.arange(0.1, 3.5, 0.45):                                           # le couinement de la roulette
+    n = int(0.16 * SR)
+    ts = np.arange(n) / SR
+    f = 2300 + 500 * np.sin(2 * np.pi * 3 * ts) + rng.uniform(-150, 150)
+    sq = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.sin(np.pi * ts / ts[-1]) ** 2 * 0.35
+    place(cart, sq, at)
+for k in range(10):                                                            # les instruments qui s'entrechoquent
+    place(cart, clang(rng.uniform(2500, 5200), 0.25, 14) * 0.12, rng.uniform(0, 3.4))
+save(OUT, "chariot_grince", cart, 0.6)
+x = np.zeros(int(1.2 * SR))
+place(x, clang(330, 1.0, 4.0), 0.0)
+place(x, clang(1800, 0.5, 8.0) * 0.5, 0.02)
+save(OUT, "chariot_lache", room(x, 0.6, 0.25), 0.8)

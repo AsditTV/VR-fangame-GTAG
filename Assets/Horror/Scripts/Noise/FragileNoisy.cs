@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Horror.Locomotion;
 
 namespace Horror.Noise
@@ -20,6 +20,10 @@ namespace Horror.Noise
 
         private Rigidbody _rb;
         private Vector3 _pos; private Quaternion _rot;
+        private Transform _parent;      // son support (un chariot qui roule) : il revient dessus, où qu'il soit
+
+        /// <summary>Vrai tant qu'il est par terre.</summary>
+        public bool Fallen => _fallen;
         private bool _fallen;
         private float _resetAt;
 
@@ -29,7 +33,8 @@ namespace Horror.Noise
             if (_rb == null) _rb = gameObject.AddComponent<Rigidbody>();
             _rb.isKinematic = true;
             _rb.mass = 2f;
-            _pos = transform.position; _rot = transform.rotation;
+            _parent = transform.parent;
+            _pos = transform.localPosition; _rot = transform.localRotation;
         }
 
         private void OnTriggerEnter(Collider other) { TryKnock(other); }
@@ -50,6 +55,7 @@ namespace Horror.Noise
         private void Knock(Vector3 from)
         {
             _fallen = true;
+            transform.SetParent(null, true);          // il tombe tout seul, il ne suit plus son support
             _rb.isKinematic = false;
             from.y = 0.4f;
             _rb.AddForce(from.normalized * push, ForceMode.VelocityChange);
@@ -62,10 +68,13 @@ namespace Horror.Noise
         private void Update()
         {
             if (!_fallen || Time.time < _resetAt) return;
+            Vector3 home = _parent != null ? _parent.TransformPoint(_pos) : _pos;
             foreach (ArmLocomotion p in ArmLocomotion.All)          // jamais sous les yeux de quelqu'un
-                if (p != null && (p.HeadPosition - _pos).sqrMagnitude < 64f) { _resetAt = Time.time + 5f; return; }
+                if (p != null && ((p.HeadPosition - home).sqrMagnitude < 64f || (p.HeadPosition - transform.position).sqrMagnitude < 64f))
+                { _resetAt = Time.time + 5f; return; }
             _rb.isKinematic = true;
-            transform.SetPositionAndRotation(_pos, _rot);
+            transform.SetParent(_parent, false);
+            transform.localPosition = _pos; transform.localRotation = _rot;
             _fallen = false;
         }
     }
