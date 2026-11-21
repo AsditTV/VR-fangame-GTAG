@@ -454,6 +454,24 @@ namespace Horror.EditorTools
             Board("PATIENT 23 - MILA ?\nTEST: -\nFile empty.\nSomeone tore the page out.", new Vector3(23f, HFloor + 2f, -70.05f), south);
             Board("THEY ARE NOT SICK.\nTHEY ARE UNFINISHED.\n\n- Dr.", new Vector3(14.05f, HFloor + 2.4f, -61f), Vector3.left * -1f, 0.04f);
             Board("QUIET PLEASE.\nTHE DOCTOR IS LISTENING\nFOR NOTHING BUT CRASHES.\nHE SEES WHAT HIS LAMP SEES.", new Vector3(35.95f, HFloor + 2.2f, -16f), Vector3.left, 0.026f);
+            // la page arrachée du dossier 23 (Mila), au sol de l'isolement, sous une lumière qui tremble
+            var page = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            page.name = "Page arrachée (dossier 23)"; Object.DestroyImmediate(page.GetComponent<Collider>());
+            page.transform.SetParent(root.transform, false);
+            page.transform.SetPositionAndRotation(new Vector3(50f, HFloor + 0.02f, -93.5f), Quaternion.Euler(90f, 12f, 0f));
+            page.transform.localScale = new Vector3(0.9f, 1.15f, 1f);
+            page.GetComponent<Renderer>().sharedMaterial = MakeMat("Hopital_Page_Mila", new Color(0.95f, 0.92f, 0.85f));
+            GameObject mila = SafeZoneShopBuilder.Label(root.transform,
+                "PATIENT 23 - MILA, 8\nTEST: SILENCE\nShe stopped making any sound.\nWe cannot find her anymore.\n\nShe is still here.\nShe whispers to the ones who fall.",
+                Vector3.zero, 0.014f, new Color(0.25f, 0.12f, 0.16f));
+            mila.transform.SetPositionAndRotation(new Vector3(50f, HFloor + 0.03f, -93.5f), Quaternion.Euler(90f, 12f, 0f));
+            var glow = new GameObject("Lumière de la page");
+            glow.transform.SetParent(root.transform, false);
+            glow.transform.position = new Vector3(50f, HFloor + 1.6f, -93.5f);
+            Light gl = glow.AddComponent<Light>();
+            gl.type = LightType.Point; gl.range = 3.2f; gl.intensity = 1.4f; gl.color = new Color(1f, 0.86f, 0.8f);
+            glow.AddComponent<LightFlicker>();
+
             for (int k = 0; k < 7; k++)                                   // l'isolement : griffonné partout
             {
                 GameObject s = SafeZoneShopBuilder.Label(root.transform, k % 2 == 0 ? "LET ME SEE AGAIN" : "i can hear you", Vector3.zero, 0.03f, new Color(0.35f, 0.12f, 0.16f));
