@@ -31,7 +31,8 @@ for line in open(os.path.join(SRC, "evenements.txt"), encoding="utf-8"):
 FIRST = lambda key: next(f for f, w in EV if w.startswith(key))           # noqa: E731
 ENTER, PASS, SPOT, CRASH, SCARE, WHISPER = (FIRST(k) for k in ("entre", "passe", "etat Traque", "fracas", "screamer", "murmure"))
 START = max(0, ENTER + 100)            # on commence quand il sort de derrière le rideau
-SCARE_LEN, WHISPER_LEN, END_FRAMES = 46, 52, 48
+SCARE_LEN, WHISPER_LEN, END_FRAMES = 64, 52, 48
+SNAP = 17
 
 
 def load(rel, gain=1.0):
@@ -69,10 +70,10 @@ def images():
     for i in range(START, SCARE + SCARE_LEN):
         img = Image.open(os.path.join(SRC, f"f{i:05d}.jpg"))
         if i >= SCARE:
-            j = i - SCARE
-            img = C.zoom(img, 1.0 + 0.2 * np.exp(-j / 6.0), dx=rng.uniform(-0.012, 0.012), dy=rng.uniform(-0.012, 0.012))
-            arr = np.clip((C.to_arr(img) - 0.01) * 1.5, 0, 1)
-            if j < 4:
+            j = i - SCARE - SNAP
+            img = C.zoom(img, 1.0 + (0.2 * np.exp(-j / 6.0) if j >= 0 else 0.0), dx=rng.uniform(-0.012, 0.012), dy=rng.uniform(-0.012, 0.012))
+            arr = np.clip(C.to_arr(img), 0, 1) ** 1.8 * 0.95
+            if 0 <= j < 4:
                 arr = C.glitch(arr, 0.9 - j * 0.2, seed=j)
         else:
             arr = C.to_arr(img)
@@ -123,7 +124,7 @@ def sound(total):
         C.place(fx, load("Hopital/docteur_pas.wav", 0.55), s)
     C.place(fx, load("Hopital/fracas_perfusion.wav", 0.8), t(CRASH))
     bed *= 3.0; fx *= 3.0
-    C.place(fx, phone_scream() * 3.0, scare_t)
+    C.place(fx, phone_scream() * 3.0, scare_t + SNAP / FPS)
     w_t = scare_t + SCARE_LEN / FPS
     C.place(fx, load("Death/murmure_09.wav", 0.45), w_t + 0.1)
     C.place(fx, C.boom(1.8, 40) * 0.5, w_t + WHISPER_LEN / FPS)

@@ -36,7 +36,8 @@ FIRST = lambda key: next(f for f, w in EV if w.startswith(key))           # noqa
 LOOK, SEEN, AGAIN, SLAP, TURN, SCARE, WHISPER = (FIRST(k) for k in
                                                  ("regard", "la_voit", "repart", "claque", "retourne", "screamer", "murmure"))
 START = 8
-SCARE_LEN = 46                             # images du screamer gardées
+SCARE_LEN = 64      # la ruée, l'arrêt silencieux (0,4 s), puis le saut avec le cri
+SNAP = 17           # image du saut (cri) après le début du screamer                             # images du screamer gardées
 WHISPER_LEN = 56
 END_FRAMES = 48
 
@@ -76,11 +77,11 @@ def images():
     for i in range(START, SCARE + SCARE_LEN):
         img = Image.open(os.path.join(SRC, f"f{i:05d}.jpg"))
         if i >= SCARE:
-            j = i - SCARE
+            j = i - SCARE - SNAP
             # le screamer : zoom d'impact, secousse, plus clair (le visage doit se lire), déchirure à l'impact
-            img = C.zoom(img, 1.0 + 0.22 * np.exp(-j / 6.0), dx=rng.uniform(-0.012, 0.012), dy=rng.uniform(-0.012, 0.012))
-            arr = np.clip((C.to_arr(img) - 0.015) * 2.0, 0, 1)
-            if j < 4:
+            img = C.zoom(img, 1.0 + (0.22 * np.exp(-j / 6.0) if j >= 0 else 0.0), dx=rng.uniform(-0.012, 0.012), dy=rng.uniform(-0.012, 0.012))
+            arr = np.clip(C.to_arr(img), 0, 1) ** 1.8 * 0.95   # les prises ont un visage trop éclairé : on assombrit
+            if 0 <= j < 4:
                 arr = C.glitch(arr, 0.9 - j * 0.2, seed=j)
         else:
             arr = C.to_arr(Image.open(os.path.join(SRC, f"f{i:05d}.jpg")))
@@ -155,7 +156,7 @@ def sound(total):
     C.place(fx, load("Monster/scream_chase.wav", 0.4), turn_t)
     # avant le screamer, tout est remonté (~ -22 LUFS : on entend ses pas, ses clés) ; le screamer reste ~15 dB au-dessus
     bed *= 3.2; fx *= 3.2
-    C.place(fx, phone_scream() * 3.0, scare_t)                     # le screamer domine tout
+    C.place(fx, phone_scream() * 3.0, scare_t + SNAP / FPS)                     # le screamer domine tout
     w_t = scare_t + SCARE_LEN / FPS
     C.place(fx, load("Death/murmure_01.wav", 0.45), w_t + 0.1)
     C.place(fx, C.boom(1.8, 40) * 0.5, w_t + WHISPER_LEN / FPS)

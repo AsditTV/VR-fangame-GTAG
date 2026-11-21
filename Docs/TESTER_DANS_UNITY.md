@@ -225,3 +225,15 @@ Au casque : la zone est-elle assez éclairée pour s'orienter ? Le faisceau du D
 **Sonnette de l'accueil** (comptoir du hall de l'infirmerie, « RING FOR THE DOCTOR ») : appuie, « ding ! », le
 Docteur remonte vers l'accueil. Une diversion : tu fouilles ailleurs pendant ce temps... mais il faudra repasser
 par l'accueil pour reprendre le monte-charge. **Page de Mila** : au sol de l'isolement, sous une lumière qui tremble.
+
+## Démarches, vitesses, voix, screamers « double coup » (menu 8 puis 9)
+1. **Démarches** : le Docteur marche (rebond, roulis) et COURT (penché en avant, bras tendus, lanterne brandie) ;
+   le Doux marcheur se dandine puis trottine ; L'Écoute a gagné du poids (rebond, roulis). Pose « image par image ».
+2. **Vitesses** : L'Écoute 5,8 m/s (charge 8,5 dans les 7 derniers mètres), Docteur 5,6, Doux 3,6, Drap 4 m/s.
+   Il faut vraiment ramer vite. Trop dur ? Baisse chaseSpeed / huntSpeed / walkSpeed sur le monstre.
+3. **Voix** : chuchoter = rien ; parler = ~5 m (L'Écoute vient si elle est près) ; CRIER = 30 m : L'Écoute
+   te chasse, le Docteur accourt en courant. Ta bouche (FaceScribble) suit toujours ta voix.
+4. **Screamers** : le monstre fonce, s'ARRÊTE à 60 cm et te fixe en silence 0,4 s, puis se jette sur toi avec le
+   cri (Jumpscare > stareTime, 0 = l'ancien screamer). Visage éclairé quelle que soit la pose.
+5. **Infirmerie habillée** : feuilles et dessins par terre, encre, peluches, dessins aux murs, griffonnages qui
+   donnent des conseils (« HE CAN'T SEE IN THE DARK »), planning des tests, notes, fiches des lits, toise.

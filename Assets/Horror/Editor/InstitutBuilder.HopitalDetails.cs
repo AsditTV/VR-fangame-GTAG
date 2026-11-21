@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -165,7 +165,7 @@ namespace Horror.EditorTools
                 {
                     float x = side == 0 ? 36.4f : 51.6f, z = -57.5f - k * 3.9f;
                     Vector3 facing = side == 0 ? Vector3.right : Vector3.left;
-                    Note(kids[side * 6 + k] + "\nNo visitors.", new Vector3(x, HFloor + 0.95f, z), facing, 0.012f, new Vector2(0.32f, 0.3f));
+                    Note(kids[side * 6 + k] + "\nNo visitors.", new Vector3(x + (side == 0 ? 0.1f : -0.1f), HFloor + 0.5f, z + 0.55f), facing, 0.012f, new Vector2(0.32f, 0.3f));   // sous la ligne des yeux
                 }
             Debug.Log($"[Horror] Infirmerie habillée : {sheets} feuilles, {framed} dessins, {sc} griffonnages, notes et fiches.");
         }

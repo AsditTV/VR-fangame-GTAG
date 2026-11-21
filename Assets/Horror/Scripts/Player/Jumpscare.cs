@@ -71,6 +71,9 @@ namespace Horror.Player
         public float lungeFrom = 1.6f;
         [Tooltip("Durée de la ruée du visage (s) : très court = plus violent.")]
         public float lungeTime = 0.14f;
+        [Tooltip("Double coup : il s'arrête et te fixe en silence (s) avant de se jeter sur toi avec le cri. 0 = désactivé.")]
+        public float stareTime = 0.4f;
+        public float stareDistance = 0.6f;
 
         [Header("Le noir après la mort")]
         [Tooltip("Chuchotements d'enfant (un au hasard, jamais deux fois de suite). Assets/Horror/Audio/Death.")]
@@ -87,6 +90,7 @@ namespace Horror.Player
         public bool ShowingWhisper => _whisperText != null && _whisperText.gameObject.activeSelf;
 
         private TextMesh _whisperText;
+        private readonly System.Collections.Generic.List<GameObject> _screamLights = new System.Collections.Generic.List<GameObject>();
         private int _lastWhisper = -1, _lastWhisper2 = -1;
 
         /// <summary>Calque réservé au screamer : pendant le jumpscare, la caméra ne voit que lui.</summary>
@@ -146,18 +150,18 @@ namespace Horror.Player
                 lightGo.transform.SetParent(head, false);
                 lightGo.transform.localPosition = new Vector3(0f, -0.35f, 0.15f);
                 Light l = lightGo.AddComponent<Light>();
-                l.type = LightType.Point; l.color = new Color(1f, 0.8f, 0.72f); l.intensity = 5f; l.range = 3f;
+                l.type = LightType.Point; l.color = new Color(1f, 0.8f, 0.72f); l.intensity = 0.45f; l.range = 3f;
                 l.cullingMask = 1 << ScreamerLayer;
-                lightGo.transform.SetParent(clone.transform, true);
+                _screamLights.Add(lightGo);   // reste accrochée à la caméra : le visage est toujours éclairé, quelle que soit la pose
                 // petite lumière de face, douce : un visage plat (le portrait de L'Écoute) restait noir sous la seule
                 // lumière d'en bas
                 var fillGo = new GameObject("Lumière de face du screamer") { layer = ScreamerLayer };
                 fillGo.transform.SetParent(head, false);
                 fillGo.transform.localPosition = new Vector3(0.04f, 0.16f, 0.06f);
                 Light f = fillGo.AddComponent<Light>();
-                f.type = LightType.Point; f.color = new Color(0.9f, 0.86f, 1f); f.intensity = 9f; f.range = 2f;
+                f.type = LightType.Point; f.color = new Color(0.9f, 0.86f, 1f); f.intensity = 0.35f; f.range = 2f;
                 f.cullingMask = 1 << ScreamerLayer;
-                fillGo.transform.SetParent(clone.transform, true);
+                _screamLights.Add(fillGo);
             }
             if (cam != null)
             {
@@ -167,8 +171,11 @@ namespace Horror.Player
             }
             SetFade(0f, Color.black);
             AudioClip clip = scream != null ? scream : sting;
-            if (clip != null) _audio.PlayOneShot(clip, volume);
-            Haptics(1f, lungeTime + faceTime + 0.2f);
+            if (stareTime <= 0f)
+            {
+                if (clip != null) _audio.PlayOneShot(clip, volume);
+                Haptics(1f, lungeTime + faceTime + 0.2f);
+            }
 
             // centre réel du visage (pas le pivot : celui du Doux est au cou) et point « avant » du visage
             Transform facePart = null;
@@ -234,12 +241,33 @@ namespace Horror.Player
                 clone.transform.position += target - Center(cloneHead);
             }
 
-            // 2) la ruée : il fonce sur toi
+            // 2) la ruée : il fonce sur toi... puis (double coup) il s'arrête à 60 cm et te FIXE, en silence,
+            //    avant de se jeter sur ton visage au moment exact où le cri éclate
+            float stop = stareTime > 0f ? stareDistance : 0.3f;
             for (float t = 0f; t < lungeTime; t += Time.deltaTime)
             {
                 float k = t / lungeTime; k = k * k * k;
-                PlaceHead(new Vector3(0f, 0.0f, Mathf.Lerp(lungeFrom, 0.3f, k)), Quaternion.identity, scale * Mathf.Lerp(0.7f, 1.1f, k));
+                PlaceHead(new Vector3(0f, 0.0f, Mathf.Lerp(lungeFrom, stop, k)), Quaternion.identity, scale * Mathf.Lerp(0.7f, 1.0f, k));
                 yield return null;
+            }
+            if (stareTime > 0f)
+            {
+                Haptics(0.15f, stareTime);
+                for (float t = 0f; t < stareTime; t += Time.deltaTime)
+                {
+                    // immobile... juste un tremblement, et la tête qui se penche lentement sur le côté
+                    PlaceHead(new Vector3(Random.Range(-0.004f, 0.004f), Random.Range(-0.003f, 0.003f), stop),
+                              Quaternion.Euler(0f, 0f, Mathf.Lerp(0f, 14f, t / stareTime)), scale);
+                    yield return null;
+                }
+                if (clip != null) _audio.PlayOneShot(clip, volume);
+                Haptics(1f, faceTime + 0.3f);
+                for (float t = 0f; t < 0.06f; t += Time.deltaTime)                     // le saut
+                {
+                    float k = t / 0.06f;
+                    PlaceHead(new Vector3(0f, 0f, Mathf.Lerp(stop, 0.27f, k)), Quaternion.Euler(0f, 0f, 14f * (1f - k)), scale * Mathf.Lerp(1f, 1.12f, k));
+                    yield return null;
+                }
             }
 
             // 3) le screamer : saccades, torsions, palpitations, flashs rouges
@@ -268,6 +296,8 @@ namespace Horror.Player
             // 4) coupure au noir, retour à la Salle de jeux pendant le noir
             SetFade(1f, Color.black);
             if (clone != null) Destroy(clone);
+            foreach (GameObject l in _screamLights) if (l != null) Destroy(l);
+            _screamLights.Clear();
             _locomotion.TeleportTo(_locomotion.SpawnPosition);
 
             // 5) le noir : une voix d'enfant chuchote un morceau de l'histoire (sous-titré, devant les yeux)
