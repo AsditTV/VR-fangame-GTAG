@@ -303,6 +303,26 @@ namespace Horror.EditorTools
             desk.transform.position = new Vector3(33.5f, HFloor + 0.6f, -16f); desk.transform.localScale = new Vector3(1.2f, 1.2f, 4f);
             desk.GetComponent<Renderer>().sharedMaterial = MakeMat("Hopital_Comptoir", new Color(0.66f, 0.82f, 0.76f));
             for (int k = 0; k < 4; k++) HPut(p, "ChaiseAttente", new Vector3(25.5f, 0, -13.5f - k * 1.2f), 90f);
+            // la sonnette du comptoir : un « ding » qui attire le Docteur à l'accueil (diversion)
+            var bell = new GameObject("Sonnette de l'accueil");
+            bell.transform.SetParent(p, false);
+            bell.transform.position = new Vector3(33.5f, HFloor + 1.2f, -15f);
+            var dome = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            dome.name = "Dôme"; Object.DestroyImmediate(dome.GetComponent<Collider>());
+            dome.transform.SetParent(bell.transform, false);
+            dome.transform.localPosition = new Vector3(0f, 0.05f, 0f); dome.transform.localScale = new Vector3(0.16f, 0.1f, 0.16f);
+            dome.GetComponent<Renderer>().sharedMaterial = MakeMat("Hopital_Laiton", new Color(0.78f, 0.66f, 0.38f));
+            var bbtn = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            bbtn.name = "Bouton de la sonnette";
+            bbtn.transform.SetParent(bell.transform, false);
+            bbtn.transform.localPosition = new Vector3(0f, 0.12f, 0f); bbtn.transform.localScale = new Vector3(0.05f, 0.04f, 0.05f);
+            bbtn.GetComponent<Renderer>().sharedMaterial = MakeMat("Hopital_Laiton", new Color(0.78f, 0.66f, 0.38f));
+            bbtn.GetComponent<Collider>().isTrigger = true;
+            ReceptionBell rb = bell.AddComponent<ReceptionBell>();
+            rb.button = bbtn.AddComponent<PressButton>();
+            rb.ding = Load<AudioClip>(Audio + "Hopital/sonnette.wav");
+            GameObject ring = SafeZoneShopBuilder.Label(p, "RING FOR THE DOCTOR", Vector3.zero, 0.012f, new Color(0.25f, 0.2f, 0.25f));
+            ring.transform.SetPositionAndRotation(new Vector3(32.88f, HFloor + 0.9f, -15f), Quaternion.LookRotation(Vector3.right));
             HFragile(p, "Plateau", new Vector3(33.5f, 0, -20.2f), 10f, "fracas_metal");
 
             // salle d'attente : rangées de petites chaises tournées vers le mur, un fauteuil roulant vide

@@ -222,3 +222,6 @@ la chambre froide (noir complet, poupées assises en rang) et l'isolement (griff
 les frôler les fait tomber avec un fracas énorme (34 m). Le Docteur l'entend même à travers un mur. Ils se
 remettent en place 3 min plus tard, hors de vue. Test : clic droit sur un « Chute_* » > FragileNoisy > Faire tomber.
 Au casque : la zone est-elle assez éclairée pour s'orienter ? Le faisceau du Docteur se voit-il assez tôt ?
+**Sonnette de l'accueil** (comptoir du hall de l'infirmerie, « RING FOR THE DOCTOR ») : appuie, « ding ! », le
+Docteur remonte vers l'accueil. Une diversion : tu fouilles ailleurs pendant ce temps... mais il faudra repasser
+par l'accueil pour reprendre le monte-charge. **Page de Mila** : au sol de l'isolement, sous une lumière qui tremble.
