@@ -65,3 +65,13 @@ le screamer, le murmure. 9,9 s : courte pour être revue en boucle (la fin renvo
 
 **Commentaire épinglé :**
 > Would you have turned around? 👀
+
+## Vidéo 6 — Le Docteur (`calm_faces_docteur_tiktok.mp4`)
+Vrai gameplay : caché dans un lit de l'infirmerie, il passe lanterne levée en fredonnant, se tait, et fonce.
+
+**Description :**
+> He only sees what his lamp sees. Don't move. 🕯️
+> #calmfaces #vrhorror #gtagfangame #gtag #metaquest3 #vr #horrorgame #plaguedoctor #jumpscare
+
+**Commentaire épinglé :**
+> When he stops humming… it's already too late. 🎶

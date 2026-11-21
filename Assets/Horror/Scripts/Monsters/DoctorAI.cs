@@ -60,6 +60,9 @@ namespace Horror.Monsters
 
         public static readonly List<DoctorAI> All = new List<DoctorAI>();
 
+        /// <summary>Appelé à chaque changement d'état (journal des vidéos, futur réseau).</summary>
+        public System.Action<State> StateChangedHook;
+
         private AudioSource _hum, _breath, _fx;
         private List<int>[] _adj;
         private List<Vector3> _path = new List<Vector3>();
@@ -69,6 +72,7 @@ namespace Horror.Monsters
         private ArmLocomotion _prey;
         private Quaternion _headBase, _twitch = Quaternion.identity;
         private float _slideSign = 1f, _slideUntil;
+        private bool _blocked;
 
         private void OnEnable() { All.Add(this); NoiseSystem.Heard += OnNoise; }
         private void OnDisable() { All.Remove(this); NoiseSystem.Heard -= OnNoise; }
@@ -192,7 +196,8 @@ namespace Horror.Monsters
                     Vector3 goal = _lastSeen;
                     bool direct = !Physics.Linecast(transform.position + Vector3.up * 0.8f, goal + Vector3.up * 0.6f,
                                                     NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore);
-                    if (direct) Move(goal, huntSpeed);
+                    // tout près, il va droit sur toi en contournant (un lit, un rideau) ; de loin, il suit les couloirs
+                    if (direct || Vector3.Distance(transform.position, goal) < 6f) Move(goal, huntSpeed);
                     else { if (Time.time > _repathAt) RepathTo(goal); FollowPath(huntSpeed); }
                     TryCatch();
                     break;
@@ -206,10 +211,22 @@ namespace Horror.Monsters
             Sounds();
         }
 
+        /// <summary>L'envoie marcher jusqu'à un point (mise en scène, tests) : il y va comme pour inspecter, en fredonnant.</summary>
+        public void GoTo(Vector3 p)
+        {
+            SetState(State.Inspecte);
+            _stateTimer = 0f;
+            RepathTo(p);
+        }
+
+        /// <summary>Vrai s'il est arrivé (à <paramref name="tol"/> près) au point donné.</summary>
+        public bool IsNear(Vector3 p, float tol = 0.9f) => Arrived(p, tol);
+
         private void SetState(State s)
         {
             if (state == s) return;
             state = s; _stateTimer = 0f; _twitch = Quaternion.identity;
+            StateChangedHook?.Invoke(s);
         }
 
         private void TryCatch()
@@ -271,7 +288,9 @@ namespace Horror.Monsters
         /// <summary>Avance le long du chemin ; vrai quand il est arrivé au bout.</summary>
         private bool FollowPath(float speed)
         {
-            while (_pathIdx < _path.Count - 1 && Arrived(_path[_pathIdx], 0.7f)) _pathIdx++;
+            // un point bouché par un meuble : assez près, on le considère atteint (sinon il pousse le meuble à l'infini)
+            while (_pathIdx < _path.Count - 1 && (Arrived(_path[_pathIdx], 0.7f) || (_blocked && Arrived(_path[_pathIdx], 1.6f)))) _pathIdx++;
+            if (_pathIdx >= _path.Count - 1 && _blocked && Arrived(_path[_path.Count - 1], 1.6f)) return true;
             if (_path.Count == 0 || (_pathIdx >= _path.Count - 1 && Arrived(_path[_path.Count - 1], 0.7f))) return true;
             Move(_path[_pathIdx], speed);
             return false;
@@ -291,9 +310,11 @@ namespace Horror.Monsters
             Vector3 dir = to.normalized;
             float stepLen = Mathf.Min(_speed * Time.deltaTime, to.magnitude);
             Vector3 origin = transform.position + Vector3.up * 0.6f;
+            _blocked = false;
             if (Physics.SphereCast(origin, 0.35f, dir, out RaycastHit hit, stepLen + 0.1f, NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore)
                 && !hit.transform.IsChildOf(transform))
             {
+                _blocked = true;
                 Vector3 slide = Vector3.ProjectOnPlane(dir, hit.normal); slide.y = 0f;
                 if (slide.sqrMagnitude < 0.04f)
                 {

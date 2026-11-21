@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Horror.Audio;
 using Horror.Interaction;
 using Horror.Monsters;
@@ -345,7 +345,7 @@ namespace Horror.EditorTools
                     d.name = "Enfant en observation"; d.transform.SetParent(p, false);
                     d.transform.SetPositionAndRotation(new Vector3(bed.x, HFloor + 0.75f, bed.z), Quaternion.Euler(-90f, bed.x < 40f ? 90f : 270f, 0f));
                 }
-            HFragile(p, "Plateau", new Vector3(44f, 0, -67f), 15f, "fracas_metal");
+            HFragile(p, "Plateau", new Vector3(41.5f, 0, -62.5f), 15f, "fracas_metal");   // pas au centre : le Docteur passe par là
 
             // bloc opératoire : la table sous la grande lampe, plateaux et bocaux tout autour
             HPut(p, "TableOperation", new Vector3(21f, 0, -61f), 0f);
@@ -591,6 +591,8 @@ namespace Horror.EditorTools
                 pts.Add(new Vector3(c.x + (vertical ? 1.2f : 0f), HFloor, c.y + (vertical ? 0f : 1.2f)));
             }
             pts.RemoveAll(q => !HWalk(Mathf.FloorToInt(q.x) - GX0, Mathf.FloorToInt(q.z) - GZ0));
+            Physics.SyncTransforms();
+            for (int i = 0; i < pts.Count; i++) pts[i] = FreeNavSpot(pts[i]);   // jamais un point de passage DANS un meuble
             var links = new List<Vector2Int>();
             for (int a = 0; a < pts.Count; a++)
                 for (int b = a + 1; b < pts.Count; b++)
