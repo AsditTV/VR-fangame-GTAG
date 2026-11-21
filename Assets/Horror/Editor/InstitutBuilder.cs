@@ -101,6 +101,7 @@ namespace Horror.EditorTools
             SetupThrowables(data);
             SetupMusicBoxes(data);
             SetupHopital();
+            SetupGrenier(data);
             SetupChildDoors(data);
             SetupJournal(playroom, docs);
             WaypointGraph graph = SetupNav(data);
@@ -1013,7 +1014,7 @@ namespace Horror.EditorTools
         private static void MarkStaticDecor()
         {
             string[] roots = { "Décor (cadres, guirlandes, jouets)", "L'Envers (zone secrète)",
-                               "La loge (Doux sans tête, peaux de Doux)", "Laverie (porte 23)", "Infirmerie (mobilier)" };
+                               "La loge (Doux sans tête, peaux de Doux)", "Laverie (porte 23)", "Infirmerie (mobilier)", "Grenier (décor)" };
             int n = 0;
             foreach (string name in roots)
             {

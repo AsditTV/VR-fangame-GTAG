@@ -42,7 +42,7 @@ namespace Horror.Net
     /// <summary>Un événement ponctuel de partie (mort, papier ramassé, porte, fin trouvée...).</summary>
     public struct GameEventMessage
     {
-        public enum Kind : byte { Mort, Papier, Lieu, Porte, Fin, Coupure, Capture }   // Capture : value = n° du monstre (MonsterSync), playerId = la victime
+        public enum Kind : byte { Mort, Papier, Lieu, Porte, Fin, Coupure, Capture, Ampoule }   // Capture : value = n° du monstre (MonsterSync), playerId = la victime ; Ampoule : value = n° d'ampoule, playerId = 1 allumée / 0 éteinte
         public Kind kind;
         public int playerId;
         public int value;              // numéro du papier, de la porte, etc.

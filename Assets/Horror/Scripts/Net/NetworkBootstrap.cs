@@ -130,6 +130,8 @@ namespace Horror.Net
         {
             // un autre joueur vient de mourir : on voit l'encre gicler là où il était
             if (e.kind == GameEventMessage.Kind.Mort) Horror.Player.DeathMarks.Spawn(e.position);
+            // une ampoule du grenier allumée / soufflée chez un autre joueur
+            if (e.kind == GameEventMessage.Kind.Ampoule) Horror.World.AtticBulb.ApplyRemote(e.value, e.playerId == 1);
             // un monstre m'a attrapé chez celui qui fait tourner l'IA : le screamer se joue ICI, avec ma copie du monstre
             if (e.kind == GameEventMessage.Kind.Capture && Session != null && e.playerId == Session.LocalPlayerId)
             {

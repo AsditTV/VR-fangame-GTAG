@@ -16,7 +16,7 @@ namespace Horror.Net
         public float sendRate = 10f;
         public float smoothing = 10f;
 
-        private static readonly string[] AiTypes = { "BlindMonsterAI", "DoctorAI", "SoftieWatcher", "SheetMonsterAI" };
+        private static readonly string[] AiTypes = { "BlindMonsterAI", "DoctorAI", "SoftieWatcher", "SheetMonsterAI", "VeilleuseAI" };
         private readonly List<MonoBehaviour> _ais = new List<MonoBehaviour>();
         private readonly Dictionary<int, MonsterState> _targets = new Dictionary<int, MonsterState>();
         private INetworkSession _session;
