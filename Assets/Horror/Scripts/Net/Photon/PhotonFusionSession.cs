@@ -209,7 +209,9 @@ namespace Horror.Net
             public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
             public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
             public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
+#pragma warning disable CS0618   // obsolète chez Fusion 2.1, mais toujours exigé par l'interface
             public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
+#pragma warning restore CS0618
             public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
             public void OnInput(NetworkRunner runner, NetworkInput input) { }
             public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
