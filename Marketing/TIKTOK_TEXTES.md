@@ -135,3 +135,21 @@ Liens : Discord https://discord.gg/Py44mhq3ZD · formulaire https://forms.gle/ov
 
 **Relance :**
 > She was there the whole time 👀 did you notice?
+
+## Vidéo « la casquette des modos » (22/11/2026) — relance du recrutement
+Fichier : `Marketing/calm_faces_mod_cap_tiktok.mp4` (22,5 s, vrai jeu : la casquette du veilleur apparaît sur la poupée,
+gros plan sur l'insigne NIGHT WATCH, L'Écoute arrive dans son dos). Bio : inchangée.
+
+**Description :**
+> mods get a cap nobody else can have 🧢 the old night watchman's cap.
+> Apply: forms.gle/ovYxYYx5cSYVNHBq9
+> #calmfaces #vrhorror #metaquest3 #vr #discord #moderator #indiegame
+
+**Commentaire épinglé :**
+> Moderator applications are still OPEN 📝
+> 1. Join the Discord: discord.gg/Py44mhq3ZD
+> 2. Fill the form: forms.gle/ovYxYYx5cSYVNHBq9
+> Accepted mods wear the NIGHT WATCH cap in game. Nobody else can. 🗝️
+
+**Relance :**
+> The badge says M.I. Marivaux Institute. The watchman never clocked out. 👀

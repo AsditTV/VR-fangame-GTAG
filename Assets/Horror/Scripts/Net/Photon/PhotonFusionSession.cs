@@ -30,17 +30,8 @@ namespace Horror.Net
         /// <summary>La session en cours (les RPC des objets réseau la retrouvent ainsi).</summary>
         public static PhotonFusionSession Current { get; private set; }
 
-        private const string KeyUserId = "horror.net.userid";
         /// <summary>Identifiant stable de cet appareil (aléatoire, créé une fois). Pas de donnée personnelle.</summary>
-        public static string LocalUserId
-        {
-            get
-            {
-                string id = PlayerPrefs.GetString(KeyUserId, "");
-                if (string.IsNullOrEmpty(id)) { id = Guid.NewGuid().ToString("N"); PlayerPrefs.SetString(KeyUserId, id); PlayerPrefs.Save(); }
-                return id;
-            }
-        }
+        public static string LocalUserId => PlayerIdentity.LocalUserId;
 
         /// <summary>Appelé une fois la salle rejointe, avec l'objet du NetworkRunner et mon identifiant : la voix s'y accroche.</summary>
         public static Action<GameObject, string> AfterJoin;

@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7837e9d3b57ab949bfd23e520a04447, type: 3}
+  m_Name: ModeratorRoster
+  m_EditorClassIdentifier: Assembly-CSharp::Horror.Cosmetics.ModeratorRoster
+  ids: []
+  capPrefab: {fileID: 3233401377469475379, guid: dfb7d78b1e92ff443855dca8d2171b99, type: 3}
+  capOffset: {x: 0, y: 0.105, z: -0.045}
+  capRotation: {x: -6, y: 0, z: 0}
+  capScale: 1.4
+  tagLine: NIGHT WATCH

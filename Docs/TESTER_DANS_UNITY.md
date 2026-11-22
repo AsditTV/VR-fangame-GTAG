@@ -252,6 +252,7 @@ par l'accueil pour reprendre le monte-charge. **Page de Mila** : au sol de l'iso
    bouton SCARE = FULL (double coup, cri fort) ou SOFT (screamer court, sans arrêt, cri moins fort). Mémorisé.
    bouton **MOVES** = FAST (par défaut : grands élans comme les jeux de bras rapides, mains un peu plus grosses qui
    n'accrochent pas, légère glisse sur les murs) ou CLASSIC (l'ancien réglage). Mémorisé. Comparer les deux.
+   Tableau **PLAYERS** : la ligne « YOUR ID: XXXXXXXX » s'affiche (c'est l'identifiant à donner pour devenir modo).
 2. **Screamers** : lumière par en dessous + lumière de côté en hauteur (des ombres sur le visage, plus effrayant
    qu'un visage blanc et plat). Au casque : assez lisible ? trop sombre ?
 3. **Poupées fusionnées** : enfants du dortoir (la tête tourne toujours), peaux de la loge, poupées de

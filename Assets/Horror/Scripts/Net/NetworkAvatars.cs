@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Horror.Cosmetics;
 using Horror.Locomotion;
 using Horror.Noise;
 using Horror.Player;
@@ -35,6 +36,7 @@ namespace Horror.Net
             public AudioLowPassFilter muffle;
             public PlayerTarget prey;          // pour les monstres (chez celui qui fait tourner l'IA)
             public Vector3 lastHead; public float lastTime;
+            public bool modChecked, moderator; // modérateur : casquette du veilleur + « NIGHT WATCH » sous le pseudo
         }
 
         private readonly Dictionary<int, Remote> _remotes = new Dictionary<int, Remote>();
@@ -204,6 +206,12 @@ namespace Horror.Net
             bool blocked = VoiceModeration.IsBlocked(uid);
             if (r.root.activeSelf == blocked) r.root.SetActive(!blocked);
             if (!r.hasPose) return;
+            if (!r.modChecked && !string.IsNullOrEmpty(uid))   // l'identifiant arrive parfois après la première pose
+            {
+                r.modChecked = true;
+                r.moderator = ModeratorRoster.IsModerator(uid);
+                if (r.moderator) ModeratorRoster.AttachCap(r.head);
+            }
             r.head.position = Vector3.Lerp(r.head.position, r.target.head, k);
             r.head.rotation = Quaternion.Slerp(r.head.rotation, r.target.headRotation, k);
             r.left.position = Vector3.Lerp(r.left.position, r.target.leftHand, k);
@@ -215,7 +223,8 @@ namespace Horror.Net
             if (r.colorizer != null && color != r.color) { r.color = color; r.colorizer.SetColor(GameSettings.Palette[Mathf.Clamp(color, 0, GameSettings.Palette.Length - 1)]); }
             if (r.tag != null)
             {
-                r.tag.text = s.PlayerName(r.id) + (VoiceModeration.IsMuted(uid) ? "  (MUTED)" : "");
+                r.tag.text = s.PlayerName(r.id) + (VoiceModeration.IsMuted(uid) ? "  (MUTED)" : "")
+                             + (r.moderator ? "\n<size=40><color=#D9A441>" + ModeratorRoster.Instance.tagLine + "</color></size>" : "");
                 if (listener != null) r.tag.transform.rotation = Quaternion.LookRotation(r.tag.transform.position - listener.position);
             }
             Voice(r, uid, listener);

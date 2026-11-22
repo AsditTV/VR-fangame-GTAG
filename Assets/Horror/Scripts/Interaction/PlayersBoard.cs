@@ -65,7 +65,8 @@ namespace Horror.Interaction
             IReadOnlyList<int> players = S != null ? S.RemotePlayers : null;
             int n = players != null ? players.Count : 0;
             if (header != null) header.text = (n == 0 ? "PLAYERS\n\nNobody else here." : "PLAYERS (" + n + ")")
-                                              + (AgeGate.VoiceAllowed ? "" : "\nVOICE CHAT OFF (ACCOUNT AGE)");   // compte enfant
+                                              + (AgeGate.VoiceAllowed ? "" : "\nVOICE CHAT OFF (ACCOUNT AGE)")   // compte enfant
+                                              + "\n\nYOUR ID: " + PlayerIdentity.Short(PlayerIdentity.LocalUserId);   // à donner pour devenir modérateur
             if (muteAllLabel != null) muteAllLabel.text = VoiceModeration.MuteEveryone ? "MUTE ALL: ON" : "MUTE ALL: OFF";
             if (rows == null) return;
             for (int i = 0; i < rows.Length; i++)

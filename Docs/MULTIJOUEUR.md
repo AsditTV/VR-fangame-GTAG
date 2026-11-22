@@ -128,3 +128,14 @@ départ de B : avatar et proie retirés ; en solo, le Docteur attrape toujours l
   installer le paquet « Meta XR Platform SDK », régler l'App ID dans ses paramètres (jamais dans le code), ajouter
   le symbole `CALM_META_PLATFORM`, et déclarer l'API dans le Contrôle de l'utilisation des données (Meta).
 - Test : argument `-age child` ou PlayerPrefs `horror.age.override` = 1 (enfant), 2 (ado), 3 (adulte), 0 (aucun).
+
+## Modérateurs : la casquette du veilleur (« NIGHT WATCH »)
+- Chaque appareil a un identifiant aléatoire (`PlayerIdentity`) ; sa forme courte est affichée sur le tableau PLAYERS :
+  « YOUR ID: 1D645C06 ». Le candidat accepté la donne (formulaire ou Discord).
+- On colle cet identifiant dans `Assets/Horror/Resources/ModeratorRoster.asset` (liste `ids`), puis on recompile l'APK.
+- Les autres joueurs voient alors sur sa tête la casquette d'Armand, le veilleur de nuit (prefab
+  `Assets/Horror/Cosmetics/night_watch_cap.prefab`, menu Horror/Outils/Casquette du veilleur), et « NIGHT WATCH » sous son pseudo.
+  Lui ne la voit pas (elle serait devant ses yeux). Aucun pouvoir, aucune lumière : apparence seulement.
+- **Limite** : l'identifiant est déclaré par le casque lui-même. Un client modifié pourrait copier celui d'un modo.
+  La vraie exclusivité viendra avec l'authentification Photon par le compte Meta (même chantier que le SDK Platform).
+- Ajouter un modo demande une nouvelle version de l'APK. Plus tard : lire la liste depuis le relais (le même que pour REPORT).
