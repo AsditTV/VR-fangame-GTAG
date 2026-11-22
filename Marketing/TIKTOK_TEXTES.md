@@ -153,3 +153,23 @@ gros plan sur l'insigne NIGHT WATCH, L'Écoute arrive dans son dos). Bio : incha
 
 **Relance :**
 > The badge says M.I. Marivaux Institute. The watchman never clocked out. 👀
+
+## Vidéo « wishlist now + modos » (22/11/2026)
+Fichier : `Marketing/calm_faces_wishlist_tiktok.mp4` (21,7 s, vrai jeu : la poupée annonce la page store et le recrutement,
+la casquette du veilleur apparaît, L'Écoute approche). Page store : https://www.meta.com/experiences/1967447728000800/
+
+**Bio** (80 caractères max) :
+> 🤫 VR horror · Meta Quest | Wishlist ↓ · Mods: discord.gg/Py44mhq3ZD
+
+**Description :**
+> CALM FACES is on the Meta Quest store 🤫 wishlist it now (link in bio)
+> Mods wanted: discord.gg/Py44mhq3ZD
+> #calmfaces #vrhorror #metaquest3 #vr #horrorgame #indiegame #wishlist
+
+**Commentaire épinglé :**
+> Wishlist CALM FACES on Meta Quest 👉 https://www.meta.com/experiences/1967447728000800/
+> Want to be a moderator? Join the Discord: discord.gg/Py44mhq3ZD
+> Mods wear the NIGHT WATCH cap in game 🗝️
+
+**Relance :**
+> Every wishlist helps the game get seen on the store. Thank you 🖤
