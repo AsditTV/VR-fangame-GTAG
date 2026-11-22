@@ -139,3 +139,12 @@ départ de B : avatar et proie retirés ; en solo, le Docteur attrape toujours l
 - **Limite** : l'identifiant est déclaré par le casque lui-même. Un client modifié pourrait copier celui d'un modo.
   La vraie exclusivité viendra avec l'authentification Photon par le compte Meta (même chantier que le SDK Platform).
 - Ajouter un modo demande une nouvelle version de l'APK. Plus tard : lire la liste depuis le relais (le même que pour REPORT).
+
+## Signalements → Discord des modos (22/11/2026)
+- REPORT (tableau PLAYERS) : le signalement est enregistré dans le casque, puis `ReportRelay` l'envoie au relais
+  (`Tools/Relay/report_worker.js`, Cloudflare Worker) qui le poste dans le salon Discord privé des modos.
+- Pas de réseau ou relais en panne : il attend dans le casque et repart plus tard (essais de plus en plus espacés).
+- Adresse du relais : `Assets/Horror/Resources/OnlineServices.asset` (vide = rien n'est envoyé). Le webhook Discord
+  n'est QUE dans Cloudflare (secret `DISCORD_WEBHOOK`). Mise en route : `Tools/Relay/LISEZMOI.md`.
+- Testé : `node Tools/Relay/test_report_worker.mjs`, et en Play avec `serveur_local.mjs` (relais coupé puis revenu :
+  les deux signalements sont partis dans l'ordre).
