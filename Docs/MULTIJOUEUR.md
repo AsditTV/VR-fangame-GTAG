@@ -111,3 +111,11 @@ distant envoie « Capture » (RPC) ; chez la victime, le screamer se joue avec S
 l'avatar de B dans le jeu -> B reçoit « Capture, monstre n° 3 » une fois par capture ; bruit reçu ; voix connectée ;
 départ de B : avatar et proie retirés ; en solo, le Docteur attrape toujours le joueur local (screamer joué).
 **Pas vérifié** : entre deux vrais appareils ; le screamer chez la victime (B de test n'a pas de joueur).
+
+## Le Grenier (22/11/2026)
+- La Veilleuse est dans `MonsterSync` (position envoyée par celui qui fait tourner l'IA) ; elle chasse tous les
+  joueurs du grenier (`PlayerTargets`), la capture d'un joueur distant passe par l'événement `Capture`.
+- Les ampoules : événement `Ampoule` (n° stable = rang par position, allumée/éteinte) envoyé à chaque changement.
+  **Limite** : pas d'état complet à l'arrivée ; un joueur qui rejoint en cours voit les ampoules de départ
+  jusqu'au prochain changement. Le grenier vide depuis 20 s revient à l'état de départ (chez tout le monde).
+- Les cassettes et le projecteur sont locaux (chacun écoute/regarde de son côté).

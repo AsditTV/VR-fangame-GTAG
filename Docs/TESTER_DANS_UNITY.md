@@ -278,3 +278,26 @@ par l'accueil pour reprendre le monte-charge. **Page de Mila** : au sol de l'iso
 5. Les monstres doivent être au même endroit chez les deux (celui qui est arrivé en premier les fait tourner).
    Limite connue : seul ce joueur-là peut se faire attraper pour l'instant.
 6. Efface le code de salle : retour en solo.
+
+## Le Grenier et La Veilleuse (menu 8, puis menu 9) — 22/11/2026
+Nouvelle zone au-dessus du grand dortoir : **monte-charge au fond du dortoir** (cage « ATTIC ^ », bouton rose).
+La Veilleuse (abat-jour à la place de la tête, éteignoir à cloche) **n'est pas aveugle : elle craint la lumière.**
+À tester dans le casque :
+1. Dortoir : la cassette « TAPE 1 » à côté de la cage. Appuie sur PLAY (bouton rose) : la voix sort de
+   l'appareil, les sous-titres défilent au-dessus. Ré-appuie : stop.
+2. Monte-charge : appuie sur le bouton de la cage → tu arrives dans la cage du grenier, sous une lampe
+   qu'elle ne peut pas souffler (refuge). Vérifie que tu ne tombes pas à l'arrivée.
+3. Reste sous une ampoule allumée : elle vient se poster au bord du halo, attend 4-7 s, puis l'ampoule
+   **grésille ~1,5 s** et s'éteint. Dès que c'est noir : elle se fige (coup de cloche) puis fonce.
+4. Juste après l'extinction, touche la **perle du cordon** (à hauteur de main) : l'ampoule se rallume
+   (≈0,8 s après l'extinction au plus tôt) et elle recule. Dis-moi si la fenêtre est trop courte ou trop longue.
+5. Dans le noir à moins de 13 m d'elle : elle charge (4,4 m/s). Si elle t'attrape : screamer avec son visage
+   cousu qui sort de sous l'abat-jour. Grimper aux chevrons ne suffit pas (elle attrape jusqu'à 3,3 m).
+6. Fond du grenier : cassette « TAPE 2 » (coin gauche, ampoule éteinte au départ), **projecteur de diapos**
+   (bouton rose sur le côté) : 4 diapositives sur le drap, légendes en dessous. Cassette « TAPE 3 » : à
+   l'infirmerie, salle des archives.
+7. Ressors par la cage du grenier : retour au dortoir.
+8. En ligne à deux : une ampoule soufflée/rallumée chez l'un doit l'être chez l'autre (limite connue :
+   quelqu'un qui arrive en cours de partie voit l'état de départ des ampoules).
+Réglages (inspecteur de « La Veilleuse ») : `windUp` (temps d'arrêt avant la charge), `huntSpeed`,
+`snuffEvery` ; sur chaque ampoule : `radius`, `startLit`.

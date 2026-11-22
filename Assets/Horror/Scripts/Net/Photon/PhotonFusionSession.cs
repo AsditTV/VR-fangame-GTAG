@@ -242,7 +242,7 @@ namespace Horror.Net
         /// <summary>Reçoit les rappels de Fusion (presque tous inutiles ici : tout passe par les objets réseau).</summary>
         private class Callbacks : MonoBehaviour, INetworkRunnerCallbacks
         {
-            public PhotonFusionSession session;
+            [System.NonSerialized] public PhotonFusionSession session;          // posé par le code, pas par Unity
             private void Update() => session?.Tick();
             public void OnPlayerJoined(NetworkRunner runner, PlayerRef player) { }
             public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }

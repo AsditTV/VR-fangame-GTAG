@@ -8,7 +8,7 @@ namespace Horror.Lore
     /// Un magnétophone à cassette des années 70, oublié quelque part. Appuyer sur PLAY : la bande se lit (son 3D qui
     /// sort de l'appareil), les sous-titres s'affichent au-dessus. Ré-appuyer : stop. Une autre façon de découvrir le
     /// lore que les papiers : on ENTEND les gens de l'Institut (la Veilleuse, une patiente, le Docteur).
-    /// Les cassettes écoutées sont retenues (PlayerPrefs) : TapesHeard / TapesTotal sur le tableau des objectifs.
+    /// Les cassettes écoutées sont retenues (PlayerPrefs) : TapesHeard / TapesTotal (pas encore affichés en jeu).
     /// </summary>
     public class LoreTape : MonoBehaviour
     {

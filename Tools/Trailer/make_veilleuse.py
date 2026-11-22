@@ -10,7 +10,8 @@ cassettes du jeu donnent la parole aux gens de l'Institut, sous-titres incrusté
   C « les diapos »    : le projecteur du grenier, la dictée du Docteur, la dernière diapo n'était pas dans la boîte.
 
 Usage : python Tools/Trailer/make_veilleuse.py A|B|C <dossier des images> <dossier des voix> <sortie.mp4>
-Voix attendues (wav) : a1 a2 a3 / b1 b2 b3 b4 / c1 c2 (textes dans VOIX ci-dessous).
+Voix attendues (wav) : a1 a2 a3 / b1 b2 b3 b4 / c1 (textes dans VOIX ci-dessous).
+La voix off et les cassettes passent sur une seule « piste » : jamais deux phrases en même temps.
 """
 import os
 import shutil
@@ -31,15 +32,14 @@ FPS, SR = C.FPS, C.SR
 rng = np.random.default_rng(23)
 
 VOIX = {   # sous-titres de la voix off (mêmes textes que les fichiers de voix)
-    "a1": ["okay so. i found a tape recorder", "at the back of the dormitory."],
-    "a2": ["yeah. obviously, i pressed play."],
+    "a1": ["found this tape recorder in the dorm."],
+    "a2": ["yeah. i pressed play."],
     "a3": ["then i went up to the attic."],
-    "b1": ["okay. there's one rule", "in the attic."],
-    "b2": ["she can't step", "into the light."],
-    "b3": ["yeah. but she can", "blow it out."],
-    "b4": ["so when it buzzes...", "pull the string."],
-    "c1": ["so, these slides were in", "the attic of the orphanage."],
-    "c2": ["yeah. the last one", "was not in the box."],
+    "b1": ["one rule in the attic."],
+    "b2": ["she can't step into the light."],
+    "b3": ["yeah. but she can blow it out."],
+    "b4": ["so... pull the string."],
+    "c1": ["these slides were in the attic."],
 }
 TAPES = {  # (fichier, lignes = sous-titres du jeu, InstitutBuilder.Grenier.cs)
     1: ("Lore/cassette_1_veilleuse.wav", ["Night log. November the second.", "Lights out at nine, as Madam wants.",
@@ -91,13 +91,12 @@ def tape_seg(n, first, last):
     acc = [0]
     for l in lines:
         acc.append(acc[-1] + len(l))
-    t0 = LEAD + speech * acc[first] / total - (0.15 if first > 0 else LEAD)
+    t0 = max(0.0, LEAD + speech * acc[first] / total - (0.15 if first > 0 else LEAD))
     t1 = LEAD + speech * acc[last + 1] / total + 0.35
-    seg = a[int(max(0, t0) * SR):int(min(dur, t1) * SR)].copy()
+    seg = a[int(t0 * SR):int(min(dur, t1) * SR)].copy()
     f = int(0.04 * SR)
     seg[:f] *= np.linspace(0, 1, f); seg[-f:] *= np.linspace(1, 0, f)
-    # minutage des lignes dans le morceau (pour les sous-titres)
-    times = [(lines[i], LEAD + speech * acc[i] / total - max(0, t0), LEAD + speech * acc[i + 1] / total - max(0, t0)) for i in range(first, last + 1)]
+    times = [(lines[i], LEAD + speech * acc[i] / total - t0, LEAD + speech * acc[i + 1] / total - t0) for i in range(first, last + 1)]
     return seg, times
 
 
@@ -114,29 +113,76 @@ def phone_scream():
     return mix
 
 
-# ---------------------------------------------------------------- images
-SUBS = []      # (image de début, image de fin, lignes, police) : sous-titres
+# ---------------------------------------------------------------- textes
+SUBS = []      # (image de début, image de fin, lignes, police) : sous-titres (un seul à la fois)
 CAPS = []      # (image de début, image de fin, lignes) : gros titres manuscrits en haut
+_voice_end = 0.0
 
 
 def sub(at_s, lines, dur_s, fnt=None):
     SUBS.append((int(at_s * FPS), int((at_s + dur_s) * FPS), lines, fnt or C.F_KID))
 
 
+def say(track, key, at, gain=1.0):
+    """Une phrase de la voix off, jamais par-dessus une autre. Renvoie le début réel."""
+    global _voice_end
+    clip = voix(key, gain)
+    start = max(at, _voice_end + 0.12)
+    C.place(track, clip, start)
+    sub(start, VOIX[key], len(clip) / SR + 0.15)
+    _voice_end = start + len(clip) / SR
+    return start
+
+
+def play_tape(track, n, first, last, at, gain=0.85, max_len=None):
+    """Un morceau de cassette sur la même piste que la voix off, sous-titres tapés à la machine."""
+    global _voice_end
+    seg, times = tape_seg(n, first, last)
+    if max_len is not None and len(seg) > int(max_len * SR):
+        seg = seg[:int(max_len * SR)]
+        f = int(0.25 * SR); seg[-f:] *= np.linspace(1, 0, f)
+    start = max(at, _voice_end + 0.12)
+    C.place(track, seg * gain, start)
+    end = start + len(seg) / SR
+    for line, s0, s1 in times:
+        if start + s0 < end - 0.3:
+            sub(start + s0, ['"' + line + '"'], min(s1 + 0.25, end - start) - s0, C.F_TYPE)
+    _voice_end = end
+    return start
+
+
+def wrap(lines, fnt, size, maxw=960):
+    f = C.font(fnt, size)
+    out = []
+    for line in lines:
+        cur = ""
+        for w in line.split(" "):
+            test = (cur + " " + w).strip()
+            if cur and f.getlength(test) > maxw:
+                out.append(cur); cur = w
+            else:
+                cur = test
+        out.append(cur)
+    return out
+
+
 def draw_text(arr, i):
     for a, b, lines in CAPS:
         if a <= i < b:
             al = min(1.0, (i - a) / 5) * min(1.0, (b - i) / 6)
-            arr = C.over(arr, C.text_layer(lines, size=92, seed=i // 4, y=360, jitter=3, stroke=6), al)
-    for a, b, lines, fnt in SUBS:
-        if a <= i < b:
-            al = min(1.0, (i - a) / 3) * min(1.0, (b - i) / 4)
-            typed = fnt == C.F_TYPE
-            arr = C.over(arr, C.text_layer(lines, size=60 if typed else 70, seed=i // 5, y=1480, fnt=fnt, jitter=1 if typed else 2,
-                                           stroke=5, color=(250, 236, 200) if typed else (245, 245, 245)), al)
+            arr = C.over(arr, C.text_layer(wrap(lines, C.F_KID, 92), size=92, seed=i // 4, y=360, jitter=3, stroke=6), al)
+    active = [x for x in SUBS if x[0] <= i < x[1]]
+    if active:
+        a, b, lines, fnt = max(active, key=lambda x: x[0])                 # le plus récent remplace les autres
+        al = min(1.0, (i - a) / 3) * min(1.0, (b - i) / 4)
+        typed = fnt == C.F_TYPE
+        size = 56 if typed else 64
+        arr = C.over(arr, C.text_layer(wrap(lines, fnt, size), size=size, seed=i // 5, y=1480, fnt=fnt, jitter=1 if typed else 2,
+                                       stroke=5, color=(250, 236, 200) if typed else (245, 245, 245)), al)
     return arr
 
 
+# ---------------------------------------------------------------- images
 def end_cards(k, whisper_lines, n_black=46, n_logo=56):
     for j in range(n_black):
         arr = np.zeros((C.H, C.W, 3), np.float32)
@@ -179,96 +225,84 @@ def lunge_frame(a, b):
     return a + 1 + int(np.argmax(np.abs(d[8:]))) + 8 if len(d) > 9 else a + 15
 
 
+def tracks(n_frames):
+    T = n_frames / FPS + 2.0
+    return np.zeros(int(SR * T)), np.zeros(int(SR * T)), np.zeros(int(SR * T))
+
+
 # ---------------------------------------------------------------- les trois vidéos
 def video_a():
     play, grenier, souffle, scream = EV["play"], EV["grenier"], EV["souffle"], EV["screamer"]
     lunge = lunge_frame(scream, FIN)
     t = lambda f: f / FPS                                                    # noqa: E731
+    bed, fx, vo = tracks(FIN + 102)
     CAPS.append((0, 80, ["never press play."]))
-    sub(0.3, VOIX["a1"], 3.3)
-    sub(t(play) - 2.0, VOIX["a2"], 2.0)
-    seg1, times1 = tape_seg(1, 0, 3)
-    seg1 = seg1[:int((t(grenier) - t(play)) * SR)]
-    for line, s0, s1 in times1:
-        if t(play) + s0 < t(grenier):
-            sub(t(play) + s0, ['"' + line + '"'], min(s1, t(grenier) - t(play)) - s0, C.F_TYPE)
-    sub(t(grenier) + 0.3, VOIX["a3"], 1.9)
-    seg2, times2 = tape_seg(1, 6, 6)
-    tape2_at = t(grenier) + 2.5
-    for line, s0, s1 in times2:
-        sub(tape2_at + s0, ['"' + line + '"'], s1 - s0 + 0.3, C.F_TYPE)
+    say(vo, "a1", 0.25)
+    say(vo, "a2", t(play) - 2.2)
+    C.place(fx, load("UI/button_click.wav", 0.7), t(play))
+    play_tape(vo, 1, 0, 3, t(play) + 0.05, max_len=t(grenier) - t(play) - 0.1)
+    say(vo, "a3", t(grenier) + 0.25)
+    play_tape(vo, 1, 6, 6, t(grenier) + 2.3)
+    SUBS[:] = [(a_, min(b_, scream), l_, f_) for a_, b_, l_, f_ in SUBS]   # rien par-dessus le screamer
     n = frames(0, FIN, scream_at=lunge)
     n = end_cards(n, ["she keeps them", "calm."])
-    T = n / FPS
-    bed = np.zeros(int(SR * T)); fx = np.zeros(int(SR * T))
     C.place(bed, C.drone(t(grenier)) * 0.35, 0)
     C.place(bed, loop(load("Grenier/grenier_ambiance.wav"), t(scream) - t(grenier)) * 0.8, t(grenier))
     C.place(bed, loop(load("Grenier/ampoule_bourdon.wav"), t(souffle) + 1.5 - t(grenier)) * 0.35, t(grenier))
-    C.place(fx, voix("a1"), 0.3); C.place(fx, voix("a2"), t(play) - 2.0)
-    C.place(fx, load("UI/button_click.wav", 0.7), t(play))
-    C.place(fx, seg1 * 0.8, t(play) + 0.05)
-    C.place(fx, voix("a3"), t(grenier) + 0.3)
-    C.place(fx, seg2 * 0.85, tape2_at)
     C.place(fx, load("Grenier/ampoule_gresille.wav", 0.8), t(souffle))
     C.place(fx, load("Grenier/ampoule_souffle.wav", 0.9), t(souffle) + 1.5)
     C.place(fx, load("Grenier/veilleuse_repere.wav", 0.9), t(scream) + 0.1)
-    bed *= 2.2; fx *= 2.2
+    bed *= 2.2; fx *= 2.2; vo *= 2.2
     C.place(fx, phone_scream() * 3.0, t(lunge))
     end_t = FIN / FPS
     C.place(fx, load("Death/murmure_04.wav", 0.45), end_t + 0.1)
     C.place(fx, C.boom(1.8, 40) * 0.5, end_t + 46 / FPS)
-    return n, C.mixdown([(bed, 0.0), (fx, 0.0)], T)
+    return n, C.mixdown([(bed, 0.0), (fx, 0.0), (vo, 0.0)], n / FPS)
 
 
 def video_b():
     elle, gres, appr, ral = EV["elle"], EV["gresille"], EV["approche"], EV["rallume"]
     t = lambda f: f / FPS                                                    # noqa: E731
-    CAPS.extend([(0, elle, ["rule #1", "of the attic"]), (elle, gres, ["she can't enter", "the light."]),
+    bed, fx, vo = tracks(FIN + 102)
+    CAPS.extend([(0, elle, ["rule #1 of the attic"]), (elle, gres, ["she can't enter", "the light."]),
                  (gres, appr, ["but she can", "put it out."]), (ral, FIN, ["PULL THE STRINGS."])])
-    sub(0.3, VOIX["b1"], 2.3); sub(t(elle) + 0.2, VOIX["b2"], 1.8); sub(t(gres) + 0.1, VOIX["b3"], 2.4)
-    sub(t(appr), VOIX["b4"], 2.8)
-    seg, times = tape_seg(2, 5, 5)
-    tape_at = t(ral) + 0.5
-    for line, s0, s1 in times:
-        sub(tape_at + s0, ['"' + line + '"'], s1 - s0 + 0.3, C.F_TYPE)
+    say(vo, "b1", 0.3); say(vo, "b2", t(elle) + 0.2); say(vo, "b3", t(gres) + 0.1); say(vo, "b4", t(appr) - 0.3)
+    play_tape(vo, 2, 5, 5, t(ral) + 0.4, gain=0.95)
     n = frames(0, FIN)
     n = end_cards(n, ["don't let them", "all go out."])
-    T = n / FPS
-    bed = np.zeros(int(SR * T)); fx = np.zeros(int(SR * T))
     C.place(bed, loop(load("Grenier/grenier_ambiance.wav"), FIN / FPS) * 0.8, 0)
     C.place(bed, loop(load("Grenier/ampoule_bourdon.wav"), t(gres) + 1.5) * 0.4, 0)
     C.place(bed, loop(load("Grenier/ampoule_bourdon.wav"), FIN / FPS - t(ral)) * 0.4, t(ral))
-    C.place(fx, voix("b1"), 0.3); C.place(fx, voix("b2"), t(elle) + 0.2); C.place(fx, voix("b3"), t(gres) + 0.1)
-    C.place(fx, voix("b4"), t(appr))
     C.place(fx, load("Grenier/ampoule_gresille.wav", 0.8), t(gres))
     C.place(fx, load("Grenier/ampoule_souffle.wav", 0.9), t(gres) + 1.5)
     C.place(fx, loop(load("Grenier/veilleuse_clochette.wav"), t(ral) - t(appr) + 0.3) * 0.7, t(appr) - 0.3)
     C.place(fx, load("Grenier/plancher.wav", 0.6), t(appr) - 0.2)
     C.place(fx, load("Grenier/veilleuse_repere.wav", 0.7), t(appr) + 0.6)
     C.place(fx, load("Grenier/ampoule_rallume.wav", 1.0), t(ral))
-    C.place(fx, seg * 0.9, tape_at)
-    bed *= 2.2; fx *= 2.2
+    bed *= 2.2; fx *= 2.2; vo *= 2.2
     end_t = FIN / FPS
     C.place(fx, load("Death/murmure_02.wav", 0.45), end_t + 0.1)
     C.place(fx, C.boom(1.8, 40) * 0.5, end_t + 46 / FPS)
-    return n, C.mixdown([(bed, 0.0), (fx, 0.0)], T)
+    return n, C.mixdown([(bed, 0.0), (fx, 0.0), (vo, 0.0)], n / FPS)
 
 
 def video_c():
     d = [EV["diapo%d" % k] for k in range(1, 6)]
     t = lambda f: f / FPS                                                    # noqa: E731
-    look = lambda img: Image.fromarray(np.clip((np.asarray(C.zoom(img, 1.3, cy=0.47), np.float32) / 255) ** 0.75 * 255, 0, 255).astype(np.uint8))  # noqa: E731
-    CAPS.append((0, d[0], ["found a slide projector", "in the attic."]))
-    sub(0.3, VOIX["c1"], 2.6)
-    slides = ["MADAM NIGHT, OUR NIGHT MONITOR.", "DORMITORY, 1974.", "VISITING DAY.", "THE ONES WHO WOKE UP..."]
-    for k in range(4):
-        CAPS.append((d[k], d[k + 1], [slides[k].lower()]))
-    seg, times = tape_seg(3, 0, 4)
-    tape_at = t(d[0]) + 0.3
-    for line, s0, s1 in times:
-        sub(tape_at + s0, ['"' + line + '"'], s1 - s0 + 0.2, C.F_TYPE)
-    sub(t(d[4]) - 0.2, VOIX["c2"], 2.4)
+
+    def look(img):                                                          # recadré sur le drap, éclairci
+        a = np.asarray(C.zoom(img, 1.3, cy=0.47), np.float32) / 255
+        return Image.fromarray(np.clip(a ** 0.75 * 255, 0, 255).astype(np.uint8))
+
     glitch_n = 12
+    bed, fx, vo = tracks(FIN + glitch_n + 102)
+    CAPS.append((0, d[0], ["found a slide projector", "in the attic."]))
+    slides = ["madam night, our night monitor.", "dormitory, 1974.", "visiting day.", "the ones who woke up..."]
+    for k in range(4):
+        CAPS.append((d[k], d[k + 1], [slides[k]]))
+    CAPS.append((d[4], FIN, ["the last slide", "wasn't in the box."]))
+    say(vo, "c1", 0.3)
+    play_tape(vo, 3, 0, 4, t(d[0]) + 0.2, gain=0.8, max_len=t(FIN) - t(d[0]) - 0.6)
     n = frames(0, FIN, look=look)
     last = look(Image.open(os.path.join(SRC, f"f{FIN - 1:05d}.jpg")))
     for j in range(glitch_n):                                               # la dernière diapo se déchire
@@ -276,21 +310,16 @@ def video_c():
         arr = C.glitch(np.clip(C.to_arr(img), 0, 1) ** 1.4, 0.9 - j * 0.05, seed=40 + j)
         C.to_img(C.grain(arr, 0.04, seed=700 + j)).save(os.path.join(FR, f"f_{n:04d}.jpg"), quality=93); n += 1
     n = end_cards(n, ['"she always keeps them...', 'calm."'])
-    T = n / FPS
-    bed = np.zeros(int(SR * T)); fx = np.zeros(int(SR * T))
     C.place(bed, loop(load("Grenier/grenier_ambiance.wav"), FIN / FPS) * 0.7, 0)
-    C.place(fx, voix("c1"), 0.3)
     for k in range(5):
         C.place(fx, load("UI/button_click.wav", 0.9), t(d[k]))
-    C.place(fx, seg * 0.75, tape_at)
-    C.place(fx, voix("c2"), t(d[4]) - 0.2)
     C.place(fx, load("Grenier/veilleuse_repere.wav", 0.6), t(d[4]) + 0.2)
-    bed *= 2.2; fx *= 2.2
+    bed *= 2.2; fx *= 2.2; vo *= 2.2
     C.place(fx, phone_scream() * 3.0, FIN / FPS)
     seg_end, _ = tape_seg(3, 6, 6)
     C.place(fx, seg_end * 1.3, (FIN + glitch_n) / FPS + 0.2)
     C.place(fx, C.boom(1.8, 40) * 0.5, (FIN + glitch_n + 46) / FPS)
-    return n, C.mixdown([(bed, 0.0), (fx, 0.0)], T)
+    return n, C.mixdown([(bed, 0.0), (fx, 0.0), (vo, 0.0)], n / FPS)
 
 
 if __name__ == "__main__":

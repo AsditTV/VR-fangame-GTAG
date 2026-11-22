@@ -75,3 +75,40 @@ Vrai gameplay : caché dans un lit de l'infirmerie, il passe lanterne levée en 
 
 **Commentaire épinglé :**
 > When he stops humming… it's already too late. 🎶
+
+## Vidéos « lore du grenier » (22/11/2026) — La Veilleuse
+Fichiers : `Marketing/calm_faces_cassette_tiktok.mp4`, `calm_faces_regle_tiktok.mp4`, `calm_faces_diapos_tiktok.mp4`
+(vrai gameplay filmé dans Unity, voix off = synthèse vocale Windows, voix des cassettes = le jeu).
+⚠️ Le texte de fin dit « wishlist on Meta Quest » : publie-les **seulement quand la page du store est en ligne**
+(après la validation de Meta), sinon les gens ne trouveront rien à mettre en liste de souhaits.
+Ordre conseillé : diapos (mystère) → cassette (screamer) → règle (mécanique). Un tous les 2-3 jours.
+
+### Vidéo « la cassette »
+**Description :**
+> found a tape in the dorm of my VR horror game. never press play. 📼
+> #calmfaces #vrhorror #metaquest3 #vr #horrorgame #indiegame #lore
+
+**Commentaire épinglé :**
+> There are 3 tapes in the Institute. This one was hers. Who is "Madam"? 👀
+
+**Relance (quelques heures après) :**
+> Number twelve is still in the dorm. Did you see her? 🫣
+
+### Vidéo « la règle »
+**Description :**
+> one rule in the attic. 💡 she can't step into the light... but she can blow it out.
+> #calmfaces #vrhorror #metaquest3 #vr #horrorgame #indiegame
+
+**Commentaire épinglé :**
+> When the bulb starts to buzz, you have about one second. Pull the string. 🔔
+
+### Vidéo « les diapos »
+**Description :**
+> found a slide projector in the attic. the last slide wasn't in the box. 🎞️
+> #calmfaces #vrhorror #metaquest3 #vr #horrorgame #indiegame #lore
+
+**Commentaire épinglé :**
+> Subject 23 was sent to the attic programme. The infirmary files say she "stopped making any sound". 🤫
+
+**Relance :**
+> The night monitor "keeps them calm". Calm faces. Get it now? 😶

@@ -62,10 +62,12 @@ principale du store ; le français est la traduction à ajouter dans *Localizati
 > - **The Sheet** glides through the dark corridors.
 > - **The Doctor** wears a crow mask and pushes a squeaking instrument trolley through the underground
 >   infirmary. If the squeaking stops, he has seen you.
+> - **Madam Night**, the night monitor, waits in the attic with her brass snuffer. She cannot step into the
+>   light — so she puts the bulbs out, one by one. Pull the strings.
 >
-> **Find the papers.** Thirteen pages and four secrets tell what really happened to the children — and to
-> the 23rd. Explore the dormitory, the switchboard, the theatre, the ink pool, the laundry and the infirmary
-> hidden beneath the boiler room.
+> **Find the papers, the tapes and the slides.** Pages, cassette recordings and an old slide projector tell what
+> really happened to the children — and to the 23rd. Explore the dormitory, the switchboard, the theatre, the ink pool, the laundry, the attic and the
+> infirmary hidden beneath the boiler room.
 >
 > **Features**
 > - Arm-based locomotion: run, jump and climb with your hands only.
@@ -96,15 +98,17 @@ principale du store ; le français est la traduction à ajouter dans *Localizati
 > - **Le Drap** glisse dans les couloirs sombres.
 > - **Le Docteur** porte un masque de corbeau et pousse un chariot d'instruments qui grince dans l'infirmerie du
 >   sous-sol. Si le grincement s'arrête, il t'a vu.
+> - **La Veilleuse**, la surveillante de nuit, attend au grenier avec son éteignoir de laiton. Elle ne peut pas
+>   entrer dans la lumière — alors elle souffle les ampoules, une par une. Tire les cordons.
 >
-> **Retrouve les papiers.** Treize pages et quatre secrets racontent ce qui est vraiment arrivé aux enfants — et
-> au 23e. Explore le dortoir, le standard, le théâtre, la piscine d'encre, la laverie et l'infirmerie
-> cachée sous la salle des machines.
+> **Retrouve les papiers, les cassettes et les diapositives.** Des pages, des enregistrements et un vieux
+> projecteur racontent ce qui est vraiment arrivé aux enfants — et au 23e. Explore le dortoir, le standard, le théâtre, la piscine d'encre, la laverie, le grenier et
+> l'infirmerie cachée sous la salle des machines.
 >
 > **Avertissement** : screamers, flashs lumineux (désactivables), thèmes dérangeants autour d'enfants dans une
 > institution (pas de gore).
 
-Noms anglais des monstres (The Listener, The Softies, The Sheet, The Doctor) : proposés pour la fiche ; le lore
+Noms anglais des monstres (The Listener, The Softies, The Sheet, The Doctor, Madam Night) : proposés pour la fiche ; le lore
 anglais dit « Softies » et parle de L'Écoute comme « She ». À garder cohérent si le jeu les nomme un jour.
 
 ## Mots-clés (search terms)
@@ -135,7 +139,8 @@ Résultat attendu : PEGI 12 à 16 / ESRB Teen (estimation, *supposition* : c'est
 ## Visuels à fournir (tailles Meta, à revérifier dans le tableau de bord)
 - **Hero / cover** paysage (2560 × 1440) : logo CALM FACES sur une image du hall. Base :
   `Marketing/calm_faces_logo_banniere.png` + une capture.
-- **Captures** (au moins 5, 2560 × 1440, sans texte ajouté par-dessus) : `Marketing/Store/` (générées par le jeu).
+- **Captures** (au moins 5, 2560 × 1440, sans texte ajouté par-dessus) : `Marketing/Store/` (générées par le jeu),
+  dont `06_veilleuse.png` et `07_grenier.png` (le grenier, 22/11/2026).
 - **Bande-annonce** paysage 16:9, 30 à 60 s : à monter depuis les vidéos TikTok (elles sont verticales : il en
   faut une version horizontale).
 - **Icône** carrée : `Marketing/calm_faces_profil.png` (vérifier la taille demandée).
