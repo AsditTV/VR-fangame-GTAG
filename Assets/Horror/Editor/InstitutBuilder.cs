@@ -1858,7 +1858,7 @@ namespace Horror.EditorTools
         {
             var root = new GameObject("Minitel (réglages)");
             Vector3 toPlayer = Dir(new Vector3(1f, 0f, 0f));    // l'écran regarde vers le centre de la Salle de jeux
-            GameObject screen = SafeZoneShopBuilder.Label(root.transform, "", Vector3.zero, 0.0042f * s_w, new Color(0.45f, 1f, 0.6f));
+            GameObject screen = SafeZoneShopBuilder.Label(root.transform, "", Vector3.zero, 0.0036f * s_w, new Color(0.45f, 1f, 0.6f));   // tout le menu tient dans l'écran
             screen.name = "Écran";
             screen.transform.position = P(new Vector3(7.965f, 1.04f, 10.25f));
             screen.transform.rotation = Quaternion.LookRotation(-toPlayer);
@@ -1876,15 +1876,28 @@ namespace Horror.EditorTools
                 GameObject key = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 key.name = names[i];
                 key.transform.SetParent(root.transform, false);
-                key.transform.position = P(new Vector3(8.12f, 0.845f, 10.07f + i * 0.12f));
+                key.transform.position = P(new Vector3(8.12f, 0.845f, 10.07f + (3 - i) * 0.12f));   // < > OK BACK de gauche à droite
                 key.transform.rotation = Quaternion.LookRotation(toPlayer);
                 key.transform.localScale = new Vector3(0.08f, 0.04f, 0.08f) * s_w;
                 key.GetComponent<Renderer>().sharedMaterial = keyMat;
                 keys[i] = key.AddComponent<PressButton>();
                 keys[i].clickSound = click;
                 SafeZoneShopBuilder.Label(key.transform, names[i].Replace("Touche ", ""), new Vector3(0f, 0.8f, 0f), 0.05f, new Color(0.2f, 0.18f, 0.2f))
-                    .transform.localRotation = Quaternion.Euler(90f, 0f, 0f);   // inscription sur le dessus de la touche
+                    .transform.localRotation = Quaternion.Euler(90f, 180f, 0f);   // inscription sur le dessus, lisible depuis le joueur
             }
+            // l'écran du modèle était clair : le texte vert ne se lisait pas (« trop lumineux »). Écran noir-vert, sans éclairage.
+            const string darkPath = "Assets/Horror/Art/Materials/Institut_Ecran_Minitel_Sombre.mat";
+            var dark = AssetDatabase.LoadAssetAtPath<Material>(darkPath);
+            if (dark == null)
+            {
+                dark = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { name = "Institut_Ecran_Minitel_Sombre" };
+                dark.SetColor("_BaseColor", new Color(0.015f, 0.045f, 0.03f));
+                AssetDatabase.CreateAsset(dark, darkPath);
+            }
+            foreach (Renderer r in Object.FindObjectsByType<Renderer>(FindObjectsInactive.Include))
+                if (r.name.Contains("Ecran_Minitel")) r.sharedMaterial = dark;
+            tm.color = new Color(0.4f, 0.95f, 0.55f);
+
             MinitelTerminal minitel = root.AddComponent<MinitelTerminal>();
             minitel.screen = tm;
             minitel.left = keys[0]; minitel.right = keys[1]; minitel.ok = keys[2]; minitel.back = keys[3];

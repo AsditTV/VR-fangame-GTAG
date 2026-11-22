@@ -59,10 +59,9 @@ namespace Horror.Locomotion
         [Tooltip("Hauteur du corps sous les yeux. Plus c'est grand, plus le sol virtuel est bas " +
                  "(et plus il faut se pencher pour le toucher). ~0.9 = mains qui touchent le sol bras tendus.")]
         public float bodyHeight = 0.9f;
-        [Tooltip("Hauteur de la COLLISION du corps (sous les yeux). Courte (préréglage Rapide, 0,45) : ce sont les mains qui " +
-                 "portent le corps, comme dans les jeux de bras ; on décolle à chaque poussée. Longue (0,9) : le corps tient " +
-                 "debout tout seul et glisse au sol (l'ancien comportement).")]
-        public float bodyColliderHeight = 0.45f;
+        [Tooltip("Hauteur de la COLLISION du corps (sous les yeux). Trop courte (0,45), les testeurs « s'enfonçaient » dans le " +
+                 "sol dès qu'ils levaient les mains ; 0,85 : debout, les mains pendantes effleurent le sol et le portent.")]
+        public float bodyColliderHeight = 0.85f;
         [Tooltip("Rayon du corps.")]
         public float bodyRadius = 0.2f;
         [Tooltip("Petite marge pour ne pas coller le corps aux murs lors des déplacements.")]
@@ -75,6 +74,11 @@ namespace Horror.Locomotion
         public float maxJumpSpeed = 7f;
         [Tooltip("Nombre d'images utilisées pour calculer la vitesse au moment de lâcher.")]
         [Range(2, 20)] public int velocityHistorySize = 6;
+        [Tooltip("En dessous de cette vitesse au lâcher, pas d'élan (évite de dériver après un geste lent).")]
+        public float minLaunchSpeed = 0.35f;
+        [Tooltip("Frottement du corps sur le sol. Bas (Rapide) : l'élan continue en glissant un peu à l'atterrissage, " +
+                 "comme dans les jeux de bras ; 0,6 : le corps freine net.")]
+        [Range(0f, 1f)] public float bodyFriction = 0.6f;
         [Tooltip("Glisse d'une main appuyée le long de la surface (0 = collée, 0,05 = glisse un peu : on « court » sur les murs).")]
         [Range(0f, 0.3f)] public float surfaceSlide = 0f;
 
@@ -170,6 +174,7 @@ namespace Horror.Locomotion
             }
 
             ResetHands();
+            ApplyBodyFriction();   // après les Awake (LeanSlide pose son matériau dans le sien)
 
             if (matchPhysicsRateToHeadset)
             {
@@ -235,6 +240,7 @@ namespace Horror.Locomotion
                 {
                     // On vient de lâcher : on donne au corps l'élan du geste (= le saut).
                     Vector3 launch = AverageRecordedVelocity() * jumpMultiplier;
+                    if (launch.magnitude < minLaunchSpeed) launch = Vector3.zero;   // un geste lent ne fait pas « flotter »
                     SetVelocity(Vector3.ClampMagnitude(launch, maxJumpSpeed));
                     ClearVelocityHistory();
                 }
@@ -590,16 +596,17 @@ namespace Horror.Locomotion
                 case Preset.Classique:
                     jumpMultiplier = 1.2f; maxJumpSpeed = 7f; velocityHistorySize = 6;
                     handRadius = 0.07f; unstickDistance = 0.3f; releaseDistance = 0.015f; surfaceSlide = 0f;
-                    bodyColliderHeight = bodyHeight;
+                    bodyColliderHeight = bodyHeight; bodyFriction = 0.6f;
                     break;
                 case Preset.Rapide:
-                    // comme les jeux de bras : corps court (les mains le portent, on décolle à chaque poussée),
-                    // grands élans, mains plus « larges » qui accrochent mieux, petite glisse pour courir sur les murs
+                    // comme les jeux de bras : grands élans, mains plus « larges » qui accrochent mieux, petite glisse pour
+                    // courir sur les murs. Corps à 0,85 (0,45 faisait s'enfoncer dans le sol au premier test des joueurs).
                     jumpMultiplier = 1.35f; maxJumpSpeed = 8.5f; velocityHistorySize = 5;
                     handRadius = 0.085f; unstickDistance = 0.45f; releaseDistance = 0.02f; surfaceSlide = 0.03f;
-                    bodyColliderHeight = 0.45f;
+                    bodyColliderHeight = 0.85f; bodyFriction = 0.12f;
                     break;
             }
+            ApplyBodyFriction();
             // la glisse en se penchant (LeanSlide) faisait « glisser au lieu de marcher » : coupée en Rapide
             var lean = GetComponent<LeanSlide>();
             if (lean != null && preset != Preset.Personnalise) lean.enabled = preset == Preset.Classique;
@@ -608,6 +615,29 @@ namespace Horror.Locomotion
                 _velocityHistory = new Vector3[Mathf.Max(2, velocityHistorySize)];
                 ClearVelocityHistory();
             }
+        }
+
+#if UNITY_6000_0_OR_NEWER
+        private PhysicsMaterial _bodyMat;
+#else
+        private PhysicMaterial _bodyMat;
+#endif
+
+        /// <summary>Matériau physique du corps (frottement réglable). Appliqué aussi au démarrage, après les autres scripts.</summary>
+        private void ApplyBodyFriction()
+        {
+            if (!Application.isPlaying) return;
+            if (_body == null) _body = GetComponent<CapsuleCollider>();
+            if (_body == null) return;
+            if (preset == Preset.Classique && GetComponent<LeanSlide>() != null) return;   // LeanSlide gère son propre frottement
+#if UNITY_6000_0_OR_NEWER
+            if (_bodyMat == null) _bodyMat = new PhysicsMaterial("Corps du joueur") { frictionCombine = PhysicsMaterialCombine.Minimum, bounceCombine = PhysicsMaterialCombine.Minimum };
+#else
+            if (_bodyMat == null) _bodyMat = new PhysicMaterial("Corps du joueur") { frictionCombine = PhysicMaterialCombine.Minimum, bounceCombine = PhysicMaterialCombine.Minimum };
+#endif
+            _bodyMat.dynamicFriction = _bodyMat.staticFriction = bodyFriction;
+            _bodyMat.bounciness = 0f;
+            _body.sharedMaterial = _bodyMat;
         }
 
         private void OnValidate()
