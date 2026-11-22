@@ -275,7 +275,7 @@ namespace Horror.Locomotion
             {
                 Vector3 d = headNow - _lastHead;
                 float len = d.magnitude;
-                if (len > 1e-4f && len < 3f && CastWorld(_lastHead, 0.06f, d / len, len, out RaycastHit hit))
+                if (len > 1e-4f && len < 3f && CastWorld(_lastHead, 0.06f, d / len, len, out RaycastHit hit, ignorePlayers: true))
                 {
                     Vector3 allowed = _lastHead + d / len * Mathf.Max(0f, hit.distance - 0.02f);
                     _rb.position += allowed - headNow;
@@ -296,15 +296,21 @@ namespace Horror.Locomotion
             if (handsDown || grounded) { _safeSpot = _rb.position; _hasSafe = true; }
         }
 
-        /// <summary>En train de tomber et plus rien sous la tête sur 60 m : on est passé sous la map.</summary>
+        private float _voidTime;
+
+        /// <summary>En train de tomber et plus rien sous la tête sur 60 m, pendant plus d'une demi-seconde : on est passé
+        /// sous la map. (Le délai évite une téléportation intempestive au-dessus d'un trou du décor.)</summary>
         private bool FallingIntoVoid()
         {
-            if (GetVelocity().y > -4f) return false;
-            return !CastWorld(PhysicsPosition(head), 0.05f, Vector3.down, 60f, out _);
+            bool voidNow = GetVelocity().y < -4f && !CastWorld(PhysicsPosition(head), 0.05f, Vector3.down, 60f, out _);
+            _voidTime = voidNow ? _voidTime + Time.fixedDeltaTime : 0f;
+            if (_voidTime < 0.5f) return false;
+            _voidTime = 0f;
+            return true;
         }
 
         /// <summary>Lancer de sphère dans le décor, en ignorant ses propres colliders et les déclencheurs.</summary>
-        private bool CastWorld(Vector3 from, float radius, Vector3 dir, float distance, out RaycastHit best)
+        private bool CastWorld(Vector3 from, float radius, Vector3 dir, float distance, out RaycastHit best, bool ignorePlayers = false)
         {
             best = default;
             int n = Physics.SphereCastNonAlloc(from, radius, dir, _hits, distance, climbableLayers, QueryTriggerInteraction.Ignore);
@@ -314,6 +320,8 @@ namespace Horror.Locomotion
                 RaycastHit h = _hits[i];
                 if (h.collider == null || _own.Contains(h.collider)) continue;
                 if (h.rigidbody != null && !h.rigidbody.isKinematic) continue;   // un objet qu'on tient ou qui roule ne compte pas
+                // la coque d'un AUTRE joueur (ou du mannequin) ne repousse pas la tête : sinon, à-coups en grimpant sur lui
+                if (ignorePlayers && h.collider.GetComponentInParent<Horror.Player.PlayerBodyShell>() != null) continue;
                 if (h.distance <= 0f && h.point == Vector3.zero) continue;
                 if (h.distance < bestDist) { bestDist = h.distance; best = h; }
             }
