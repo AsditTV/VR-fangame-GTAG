@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using Horror.Locomotion;
 
 namespace Horror.World
@@ -32,7 +33,8 @@ namespace Horror.World
             go.transform.SetParent(transform, false);
             _cam = go.AddComponent<Camera>();
             _cam.targetTexture = _rt;
-            _cam.stereoTargetEye = StereoTargetEyeMask.None;
+            // pas de rendu XR pour cette caméra (en URP, stereoTargetEye ne marche pas et affiche un avertissement)
+            _cam.GetUniversalAdditionalCameraData().allowXRRendering = false;
             _cam.nearClipPlane = 0.05f; _cam.farClipPlane = 25f;
             _cam.enabled = false;
             if (surface != null)

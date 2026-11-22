@@ -1175,12 +1175,13 @@ namespace Horror.EditorTools
             quad.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);        // le quad Unity regarde vers -Z
             quad.transform.localScale = new Vector3(0.62f, 0.93f, 1f);
             Shader unlit = Shader.Find("Universal Render Pipeline/Unlit");
-            var mat = new Material(unlit != null ? unlit : Shader.Find("Unlit/Texture")) { name = "Institut_Miroir" };
-            mat.color = new Color(0.78f, 0.74f, 0.82f);                            // vieux tain un peu terne
             EnsureFolder("Assets/Horror/Art/Materials");
             string mp = "Assets/Horror/Art/Materials/Institut_Miroir.mat";
-            if (Load<Material>(mp) != null) AssetDatabase.DeleteAsset(mp);
-            AssetDatabase.CreateAsset(mat, mp);
+            // on réutilise le fichier s'il existe (le recréer à chaque menu 8 le faisait changer dans git à chaque fois)
+            var mat = Load<Material>(mp);
+            if (mat == null) { mat = new Material(unlit != null ? unlit : Shader.Find("Unlit/Texture")) { name = "Institut_Miroir" }; AssetDatabase.CreateAsset(mat, mp); }
+            mat.color = new Color(0.78f, 0.74f, 0.82f);                            // vieux tain un peu terne
+            EditorUtility.SetDirty(mat);
             quad.GetComponent<Renderer>().sharedMaterial = mat;
             var proto = Load<GameObject>("Assets/Horror/Art/Character/LeDessine_PNJ.glb");
             GameObject ghost = proto != null ? (GameObject)PrefabUtility.InstantiatePrefab(proto) : null;

@@ -52,7 +52,9 @@ namespace Horror.World
             if (bulbLight != null) _baseIntensity = bulbLight.intensity;
             if (glass != null)
             {
-                _glassMat = glass.material;
+                _glassMat = glass.material;                                    // copie propre à cette ampoule
+                _glassMat.EnableKeyword("_EMISSION");                          // le fichier du matériau ne l'a pas : sans lui, pas de lueur
+                _glassMat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
                 _emit = _glassMat.HasProperty("_EmissionColor") ? _glassMat.GetColor("_EmissionColor") : Color.white;
             }
             if (humLoop != null)
