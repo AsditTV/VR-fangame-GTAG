@@ -1285,7 +1285,7 @@ namespace Horror.EditorTools
             Material pencil = MakeMat("Envers_Crayon", new Color(0.12f, 0.1f, 0.14f));
             // le papier luit un peu : l'Envers doit paraître blanc malgré l'étalonnage sombre du reste du jeu
             paper.EnableKeyword("_EMISSION"); paper.SetColor("_EmissionColor", new Color(0.62f, 0.6f, 0.56f));
-            paper.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None; EditorUtility.SetDirty(paper);
+            paper.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive; EditorUtility.SetDirty(paper);   // None : URP retirerait _EMISSION
             Vector3 O = new Vector3(0f, 60f, 0f);   // très au-dessus (sous -30 m, le joueur est ramené au spawn)
             GameObject Box(string name, Material m, Vector3 c, Vector3 size, bool solid = true)
             {

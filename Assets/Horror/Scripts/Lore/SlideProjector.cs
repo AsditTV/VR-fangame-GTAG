@@ -29,8 +29,8 @@ namespace Horror.Lore
             if (screen != null)
             {
                 _mat = screen.material;                                        // copie propre à l'écran
-                _mat.EnableKeyword("_EMISSION");                              // le fichier du matériau ne l'a pas : sans lui, la diapo ne s'allume pas
-                _mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+                _mat.EnableKeyword("_EMISSION");                              // sécurité : sans ce mot-clé, la diapo ne s'allume pas
+                _mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             }
             Show(-1);
         }

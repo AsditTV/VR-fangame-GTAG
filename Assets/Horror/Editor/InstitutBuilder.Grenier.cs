@@ -86,7 +86,8 @@ namespace Horror.EditorTools
         {
             Material m = GMat(name, null, Vector2.one, baseColor);
             m.EnableKeyword("_EMISSION");
-            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            // « émissif » pour URP : avec None, URP retire le mot-clé _EMISSION à chaque validation (plus de lueur)
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             m.SetColor("_EmissionColor", emission);
             EditorUtility.SetDirty(m);
             return m;
@@ -258,8 +259,6 @@ namespace Horror.EditorTools
             Material black = MakeMat("Grenier_Fil", new Color(0.05f, 0.05f, 0.05f));
             Material brass = MakeMat("Grenier_Laiton", new Color(0.55f, 0.43f, 0.2f));
             Material glass = GGlow("Ampoule", new Color(1f, 0.9f, 0.7f), new Color(1f, 0.72f, 0.38f) * 6f);
-            // Unity retire ce mot-clé du fichier de toute façon (le fichier changeait à chaque Play) : AtticBulb l'allume sur sa copie
-            glass.DisableKeyword("_EMISSION");
             float wire = roofY - y;
             GCyl(go.transform, "Fil", G(x, y + wire * 0.5f, z), new Vector3(0.012f, wire * 0.5f, 0.012f), Quaternion.identity, black);
             GCyl(go.transform, "Douille", G(x, y + 0.09f, z), new Vector3(0.05f, 0.04f, 0.05f), Quaternion.identity, brass);
@@ -422,7 +421,8 @@ namespace Horror.EditorTools
 
             // le projecteur de diapositives, sur sa caisse, tourné vers le drap tendu au pignon
             Material sheetMat = GMat("Ecran", "grenier_drap.png", Vector2.one, Color.white);
-            sheetMat.DisableKeyword("_EMISSION");   // émission noire : Unity retirerait le mot-clé ; SlideProjector l'allume sur sa copie
+            sheetMat.EnableKeyword("_EMISSION");
+            sheetMat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;   // sinon URP retire _EMISSION
             var screen = GameObject.CreatePrimitive(PrimitiveType.Quad);
             screen.name = "Drap tendu (écran)"; Object.DestroyImmediate(screen.GetComponent<Collider>());
             screen.transform.SetParent(p, false);

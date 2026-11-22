@@ -157,7 +157,7 @@ namespace Horror.Lore
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.05f);
             if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0.05f);
             m.EnableKeyword("_EMISSION");
-            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             m.SetColor(EmissionColor, Color.black);
             return m;
         }
