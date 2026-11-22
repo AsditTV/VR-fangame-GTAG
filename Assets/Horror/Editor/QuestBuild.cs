@@ -98,11 +98,26 @@ namespace Horror.EditorTools
                     f.enabled = true;
                     enabled += n + " ";
                 }
+                if (n == "MetaQuestFeature") DropQuest1(f);
             }
             EditorUtility.SetDirty(xr);
             EditorUtility.SetDirty(perTarget);
             AssetDatabase.SaveAssets();
             Debug.Log("[Horror] OpenXR Android : chargeur OpenXR, rendu Single Pass Instanced, " + enabled.Trim() + ".");
+        }
+
+        /// <summary>Meta refuse un APK qui déclare encore le Quest 1 (plus pris en charge) : on décoche ce casque.</summary>
+        private static void DropQuest1(Object feature)
+        {
+            var so = new SerializedObject(feature);
+            SerializedProperty list = so.FindProperty("targetDevices");
+            if (list == null) return;
+            for (int i = 0; i < list.arraySize; i++)
+            {
+                SerializedProperty dev = list.GetArrayElementAtIndex(i);
+                if (dev.FindPropertyRelative("manifestName").stringValue == "quest") dev.FindPropertyRelative("enabled").boolValue = false;
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void ConfigurePlayer()
@@ -118,6 +133,10 @@ namespace Horror.EditorTools
             PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new[] { UnityEngine.Rendering.GraphicsDeviceType.Vulkan });
             PlayerSettings.colorSpace = ColorSpace.Linear;
             PlayerSettings.Android.forceInternetPermission = true;          // pour Photon plus tard
+            // Exigences de Meta pour l'envoi d'un APK (refusé sinon) : paysage, installation « auto », Android ciblé <= 34
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
+            PlayerSettings.Android.preferredInstallLocation = AndroidPreferredInstallLocation.Auto;
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel32;
             EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ASTC;
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
         }
