@@ -115,16 +115,23 @@ Ordre conseillé : diapos (mystère) → cassette (screamer) → règle (mécani
 
 ## Vidéo « MODERATORS WANTED » (22/11/2026) — recrutement
 Fichier : `Marketing/calm_faces_moderators_tiktok.mp4` (28,9 s, vrai jeu : la poupée parle, L'Écoute passe derrière).
-**Avant de poster**, mets dans ta bio (ou un Linktree) :
-- Discord : https://discord.gg/Py44mhq3ZD
-- Formulaire : https://docs.google.com/forms/d/e/1FAIpQLScVGiY5jI1LAGZ3yqfzpxRNQO_upZqXzc_LFtGhbewDahPW7g/viewform
+Liens : Discord https://discord.gg/Py44mhq3ZD · formulaire https://forms.gle/ovYxYYx5cSYVNHBq9
+
+**Bio** (80 caractères max) :
+> 🤫 VR horror · Meta Quest | Mods wanted ↓
+> discord.gg/Py44mhq3ZD
 
 **Description :**
-> CALM FACES is coming soon on Meta Quest and I need moderators 🤫 join the discord + apply (link in bio)
+> CALM FACES is coming soon on Meta Quest and I need moderators 🤫
+> Discord: discord.gg/Py44mhq3ZD
+> Apply: forms.gle/ovYxYYx5cSYVNHBq9
 > #calmfaces #vrhorror #metaquest3 #vr #discord #moderator #indiegame
 
 **Commentaire épinglé :**
-> Applications are open 📝 Discord + form in my bio. Stay calm. Don't look behind you.
+> Moderator applications are OPEN 📝
+> 1. Join the Discord: discord.gg/Py44mhq3ZD
+> 2. Fill the form: forms.gle/ovYxYYx5cSYVNHBq9
+> Stay calm. Don't look behind you. 👀
 
 **Relance :**
 > She was there the whole time 👀 did you notice?
