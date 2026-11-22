@@ -336,7 +336,7 @@ namespace Horror.Monsters
             Vector3 origin = transform.position + Vector3.up * 0.6f;
             _blocked = false;
             if (Physics.SphereCast(origin, 0.35f, dir, out RaycastHit hit, stepLen + 0.1f, NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore)
-                && !hit.transform.IsChildOf(transform))
+                && MonsterMover.Blocks(hit, transform, dir))   // un objet lancé ne le bloque plus : il le pousse
             {
                 _blocked = true;
                 Vector3 slide = Vector3.ProjectOnPlane(dir, hit.normal); slide.y = 0f;

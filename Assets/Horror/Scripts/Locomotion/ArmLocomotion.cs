@@ -59,6 +59,10 @@ namespace Horror.Locomotion
         [Tooltip("Hauteur du corps sous les yeux. Plus c'est grand, plus le sol virtuel est bas " +
                  "(et plus il faut se pencher pour le toucher). ~0.9 = mains qui touchent le sol bras tendus.")]
         public float bodyHeight = 0.9f;
+        [Tooltip("Hauteur de la COLLISION du corps (sous les yeux). Courte (préréglage Rapide, 0,45) : ce sont les mains qui " +
+                 "portent le corps, comme dans les jeux de bras ; on décolle à chaque poussée. Longue (0,9) : le corps tient " +
+                 "debout tout seul et glisse au sol (l'ancien comportement).")]
+        public float bodyColliderHeight = 0.45f;
         [Tooltip("Rayon du corps.")]
         public float bodyRadius = 0.2f;
         [Tooltip("Petite marge pour ne pas coller le corps aux murs lors des déplacements.")]
@@ -201,6 +205,7 @@ namespace Horror.Locomotion
         private void FixedUpdate()
         {
             UpdateBodyCollider();
+            KeepHeadOutOfWalls();
 
             // 1) Chaque main : est-elle appuyée quelque part ? Si oui, de combien le corps doit-il bouger ?
             Vector3 totalMove = Vector3.zero;
@@ -236,9 +241,77 @@ namespace Horror.Locomotion
                 _wasTouching = false;
             }
 
-            // 3) Filet de sécurité : tombé hors de la map → retour au départ.
+            // 3) Filets de sécurité : tombé hors de la map (ou dans le vide sous le sol) → dernier endroit sûr.
+            RememberSafeSpot(touchingCount > 0);
             if (_rb.position.y < respawnBelowY)
                 TeleportTo(SpawnPosition);
+            else if (FallingIntoVoid())
+                TeleportTo(_hasSafe ? _safeSpot : SpawnPosition);
+        }
+
+        // ------------------------------------------------------------------ anti-traversée
+
+        private Vector3 _lastHead;
+        private bool _hasLastHead;
+        private Vector3 _safeSpot;
+        private bool _hasSafe;
+        private float _nextSafeCheck;
+
+        /// <summary>
+        /// La tête ne traverse jamais un mur ni un sol : si, d'une image à l'autre, elle passerait à travers (le joueur
+        /// avance dans sa pièce, se penche brusquement, ou le corps est poussé), tout le joueur est repoussé du bon côté.
+        /// C'est ce qui faisait passer un testeur sous la map en marchant.
+        /// </summary>
+        private void KeepHeadOutOfWalls()
+        {
+            Vector3 headNow = PhysicsPosition(head);
+            if (_hasLastHead)
+            {
+                Vector3 d = headNow - _lastHead;
+                float len = d.magnitude;
+                if (len > 1e-4f && len < 3f && CastWorld(_lastHead, 0.06f, d / len, len, out RaycastHit hit))
+                {
+                    Vector3 allowed = _lastHead + d / len * Mathf.Max(0f, hit.distance - 0.02f);
+                    _rb.position += allowed - headNow;
+                    SetVelocity(Vector3.zero);
+                    headNow = allowed;
+                }
+            }
+            _lastHead = headNow;
+            _hasLastHead = true;
+        }
+
+        /// <summary>Retient régulièrement une position sûre (les mains sur une surface, ou le corps posé sur un sol).</summary>
+        private void RememberSafeSpot(bool handsDown)
+        {
+            if (Time.time < _nextSafeCheck) return;
+            _nextSafeCheck = Time.time + 0.5f;
+            bool grounded = CastWorld(PhysicsPosition(head), bodyRadius * 0.5f, Vector3.down, bodyColliderHeight + 1.2f, out _);
+            if (handsDown || grounded) { _safeSpot = _rb.position; _hasSafe = true; }
+        }
+
+        /// <summary>En train de tomber et plus rien sous la tête sur 60 m : on est passé sous la map.</summary>
+        private bool FallingIntoVoid()
+        {
+            if (GetVelocity().y > -4f) return false;
+            return !CastWorld(PhysicsPosition(head), 0.05f, Vector3.down, 60f, out _);
+        }
+
+        /// <summary>Lancer de sphère dans le décor, en ignorant ses propres colliders et les déclencheurs.</summary>
+        private bool CastWorld(Vector3 from, float radius, Vector3 dir, float distance, out RaycastHit best)
+        {
+            best = default;
+            int n = Physics.SphereCastNonAlloc(from, radius, dir, _hits, distance, climbableLayers, QueryTriggerInteraction.Ignore);
+            float bestDist = float.MaxValue;
+            for (int i = 0; i < n; i++)
+            {
+                RaycastHit h = _hits[i];
+                if (h.collider == null || _own.Contains(h.collider)) continue;
+                if (h.rigidbody != null && !h.rigidbody.isKinematic) continue;   // un objet qu'on tient ou qui roule ne compte pas
+                if (h.distance <= 0f && h.point == Vector3.zero) continue;
+                if (h.distance < bestDist) { bestDist = h.distance; best = h; }
+            }
+            return bestDist < float.MaxValue;
         }
 
         private void LateUpdate()
@@ -258,6 +331,7 @@ namespace Horror.Locomotion
             SetVelocity(Vector3.zero);
             ClearVelocityHistory();
             _wasTouching = false;
+            _hasLastHead = false;
             ResetHands();
         }
 
@@ -417,7 +491,7 @@ namespace Horror.Locomotion
         private void UpdateBodyCollider()
         {
             Vector3 headLocal = transform.InverseTransformPoint(head.position);
-            float height = Mathf.Max(bodyHeight, bodyRadius * 2f);
+            float height = Mathf.Max(bodyColliderHeight, bodyRadius * 2f);
 
             _body.radius = bodyRadius;
             _body.height = height;
@@ -516,13 +590,19 @@ namespace Horror.Locomotion
                 case Preset.Classique:
                     jumpMultiplier = 1.2f; maxJumpSpeed = 7f; velocityHistorySize = 6;
                     handRadius = 0.07f; unstickDistance = 0.3f; releaseDistance = 0.015f; surfaceSlide = 0f;
+                    bodyColliderHeight = bodyHeight;
                     break;
                 case Preset.Rapide:
+                    // comme les jeux de bras : corps court (les mains le portent, on décolle à chaque poussée),
                     // grands élans, mains plus « larges » qui accrochent mieux, petite glisse pour courir sur les murs
                     jumpMultiplier = 1.35f; maxJumpSpeed = 8.5f; velocityHistorySize = 5;
                     handRadius = 0.085f; unstickDistance = 0.45f; releaseDistance = 0.02f; surfaceSlide = 0.03f;
+                    bodyColliderHeight = 0.45f;
                     break;
             }
+            // la glisse en se penchant (LeanSlide) faisait « glisser au lieu de marcher » : coupée en Rapide
+            var lean = GetComponent<LeanSlide>();
+            if (lean != null && preset != Preset.Personnalise) lean.enabled = preset == Preset.Classique;
             if (_velocityHistory == null || _velocityHistory.Length != Mathf.Max(2, velocityHistorySize))
             {
                 _velocityHistory = new Vector3[Mathf.Max(2, velocityHistorySize)];

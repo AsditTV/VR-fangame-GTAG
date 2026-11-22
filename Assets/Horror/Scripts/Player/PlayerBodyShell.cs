@@ -34,7 +34,21 @@ namespace Horror.Player
             _bodyShell = MakePart("Coque (corps)", false);
 
             ArmLocomotion local = GetComponent<ArmLocomotion>();
-            if (local != null) local.RefreshOwnColliders();   // mes mains ignorent mon corps
+            if (local != null)
+            {
+                // Joueur local : la coque ne doit PAS porter son propre corps (elle le faisait tenir debout et glisser
+                // au sol). Chaque pièce devient un objet cinématique à part, qui ne touche pas la capsule du joueur :
+                // les mains des AUTRES s'y appuient toujours, mais pour moi ce sont mes mains qui me portent.
+                foreach (Transform part in new[] { _headShell, _bodyShell })
+                {
+                    Rigidbody prb = part.gameObject.AddComponent<Rigidbody>();
+                    prb.isKinematic = true;
+                    prb.useGravity = false;
+                    Collider pc = part.GetComponent<Collider>();
+                    foreach (Collider own in GetComponents<Collider>()) Physics.IgnoreCollision(own, pc);
+                }
+                local.RefreshOwnColliders();   // mes mains ignorent mon corps
+            }
             else if (GetComponent<Rigidbody>() == null)
             {
                 Rigidbody rb = gameObject.AddComponent<Rigidbody>();   // avatar distant : bouge sans tomber

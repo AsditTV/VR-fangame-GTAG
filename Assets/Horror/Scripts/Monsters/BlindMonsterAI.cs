@@ -289,12 +289,15 @@ namespace Horror.Monsters
             Vector3 goal = WaypointGraph.Instance != null ? NextWaypoint(target) : target;
             Vector3 to = goal - transform.position;
             to.y = 0f;
+            // anti-blocage : elle veut avancer mais ne progresse plus -> autre chemin, autre côté, puis replacement discret
+            bool wants = speed > 0.1f && _currentSpeed > 0.3f && to.sqrMagnitude > 0.25f;
+            if (_stuck.Update(transform.position, wants, Time.deltaTime)) OnStuck();
             if (to.sqrMagnitude < 0.01f || _currentSpeed < 0.01f) return;
             Vector3 dir = to.normalized;
             float step = Mathf.Min(_currentSpeed * Time.deltaTime, to.magnitude);
             Vector3 origin = transform.position + Vector3.up * 0.5f;
             if (Physics.SphereCast(origin, 0.35f, dir, out RaycastHit hit, step + 0.1f, NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore)
-                && hit.transform != transform && !hit.transform.IsChildOf(transform))
+                && MonsterMover.Blocks(hit, transform, dir))   // un objet lancé ne la bloque plus : elle le pousse
             {
                 Vector3 slide = Vector3.ProjectOnPlane(dir, hit.normal);
                 slide.y = 0f;
@@ -328,6 +331,21 @@ namespace Horror.Monsters
         private Vector3 _pathTarget;
         private float _repathAt;
         private float _slideSign = 1f, _slideUntil;
+        private readonly MonsterMover.StuckWatch _stuck = new MonsterMover.StuckWatch();
+
+        /// <summary>Bloquée depuis une période (1,5 s) : on recalcule, on change de côté ; après 3 périodes, replacement invisible.</summary>
+        private void OnStuck()
+        {
+            _repathAt = 0f;
+            if (_path != null && _pathIndex < _path.Count - 1) _pathIndex++;
+            _slideSign = -_slideSign;
+            _slideUntil = Time.time + 1.2f;
+            if (_stuck.Level >= 3 && _path != null && _path.Count > 0)
+            {
+                Vector3 spot = _path[Mathf.Min(_pathIndex, _path.Count - 1)];
+                if (MonsterMover.TryUnstick(transform, spot)) { _stuck.Reset(); SnapToGround(); }
+            }
+        }
 
         /// <summary>Le prochain point à atteindre sur le chemin vers "target" (recalculé si la cible bouge).</summary>
         private Vector3 NextWaypoint(Vector3 target)

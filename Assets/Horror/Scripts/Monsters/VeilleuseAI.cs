@@ -212,7 +212,7 @@ namespace Horror.Monsters
             float step = Mathf.Min(speed * Time.deltaTime, to.magnitude);
             Vector3 origin = transform.position + Vector3.up * 0.8f;
             if (Physics.SphereCast(origin, 0.3f, dir, out RaycastHit hit, step + 0.15f, NoiseSystem.occluderLayers, QueryTriggerInteraction.Ignore)
-                && !hit.transform.IsChildOf(transform))
+                && MonsterMover.Blocks(hit, transform, dir))   // un objet lancé ne la bloque plus
             {
                 Vector3 slide = Vector3.ProjectOnPlane(dir, hit.normal); slide.y = 0f;
                 if (slide.sqrMagnitude < 0.04f) slide = Vector3.Cross(Vector3.up, hit.normal);
