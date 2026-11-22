@@ -142,13 +142,13 @@ gros plan sur l'insigne NIGHT WATCH, L'Écoute arrive dans son dos). Bio : incha
 
 **Description :**
 > mods get a cap nobody else can have 🧢 the old night watchman's cap.
-> Apply: forms.gle/ovYxYYx5cSYVNHBq9
+> Join the Discord to apply: discord.gg/Py44mhq3ZD
 > #calmfaces #vrhorror #metaquest3 #vr #discord #moderator #indiegame
 
 **Commentaire épinglé :**
 > Moderator applications are still OPEN 📝
-> 1. Join the Discord: discord.gg/Py44mhq3ZD
-> 2. Fill the form: forms.gle/ovYxYYx5cSYVNHBq9
+> Join the Discord to apply 👉 discord.gg/Py44mhq3ZD
+> Everything happens inside the server.
 > Accepted mods wear the NIGHT WATCH cap in game. Nobody else can. 🗝️
 
 **Relance :**
