@@ -58,3 +58,7 @@ __pycache__/
 # sauvegardes de scène créées par Unity après un arrêt brutal
 /[Aa]ssets/_Recovery/
 /[Aa]ssets/_Recovery.meta
+
+# Clés de signature Android (jamais dans le dépôt public : sans elles, impossible de mettre le jeu à jour)
+*.keystore
+*.jks

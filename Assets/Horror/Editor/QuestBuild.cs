@@ -38,6 +38,15 @@ namespace Horror.EditorTools
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
                 EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);   // long la 1re fois (textures en ASTC)
 
+            // Chaque APK envoyé à Meta doit avoir un numéro de version (versionCode) plus grand que le précédent
+            PlayerSettings.Android.bundleVersionCode = PlayerSettings.Android.bundleVersionCode + 1;
+            Debug.Log($"[Horror] APK n° {PlayerSettings.Android.bundleVersionCode} (version {PlayerSettings.bundleVersion}).");
+            // Meta refuse un APK signé avec la clé de debug (canaux ALPHA/BETA et store). La clé de publication se crée
+            // une fois dans Player > Publishing Settings > Keystore Manager, HORS du dépôt ; ses mots de passe se tapent
+            // dans Unity à chaque session, jamais dans le code.
+            if (!PlayerSettings.Android.useCustomKeystore)
+                Debug.LogWarning("[Horror] APK signé avec la clé de DEBUG : il s'installe sur ton casque, mais Meta le refusera (canal ALPHA). Voir Docs/ALPHA.md.");
+
             Directory.CreateDirectory(Path.GetDirectoryName(ApkPath));
             var options = new BuildPlayerOptions
             {
