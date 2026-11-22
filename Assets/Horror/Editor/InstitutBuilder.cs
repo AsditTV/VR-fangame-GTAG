@@ -769,7 +769,7 @@ namespace Horror.EditorTools
 
             // --- le panneau de confort (sous les objectifs) : flashs, screamers doux
             Plate("Panneau de confort", new Vector3(10.2f, 0.62f, wallZ), new Vector3(2.0f, 0.55f, 0.04f), panel);
-            GameObject comfortText = Label("", new Vector3(10.65f, 0.66f, wallZ + 0.04f), 0.009f, new Color(0.95f, 0.92f, 0.86f));
+            GameObject comfortText = Label("", new Vector3(10.78f, 0.66f, wallZ + 0.04f), 0.009f, new Color(0.95f, 0.92f, 0.86f));
             var comfort = root.AddComponent<ComfortSettings>();
             comfort.display = comfortText.GetComponent<TextMesh>();
             comfort.toggleSound = click;
@@ -785,6 +785,8 @@ namespace Horror.EditorTools
             comfort.scaresButton = ComfortButton("Bouton SCARES", 9.6f);
             Label("FLASH", new Vector3(9.9f, 0.78f, wallZ + 0.04f), 0.009f, new Color(0.95f, 0.92f, 0.86f));
             Label("SCARE", new Vector3(9.6f, 0.78f, wallZ + 0.04f), 0.009f, new Color(0.95f, 0.92f, 0.86f));
+            comfort.movesButton = ComfortButton("Bouton MOVES", 10.2f);   // 9.3 est pris par TUTO
+            Label("MOVES", new Vector3(10.2f, 0.78f, wallZ + 0.04f), 0.009f, new Color(0.95f, 0.92f, 0.86f));
 
             // --- le tutoriel du premier lancement (panneau flottant) ; le bouton TUTO le relance ou le passe
             var coachGo = new GameObject("Tutoriel (premier lancement)");

@@ -250,6 +250,8 @@ par l'accueil pour reprendre le monte-charge. **Page de Mila** : au sol de l'iso
 ## Confort, screamers avec relief, poupées fusionnées (menu 8 puis 9)
 1. **Panneau COMFORT** (Salle de jeux, sous le tableau des objectifs) : bouton FLASH = flashs rouges ON/OFF ;
    bouton SCARE = FULL (double coup, cri fort) ou SOFT (screamer court, sans arrêt, cri moins fort). Mémorisé.
+   bouton **MOVES** = FAST (par défaut : grands élans comme les jeux de bras rapides, mains un peu plus grosses qui
+   n'accrochent pas, légère glisse sur les murs) ou CLASSIC (l'ancien réglage). Mémorisé. Comparer les deux.
 2. **Screamers** : lumière par en dessous + lumière de côté en hauteur (des ombres sur le visage, plus effrayant
    qu'un visage blanc et plat). Au casque : assez lisible ? trop sombre ?
 3. **Poupées fusionnées** : enfants du dortoir (la tête tourne toujours), peaux de la loge, poupées de

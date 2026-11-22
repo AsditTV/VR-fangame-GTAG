@@ -37,7 +37,13 @@ namespace Horror.Locomotion
         [Tooltip("Modèle de la main droite.")]
         public Transform rightHandVisual;
 
+        public enum Preset { Classique, Rapide, Personnalise }
+
         [Header("Mains")]
+        [Tooltip("Classique : sauts mesurés (la version d'origine). Rapide : grands élans, mains qui accrochent plus " +
+                 "et glissent le long des murs (pour courir sur les parois). Personnalisé : les valeurs ci-dessous.")]
+        public Preset preset = Preset.Rapide;
+
         [Tooltip("Rayon de la 'boule' de collision de chaque main, en mètres.")]
         public float handRadius = 0.07f;
         [Tooltip("Calques sur lesquels les mains peuvent s'appuyer. Le calque du joueur doit être EXCLU.")]
@@ -65,6 +71,8 @@ namespace Horror.Locomotion
         public float maxJumpSpeed = 7f;
         [Tooltip("Nombre d'images utilisées pour calculer la vitesse au moment de lâcher.")]
         [Range(2, 20)] public int velocityHistorySize = 6;
+        [Tooltip("Glisse d'une main appuyée le long de la surface (0 = collée, 0,05 = glisse un peu : on « court » sur les murs).")]
+        [Range(0f, 0.3f)] public float surfaceSlide = 0f;
 
         [Header("Physique")]
         [Tooltip("Cale la fréquence de la physique sur celle du casque (72/90/120 Hz). " +
@@ -137,6 +145,7 @@ namespace Horror.Locomotion
             _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic; // pas de traversée de mur à grande vitesse
 
             _body.direction = 1; // capsule verticale (axe Y)
+            ApplyPreset();
             RefreshOwnColliders();
             _velocityHistory = new Vector3[Mathf.Max(2, velocityHistorySize)];
             _spawnPosition = transform.position;
@@ -277,6 +286,10 @@ namespace Horror.Locomotion
                     hand.position = target;
                     return;
                 }
+
+                // Glisse : la main appuyée suit un peu la manette le long de la surface (jamais à travers).
+                if (surfaceSlide > 0f)
+                    hand.position += Vector3.ProjectOnPlane(offset, hand.surfaceNormal) * surfaceSlide;
 
                 // La main reste collée : le corps compense le mouvement de la manette.
                 totalMove += hand.position - target;
@@ -495,8 +508,31 @@ namespace Horror.Locomotion
                 _rb.useGravity = on;
         }
 
+        /// <summary>Valeurs du préréglage choisi (Personnalisé : on garde celles de l'inspecteur).</summary>
+        public void ApplyPreset()
+        {
+            switch (preset)
+            {
+                case Preset.Classique:
+                    jumpMultiplier = 1.2f; maxJumpSpeed = 7f; velocityHistorySize = 6;
+                    handRadius = 0.07f; unstickDistance = 0.3f; releaseDistance = 0.015f; surfaceSlide = 0f;
+                    break;
+                case Preset.Rapide:
+                    // grands élans, mains plus « larges » qui accrochent mieux, petite glisse pour courir sur les murs
+                    jumpMultiplier = 1.35f; maxJumpSpeed = 8.5f; velocityHistorySize = 5;
+                    handRadius = 0.085f; unstickDistance = 0.45f; releaseDistance = 0.02f; surfaceSlide = 0.03f;
+                    break;
+            }
+            if (_velocityHistory == null || _velocityHistory.Length != Mathf.Max(2, velocityHistorySize))
+            {
+                _velocityHistory = new Vector3[Mathf.Max(2, velocityHistorySize)];
+                ClearVelocityHistory();
+            }
+        }
+
         private void OnValidate()
         {
+            ApplyPreset();
             velocityHistorySize = Mathf.Max(2, velocityHistorySize);
             handRadius = Mathf.Max(0.01f, handRadius);
             bodyRadius = Mathf.Max(0.05f, bodyRadius);
