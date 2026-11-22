@@ -119,3 +119,12 @@ départ de B : avatar et proie retirés ; en solo, le Docteur attrape toujours l
   **Limite** : pas d'état complet à l'arrivée ; un joueur qui rejoint en cours voit les ampoules de départ
   jusqu'au prochain changement. Le grenier vide depuis 20 s revient à l'état de départ (chez tout le monde).
 - Les cassettes et le projecteur sont locaux (chacun écoute/regarde de son côté).
+
+## Âge du compte (22/11/2026)
+- `AgeGate` (Scripts/Net) : tranche d'âge du compte Meta (enfant / ado / adulte / inconnu), gardée en cache.
+  Compte **enfant** : chat vocal coupé dans les deux sens (micro jamais envoyé, voix des autres muettes), le
+  tableau PLAYERS l'indique. Âge **inconnu** : rien n'est bloqué (règle de Meta).
+- `MetaAgeProvider` lit l'âge via le SDK Platform de Meta (Get Age Category API). **Pas encore actif** : il faut
+  installer le paquet « Meta XR Platform SDK », régler l'App ID dans ses paramètres (jamais dans le code), ajouter
+  le symbole `CALM_META_PLATFORM`, et déclarer l'API dans le Contrôle de l'utilisation des données (Meta).
+- Test : argument `-age child` ou PlayerPrefs `horror.age.override` = 1 (enfant), 2 (ado), 3 (adulte), 0 (aucun).

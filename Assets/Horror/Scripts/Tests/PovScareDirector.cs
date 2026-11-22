@@ -87,7 +87,8 @@ namespace Horror.Tests
             }
             foreach (MonoBehaviour b in FindObjectsByType<MonoBehaviour>())
                 if (b.GetType().Name == "SoftieWatcher" || b.GetType().Name == "SheetMonsterAI") b.enabled = false;
-            PlaytestBot bot = _player.GetComponent<PlaytestBot>() ?? _player.gameObject.AddComponent<PlaytestBot>();
+            PlaytestBot bot = _player.GetComponent<PlaytestBot>();
+            if (bot == null) bot = _player.gameObject.AddComponent<PlaytestBot>();
             Jumpscare js = _player.GetComponent<Jumpscare>();
             js.strobe = true;
             js.forceWhisper = whisper;

@@ -231,7 +231,8 @@ namespace Horror.Net
                 r.voice.transform.localPosition = Vector3.zero;
                 r.voice.spatialBlend = 1f; r.voice.dopplerLevel = 0f;
                 r.voice.rolloffMode = AudioRolloffMode.Linear; r.voice.minDistance = 1.5f; r.voice.maxDistance = 25f;
-                r.muffle = r.voice.GetComponent<AudioLowPassFilter>() ?? r.voice.gameObject.AddComponent<AudioLowPassFilter>();
+                r.muffle = r.voice.GetComponent<AudioLowPassFilter>();
+                if (r.muffle == null) r.muffle = r.voice.gameObject.AddComponent<AudioLowPassFilter>();   // pas de ?? sur un composant Unity
             }
             r.voice.volume = VoiceModeration.ShouldHear(uid) ? 1f : 0f;
             if (r.muffle != null && listener != null)

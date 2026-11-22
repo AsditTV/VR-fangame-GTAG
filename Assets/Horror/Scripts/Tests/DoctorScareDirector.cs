@@ -62,7 +62,8 @@ namespace Horror.Tests
             }
             _doc = FindAnyObjectByType<DoctorAI>();
             _doc.enabled = true;
-            PlaytestBot bot = player.GetComponent<PlaytestBot>() ?? player.gameObject.AddComponent<PlaytestBot>();
+            PlaytestBot bot = player.GetComponent<PlaytestBot>();
+            if (bot == null) bot = player.gameObject.AddComponent<PlaytestBot>();
             Jumpscare js = player.GetComponent<Jumpscare>();
             js.strobe = true; js.forceWhisper = whisper;
             _head = player.head;

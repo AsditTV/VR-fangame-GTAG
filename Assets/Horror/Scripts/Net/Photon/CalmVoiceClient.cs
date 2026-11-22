@@ -60,7 +60,7 @@ namespace Horror.Net
             if (_localMouth == null)
                 foreach (MicMouth m in FindObjectsByType<MicMouth>()) if (m.isLocal) { _localMouth = m; break; }
             // MicModeApplier décide (Minitel : ouvert / appuyer pour parler / coupé) ; la voix suit
-            bool open = _localMouth == null || _localMouth.micEnabled;
+            bool open = (_localMouth == null || _localMouth.micEnabled) && AgeGate.VoiceAllowed;   // compte enfant : micro jamais envoyé
             if (_recorder.TransmitEnabled != open) _recorder.TransmitEnabled = open;
         }
 

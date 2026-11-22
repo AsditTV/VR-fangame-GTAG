@@ -54,3 +54,7 @@ __pycache__/
 # (licence Photon, et PhotonAppSettings contient les App ID). Voir Docs/MULTIJOUEUR.md.
 /[Aa]ssets/Photon/
 /[Aa]ssets/Photon.meta
+
+# sauvegardes de scène créées par Unity après un arrêt brutal
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta

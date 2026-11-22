@@ -64,7 +64,7 @@ namespace Horror.Net
         public static bool IsBlocked(string userId) => !string.IsNullOrEmpty(userId) && Data.blocked.Contains(userId);
 
         /// <summary>Doit-on entendre ce joueur ? (lu par la voix réseau)</summary>
-        public static bool ShouldHear(string userId) => !MuteEveryone && !IsMuted(userId) && !IsBlocked(userId);
+        public static bool ShouldHear(string userId) => AgeGate.VoiceAllowed && !MuteEveryone && !IsMuted(userId) && !IsBlocked(userId);   // compte enfant : rien
 
         public static void SetMuted(string userId, bool muted)
         {

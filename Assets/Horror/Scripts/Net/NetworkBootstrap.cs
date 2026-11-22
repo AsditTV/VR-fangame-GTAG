@@ -96,6 +96,7 @@ namespace Horror.Net
         public static void GoOnline(string mode, Action<bool> done = null)
         {
             if (OnlineFactory == null || (Session != null && Session.IsOnline)) { done?.Invoke(Session != null && Session.IsOnline); return; }
+            AgeGate.Refresh();                                           // re-vérifie la tranche d'âge du compte avant d'aller en ligne
             if (Session != null) { Session.NoiseReceived -= OnRemoteNoise; Session.EventReceived -= OnRemoteEvent; }
             Session = OnlineFactory();
             Session.NoiseReceived += OnRemoteNoise;

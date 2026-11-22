@@ -112,3 +112,19 @@ Ordre conseillé : diapos (mystère) → cassette (screamer) → règle (mécani
 
 **Relance :**
 > The night monitor "keeps them calm". Calm faces. Get it now? 😶
+
+## Vidéo « MODERATORS WANTED » (22/11/2026) — recrutement
+Fichier : `Marketing/calm_faces_moderators_tiktok.mp4` (28,9 s, vrai jeu : la poupée parle, L'Écoute passe derrière).
+**Avant de poster**, mets dans ta bio (ou un Linktree) :
+- Discord : https://discord.gg/Py44mhq3ZD
+- Formulaire : https://docs.google.com/forms/d/e/1FAIpQLScVGiY5jI1LAGZ3yqfzpxRNQO_upZqXzc_LFtGhbewDahPW7g/viewform
+
+**Description :**
+> CALM FACES is coming soon on Meta Quest and I need moderators 🤫 join the discord + apply (link in bio)
+> #calmfaces #vrhorror #metaquest3 #vr #discord #moderator #indiegame
+
+**Commentaire épinglé :**
+> Applications are open 📝 Discord + form in my bio. Stay calm. Don't look behind you.
+
+**Relance :**
+> She was there the whole time 👀 did you notice?
