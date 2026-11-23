@@ -64,6 +64,11 @@ namespace Horror.Locomotion
         public float bodyColliderHeight = 0.85f;
         [Tooltip("Rayon du corps.")]
         public float bodyRadius = 0.2f;
+        [Tooltip("Les BRAS ont une hitbox (épaule → poignet, sans les doigts) : un bras ne traverse plus un mur, il repousse " +
+                 "le corps. Les mains gardent leurs propres boules de contact.")]
+        public bool armHitbox = true;
+        [Tooltip("Rayon de la hitbox des bras (m).")]
+        public float armRadius = 0.055f;
         [Tooltip("Petite marge pour ne pas coller le corps aux murs lors des déplacements.")]
         public float skinWidth = 0.01f;
 
@@ -217,6 +222,7 @@ namespace Horror.Locomotion
             int touchingCount = 0;
             StepHand(_left, ref totalMove, ref touchingCount);
             StepHand(_right, ref totalMove, ref touchingCount);
+            if (armHitbox && inputEnabled) PushArmsOutOfWalls();
 
             if (touchingCount > 0)
             {
@@ -256,6 +262,82 @@ namespace Horror.Locomotion
         }
 
         // ------------------------------------------------------------------ anti-traversée
+
+        // ------------------------------------------------------------------ hitbox des bras
+
+        private CapsuleCollider _armProbe;
+        private readonly Collider[] _armHits = new Collider[12];
+
+        /// <summary>
+        /// Chaque bras est une capsule de l'épaule (estimée sous la tête) jusqu'au poignet. Si elle rentre dans le décor,
+        /// le corps est repoussé hors du mur et la vitesse qui allait dans le mur est retirée : on ne passe plus le bras
+        /// à travers une paroi, on peut s'y appuyer. Rien n'est fait pour un bras dont la main est déjà posée (c'est la
+        /// main qui commande alors : sinon le bras et la main se contrediraient et le corps tremblerait).
+        /// </summary>
+        private void PushArmsOutOfWalls()
+        {
+            if (_armProbe == null)
+            {
+                var go = new GameObject("Hitbox des bras (sonde)");
+                go.transform.SetParent(transform, false);
+                go.layer = gameObject.layer;
+                _armProbe = go.AddComponent<CapsuleCollider>();
+                _armProbe.isTrigger = true;    // ne sert qu'aux calculs de chevauchement
+                _armProbe.direction = 2;       // le long de l'axe Z local
+                RefreshOwnColliders();
+            }
+            Vector3 headP = PhysicsPosition(head);
+            Vector3 fwd = Vector3.ProjectOnPlane(head.forward, Vector3.up);
+            if (fwd.sqrMagnitude < 1e-4f) fwd = transform.forward;
+            Vector3 right = Vector3.Cross(Vector3.up, fwd.normalized);
+            Vector3 push = Vector3.zero;
+            foreach (Hand hand in new[] { _left, _right })
+            {
+                if (hand.touching) continue;
+                Vector3 shoulder = headP - Vector3.up * 0.24f + right * (hand.isLeft ? -0.17f : 0.17f);
+                Vector3 wrist = hand.position;
+                Vector3 seg = wrist - shoulder;
+                float len = seg.magnitude;
+                if (len < 0.2f) continue;
+                Vector3 dir = seg / len;
+                // de 15 % du bras (près de l'épaule, déjà couverte par le corps) jusqu'avant la main (couverte par sa boule)
+                Vector3 a = shoulder + dir * (len * 0.15f);
+                Vector3 b = wrist - dir * (handRadius + 0.02f);
+                float l = Vector3.Distance(a, b);
+                if (l < 0.05f) continue;
+                Vector3 center = (a + b) * 0.5f;
+                Quaternion rot = Quaternion.LookRotation(dir);
+                _armProbe.radius = armRadius;
+                _armProbe.height = l + armRadius * 2f;
+                int n = Physics.OverlapCapsuleNonAlloc(a, b, armRadius, _armHits, climbableLayers, QueryTriggerInteraction.Ignore);
+                for (int i = 0; i < n; i++)
+                {
+                    Collider c = _armHits[i];
+                    if (c == null || _own.Contains(c)) continue;
+                    if (c.attachedRigidbody != null && !c.attachedRigidbody.isKinematic) continue;   // objets libres : ignorés
+                    if (Physics.ComputePenetration(_armProbe, center, rot, c, c.transform.position, c.transform.rotation,
+                                                   out Vector3 pdir, out float pdist) && pdist > 0.002f)
+                    {
+                        // seulement les murs et obstacles de côté : le sol et le plafond sont l'affaire des mains, de la tête et
+                        // du corps (sinon l'avant-bras touche le sol avant la main et soulève le corps : la marche ne marche plus)
+                        if (Mathf.Abs(pdir.y) > 0.5f) continue;
+                        pdir.y = 0f;
+                        Vector3 p = pdir.normalized * pdist;
+                        // on garde la plus grande poussée dans chaque direction (pas de double comptage)
+                        if (Mathf.Abs(p.x) > Mathf.Abs(push.x)) push.x = p.x;
+                        if (Mathf.Abs(p.y) > Mathf.Abs(push.y)) push.y = p.y;
+                        if (Mathf.Abs(p.z) > Mathf.Abs(push.z)) push.z = p.z;
+                    }
+                }
+            }
+            if (push.sqrMagnitude < 1e-6f) return;
+            push = Vector3.ClampMagnitude(push, 0.08f);   // jamais de grand saut d'un coup
+            _rb.MovePosition(_rb.position + SweepBody(push));
+            Vector3 v = GetVelocity();
+            Vector3 n2 = push.normalized;
+            float into = Vector3.Dot(v, -n2);
+            if (into > 0f) SetVelocity(v + n2 * into);   // la vitesse qui rentrait dans le mur disparaît
+        }
 
         private Vector3 _lastHead;
         private bool _hasLastHead;
@@ -610,7 +692,7 @@ namespace Horror.Locomotion
                     // comme les jeux de bras : grands élans, mains plus « larges » qui accrochent mieux, petite glisse pour
                     // courir sur les murs. Corps à 0,85 (0,45 faisait s'enfoncer dans le sol au premier test des joueurs).
                     jumpMultiplier = 1.35f; maxJumpSpeed = 8.5f; velocityHistorySize = 5;
-                    handRadius = 0.085f; unstickDistance = 0.45f; releaseDistance = 0.02f; surfaceSlide = 0.03f;
+                    handRadius = 0.085f; unstickDistance = 0.45f; releaseDistance = 0.02f; surfaceSlide = 0.01f;   // glisse très légère
                     bodyColliderHeight = 0.85f; bodyFriction = 0.12f;
                     break;
             }
