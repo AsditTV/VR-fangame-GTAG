@@ -173,3 +173,28 @@ la casquette du veilleur apparaît, L'Écoute approche). Page store : https://ww
 
 **Relance :**
 > Every wishlist helps the game get seen on the store. Thank you 🖤
+
+## Vidéo « don't play alone » (23/11/2026) — Discord
+Fichier : `Marketing/calm_faces_discord_tiktok.mp4` (~20 s, vrai jeu au dortoir, L'Écoute approche).
+
+**Description :**
+> don't play CALM FACES alone 🤫 join the Discord: discord.gg/Py44mhq3ZD
+> #calmfaces #vrhorror #metaquest3 #vr #horrorgame #discord #indiegame
+
+**Commentaire épinglé :**
+> Find people to play with + share your scariest moments 👉 discord.gg/Py44mhq3ZD
+> Mods wanted too (they get the NIGHT WATCH cap 🗝️)
+> Wishlist: https://www.meta.com/experiences/1967447728000800/
+
+## Vidéo « stay in the light » (23/11/2026) — wishlist, grenier
+Fichier : `Marketing/calm_faces_attic_tiktok.mp4` (17,9 s, vrai jeu au grenier, La Veilleuse et l'ampoule qui s'éteint).
+
+**Description :**
+> rule one in the attic: stay in the light 💡 she can't step into it... she just waits.
+> Wishlist CALM FACES on Meta Quest (link in bio)
+> #calmfaces #vrhorror #metaquest3 #vr #horrorgame #indiegame #wishlist
+
+**Commentaire épinglé :**
+> Wishlist it here 👉 https://www.meta.com/experiences/1967447728000800/
+> When the bulb starts to buzz, you have about one second. Pull the string. 🔔
+> Discord: discord.gg/Py44mhq3ZD
